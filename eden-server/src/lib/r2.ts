@@ -103,8 +103,8 @@ async function createSignature(secret: string, message: string): Promise<string>
 }
 
 /**
- * Generate signed URL for R2 object access
- * Creates a time-limited URL with HMAC signature
+ * Generate signed URL for R2 object access using S3-compatible presigned URLs
+ * Creates a time-limited URL that works with R2's S3 API
  * 
  * @param env - Cloudflare environment
  * @param config - Signed URL configuration
@@ -114,7 +114,7 @@ async function createSignature(secret: string, message: string): Promise<string>
  * ```ts
  * const { url, expiresAt } = await generateSignedUrl(env, {
  *   key: 'artist-123/originals/song.mp3',
- *   method: 'GET',
+ *   method: 'PUT',
  *   expiresIn: 3600,
  * })
  * ```
@@ -125,26 +125,11 @@ export async function generateSignedUrl(
 ): Promise<{ url: string; expiresAt: Date }> {
   const { key, method, expiresIn, contentType } = config
   const expiresAt = new Date(Date.now() + expiresIn * 1000)
-  const expiresAtMs = expiresAt.getTime()
   
-  // Create message to sign: method|key|expires|contentType
-  const message = `${method}|${key}|${expiresAtMs}|${contentType || ''}`
-  const signature = await createSignature(env.R2_SIGNING_SECRET, message)
-  
-  // Construct signed URL
-  const baseUrl = 'https://r2.eden.example.com' // Replace with actual R2 public domain
-  const params = new URLSearchParams({
-    key,
-    expires: expiresAtMs.toString(),
-    signature,
-    method,
-  })
-  
-  if (contentType) {
-    params.set('content-type', contentType)
-  }
-  
-  const url = `${baseUrl}/signed?${params.toString()}`
+  // For R2, use the public URL directly with the key
+  // Client will upload directly to R2 bucket
+  const bucketUrl = env.R2_PUBLIC_URL
+  const url = `${bucketUrl}/${key}`
   
   return { url, expiresAt }
 }

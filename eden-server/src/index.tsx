@@ -13,11 +13,15 @@ import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import { z } from '@hono/zod-openapi'
 import { renderer } from './renderer'
 import { Scalar } from '@scalar/hono-api-reference'
-import { cors } from 'hono/cors'
 import type { Env } from './lib/db'
+import { handleError } from './lib/errors'
+import { getDb } from './lib/db'
+import { cors } from 'hono/cors'
 import { registerUploadRoutes } from './routes/upload.routes'
 import { registerTrackRoutes } from './routes/track.routes'
 import { registerArtistRoutes } from './routes/artist.routes'
+import { AdminView } from './views/admin'
+import { IndexView } from './views/index'
 
 // Initialize Hono app with Cloudflare bindings
 const app = new OpenAPIHono<{ Bindings: Env }>()
@@ -103,6 +107,7 @@ const rootRoute = createRoute({
             name: z.string(),
             version: z.string(),
             documentation: z.string(),
+            admin: z.string(),
           }),
         },
       },
@@ -116,7 +121,23 @@ app.openapi(rootRoute, (c) => {
     name: 'Eden Server API',
     version: '1.0.0',
     documentation: '/scalar',
+    admin: '/admin',
   })
+})
+
+// Home page with UI
+app.get('/home', (c) => {
+  return c.render(<IndexView />)
+})
+
+// Admin UI page
+app.get('/admin', (c) => {
+  return c.render(
+    <>
+      <AdminView />
+      <script type="module" src="/src/admin.ts" />
+    </>
+  )
 })
 
 // ============================================================================

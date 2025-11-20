@@ -32,4 +32,5 @@
 	// Secrets (set via: wrangler secret put <NAME>):
 	// - JWT_SECRET: Secret key for JWT token signing/verification
 	// - R2_SIGNING_SECRET: Secret key for R2 signed URL generation
+	// - R2_PUBLIC_URL: Public URL for R2 bucket (e.g., https://pub-ACCOUNT_ID.r2.dev or custom domain)
 }

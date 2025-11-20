@@ -16,6 +16,7 @@ export interface Env {
   // Secrets
   JWT_SECRET: string
   R2_SIGNING_SECRET: string
+  R2_PUBLIC_URL: string
   // Optional
   ENVIRONMENT?: 'development' | 'staging' | 'production'
 }
