@@ -1,38 +1,26 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import type { Env } from '../../lib/db'
-import app from '../../../src/index'
-import { generateJWT } from '../../lib/auth'
+import { describe, it, expect } from 'vitest'
+import { env, SELF } from 'cloudflare:test'
 
 describe('Artist API', () => {
-  let authToken: string
-  const testEnv: Env = {} as Env // Mock env for testing
-
-  beforeAll(async () => {
-    // Generate test token
-    authToken = await generateJWT(
-      { sub: 'test-artist-123', role: 'artist' },
-      'test-secret',
-      3600
-    )
-  })
-
   describe('POST /api/artists', () => {
     it('should create a new artist', async () => {
-      const response = await app.request('/api/artists', {
+      const response = await SELF.fetch('http://localhost/api/artists', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: 'Test Artist',
+          email: 'testartist@example.com',
           bio: 'A test artist bio',
         }),
       })
 
       expect(response.status).toBe(201)
-      const data = await response.json() as { id: string; name: string; bio: string }
+      const data = await response.json() as { id: string; name: string; email: string; bio: string | null }
       expect(data.id).toBeDefined()
       expect(data.name).toBe('Test Artist')
+      expect(data.email).toBe('testartist@example.com')
       expect(data.bio).toBe('A test artist bio')
     })
 
@@ -43,7 +31,7 @@ describe('Artist API', () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          // missing required name field
+          // missing required name and email fields
           bio: 'A bio without a name',
         }),
       })
