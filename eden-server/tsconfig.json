@@ -9,6 +9,7 @@
       "ESNext",
       "DOM"
     ],
+    "noEmit": true,
     "types": ["vite/client"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
