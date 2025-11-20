@@ -19,15 +19,16 @@
 			"remote": true
 		}
 	],
-	"r2_buckets": [
-		{
-			"binding": "eden-audio-storage",
-			"bucket_name": "eden-audio-storage"
-		}
-	],
 	"vars": {
 		"ENVIRONMENT": "development"
-	}
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "eden-audio-storage",
+			"binding": "EDEN_R2_BUCKET",
+			"remote": true
+		}
+	]
 	// Secrets (set via: wrangler secret put <NAME>):
 	// - JWT_SECRET: Secret key for JWT token signing/verification
 	// - R2_SIGNING_SECRET: Secret key for R2 signed URL generation
