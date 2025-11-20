@@ -1,6 +1,15 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "eden-server",
-  "compatibility_date": "2025-08-03",
-  "main": "./src/index.tsx"
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "eden-server",
+	"compatibility_date": "2025-08-03",
+	"main": "./src/index.tsx",
+	"d1_databases": [
+		{
+			"binding": "eden_db_main",
+			"database_name": "eden-db-main",
+			"database_id": "d5151423-bea2-4b03-8b33-0fe6fd8c8a25",
+			"remote": true,
+			"migrations_dir": "drizzle/migrations"
+		}
+	]
 }

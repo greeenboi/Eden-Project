@@ -12,11 +12,13 @@
     "@hono/standard-validator": "^0.2.0",
     "@hono/zod-openapi": "^1.1.5",
     "@scalar/hono-api-reference": "^0.9.24",
+    "drizzle-orm": "^0.44.7",
     "hono": "^4.10.6",
     "zod": "^4.1.12"
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.2.3",
+    "drizzle-kit": "^0.31.7",
     "vite": "^6.3.5",
     "vite-ssr-components": "^0.5.1",
     "wrangler": "^4.17.0"
