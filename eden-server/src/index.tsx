@@ -29,7 +29,7 @@ const app = new OpenAPIHono<{ Bindings: Env }>()
 // Middleware
 app.use(renderer)
 app.use('/api/*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://eden-server.suvan-gowrishanker-204.workers.dev'],
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -206,7 +206,7 @@ Authorization: Bearer <token>
   },
   servers: [
     { url: 'http://localhost:5173', description: 'Development Server' },
-    { url: 'https://eden-server.workers.dev', description: 'Production (Cloudflare Workers)' },
+    { url: 'https://eden-server.suvan-gowrishanker-204.workers.dev', description: 'Production (Cloudflare Workers)' },
   ],
   tags: [
     {
