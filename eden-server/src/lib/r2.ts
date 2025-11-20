@@ -103,7 +103,7 @@ async function createSignature(secret: string, message: string): Promise<string>
 }
 
 /**
- * Generate signed URL for R2 object access using S3-compatible presigned URLs
+ * Generate AWS S3-compatible presigned URL for R2 object access
  * Creates a time-limited URL that works with R2's S3 API
  * 
  * @param env - Cloudflare environment
@@ -126,12 +126,43 @@ export async function generateSignedUrl(
   const { key, method, expiresIn, contentType } = config
   const expiresAt = new Date(Date.now() + expiresIn * 1000)
   
-  // For R2, use the public URL directly with the key
-  // Client will upload directly to R2 bucket
-  const bucketUrl = env.R2_PUBLIC_URL
-  const url = `${bucketUrl}/${key}`
+  // Construct R2 endpoint URL
+  const bucketName = 'eden-audio-storage'
+  const endpoint = `https://${env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`
+  const url = `${endpoint}/${bucketName}/${key}`
   
-  return { url, expiresAt }
+  // Import AwsClient dynamically
+  const { AwsClient } = await import('aws4fetch')
+  
+  // Create AWS client with R2 credentials
+  const client = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    service: 's3',
+    region: 'auto',
+  })
+  
+  // Create request for signing
+  const headers: Record<string, string> = {}
+  if (contentType) {
+    headers['Content-Type'] = contentType
+  }
+  
+  // Sign the URL
+  const signedRequest = await client.sign(url, {
+    method,
+    headers,
+    aws: {
+      signQuery: true,
+      datetime: new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+      allHeaders: false,
+    },
+  })
+  
+  return {
+    url: signedRequest.url,
+    expiresAt,
+  }
 }
 
 /**

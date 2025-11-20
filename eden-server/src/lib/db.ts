@@ -17,6 +17,9 @@ export interface Env {
   JWT_SECRET: string
   R2_SIGNING_SECRET: string
   R2_PUBLIC_URL: string
+  R2_ACCESS_KEY_ID: string
+  R2_SECRET_ACCESS_KEY: string
+  CLOUDFLARE_ACCOUNT_ID: string
   // Optional
   ENVIRONMENT?: 'development' | 'staging' | 'production'
 }
