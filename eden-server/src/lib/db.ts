@@ -19,7 +19,7 @@ export interface Env {
   R2_PUBLIC_URL: string
   R2_ACCESS_KEY_ID: string
   R2_SECRET_ACCESS_KEY: string
-  CLOUDFLARE_ACCOUNT_ID: string
+  R2_ACCOUNT_ID: string
   // Optional
   ENVIRONMENT?: 'development' | 'staging' | 'production'
 }

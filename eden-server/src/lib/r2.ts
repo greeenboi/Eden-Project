@@ -128,7 +128,7 @@ export async function generateSignedUrl(
   
   // Construct R2 endpoint URL
   const bucketName = 'eden-audio-storage'
-  const endpoint = `https://${env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`
+  const endpoint = `https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
   const url = `${endpoint}/${bucketName}/${key}`
   
   // Import AwsClient dynamically

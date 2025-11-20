@@ -26,6 +26,7 @@ import {
   getPublishedTracks,
   searchTracks,
 } from '../services/track.service'
+import { generateSignedUrl } from '../lib/r2'
 
 /**
  * POST /api/tracks
@@ -478,6 +479,107 @@ export async function searchTracksHandler(c: unknown) {
     return ctx.json({
       tracks: transformedTracks,
       query,
+    }, 200)
+  } catch (error) {
+    const { status, body } = handleError(error)
+    return ctx.json(body, status)
+  }
+}
+
+/**
+ * GET /api/tracks/:id/stream
+ * Get streaming URL for a track
+ */
+export const getTrackStreamRoute = createRoute({
+  method: 'get',
+  path: '/api/tracks/{id}/stream',
+  tags: ['Tracks'],
+  summary: 'Get track streaming URL',
+  description: 'Generate a signed URL for streaming/downloading a track',
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({
+        description: 'Track ID',
+        example: '550e8400-e29b-41d4-a716-446655440000',
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            streamUrl: z.string().url().openapi({ description: 'Signed streaming URL' }),
+            expiresAt: z.string().datetime().openapi({ description: 'URL expiration timestamp' }),
+            expiresIn: z.number().openapi({ description: 'Seconds until expiration' }),
+            track: TrackResponseSchema,
+          }),
+        },
+      },
+      description: 'Streaming URL generated successfully',
+    },
+    404: {
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+      description: 'Track not found',
+    },
+    500: {
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+      description: 'Internal server error',
+    },
+  },
+})
+
+export async function getTrackStreamHandler(c: unknown) {
+  const ctx = c as { req: { param: () => { id: string } }; env: Env; json: (data: unknown, status?: number) => unknown }
+  try {
+    const { id } = ctx.req.param()
+    const db = getDb(ctx.env)
+    
+    // Get track with relations to get all fields
+    const track = await getTrackWithRelations(db, ctx.env, id)
+    
+    if (!track) {
+      return ctx.json({
+        error: 'NotFoundError',
+        message: `Track with id '${id}' not found`,
+      }, 404)
+    }
+    
+    if (!track.r2KeyOriginal) {
+      return ctx.json({
+        error: 'ValidationError',
+        message: 'Track does not have an audio file',
+      }, 400)
+    }
+    
+    // Generate signed GET URL (valid for 1 hour)
+    const { url: streamUrl, expiresAt } = await generateSignedUrl(ctx.env, {
+      key: track.r2KeyOriginal,
+      method: 'GET',
+      expiresIn: 3600, // 1 hour
+    })
+    
+    const expiresIn = Math.floor((expiresAt.getTime() - Date.now()) / 1000)
+    
+    return ctx.json({
+      streamUrl,
+      expiresAt: expiresAt.toISOString(),
+      expiresIn,
+      track: {
+        id: track.id,
+        artistId: track.artistId,
+        title: track.title,
+        duration: track.duration,
+        status: track.status,
+        r2KeyOriginal: track.r2KeyOriginal,
+        encodings: track.encodings,
+        isrc: track.isrc,
+        genre: track.genre,
+        explicit: track.explicit,
+        publishedAt: track.publishedAt?.toISOString() || null,
+        createdAt: track.createdAt.toISOString(),
+        updatedAt: track.updatedAt.toISOString(),
+      },
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)

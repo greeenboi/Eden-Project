@@ -20,6 +20,8 @@ import {
   deleteTrackHandler,
   searchTracksRoute,
   searchTracksHandler,
+  getTrackStreamRoute,
+  getTrackStreamHandler,
 } from '../controllers/track.controller'
 
 /**
@@ -43,4 +45,7 @@ export function registerTrackRoutes(app: OpenAPIHono<{ Bindings: Env }>) {
 
   // GET /api/tracks/search - Search tracks by title, artist, or album
   app.openapi(searchTracksRoute, searchTracksHandler as never)
+
+  // GET /api/tracks/:id/stream - Get streaming URL for track
+  app.openapi(getTrackStreamRoute, getTrackStreamHandler as never)
 }
