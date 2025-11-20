@@ -8,6 +8,7 @@ import { sql } from 'drizzle-orm'
 export const users = sqliteTable('users', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: text('email').notNull().unique(),
+  passwordHash: text('password_hash'),
   name: text('name'),
   subscriptionTier: text('subscription_tier', { 
     enum: ['free', 'premium', 'family', 'student'] 

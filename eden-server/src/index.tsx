@@ -21,6 +21,7 @@ import { registerUploadRoutes } from './routes/upload.routes'
 import { registerTrackRoutes } from './routes/track.routes'
 import { registerArtistRoutes } from './routes/artist.routes'
 import { registerHomeRoutes } from './routes/home.routes.tsx'
+import { registerAuthRoutes } from './routes/auth.routes'
 
 // Initialize Hono app with Cloudflare bindings
 const app = new OpenAPIHono<{ Bindings: Env }>()
@@ -50,6 +51,7 @@ app.onError((err, c) => {
 // ============================================================================
 
 registerHomeRoutes(app)
+registerAuthRoutes(app)
 registerUploadRoutes(app)
 registerTrackRoutes(app)
 registerArtistRoutes(app)
