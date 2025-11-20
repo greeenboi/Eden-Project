@@ -6,3 +6,4 @@
 
 export { registerUploadRoutes } from './upload.routes'
 export { registerTrackRoutes } from './track.routes'
+export { registerArtistRoutes } from './artist.routes'

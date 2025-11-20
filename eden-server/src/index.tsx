@@ -17,6 +17,7 @@ import { cors } from 'hono/cors'
 import type { Env } from './lib/db'
 import { registerUploadRoutes } from './routes/upload.routes'
 import { registerTrackRoutes } from './routes/track.routes'
+import { registerArtistRoutes } from './routes/artist.routes'
 
 // Initialize Hono app with Cloudflare bindings
 const app = new OpenAPIHono<{ Bindings: Env }>()
@@ -124,6 +125,7 @@ app.openapi(rootRoute, (c) => {
 
 registerUploadRoutes(app)
 registerTrackRoutes(app)
+registerArtistRoutes(app)
 
 // ============================================================================
 // OpenAPI Documentation
@@ -189,6 +191,10 @@ Authorization: Bearer <token>
     {
       name: 'System',
       description: 'System health and status endpoints',
+    },
+    {
+      name: 'Artists',
+      description: 'Artist profile management, statistics, and track listings',
     },
     {
       name: 'Uploads',
