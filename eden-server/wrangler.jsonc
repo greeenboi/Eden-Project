@@ -11,5 +11,12 @@
 			"remote": true,
 			"migrations_dir": "drizzle/migrations"
 		}
+	],
+	"kv_namespaces": [
+		{
+			"binding": "eden_kv",
+			"id": "35e4a190037f42da8daadf0446091546",
+			"remote": true,
+		}
 	]
 }
