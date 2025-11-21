@@ -1,4 +1,6 @@
 import { useColorScheme } from '@/components/useColorScheme';
+import { SessionProvider, useSession } from '@/lib/ctx';
+import { SplashScreenController } from '@/lib/splash';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { ThemeProvider } from '@react-navigation/native';
 import { PortalHost } from '@rn-primitives/portal';
@@ -17,7 +19,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: '(dashboard)/all-songs',
 };
 
 SplashScreen.setOptions({
@@ -25,13 +27,14 @@ SplashScreen.setOptions({
   fade: true,
 });
 
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    JetBrainsMono: require('../assets/fonts/JetBrainsMono-VariableFont_wght.ttf'),
+    SourceSerif4: require('../assets/fonts/SourceSerif4-VariableFont_opsz,wght.ttf'),
+    Merriweather: require('../assets/fonts/Merriweather-VariableFont_opsz,wdth,wght.ttf'),
     ...FontAwesome.font,
   });
 
@@ -40,27 +43,35 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <SessionProvider>
+      <SplashScreenController />
+      <RootLayoutNav />
+    </SessionProvider>
+  );
 }
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { session } = useSession();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkThemeCustom : LightTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="(auth)" />
+        </Stack.Protected>
+
+        <Stack.Protected guard={!!session}>
+          <Stack.Screen name="(home)" />
+          <Stack.Screen name="(dashboard)" />
+        </Stack.Protected>
+
+        <Stack.Screen name="(tabs)" />
       </Stack>
       <PortalHost />
     </ThemeProvider>

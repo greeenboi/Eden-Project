@@ -4,6 +4,28 @@
 
 
 @layer base {
+
+  @font-face {
+    font-family: JetBrainsMono;
+    font-style: normal;
+    font-weight: 200 400 500 700;
+    font-display: swap;
+    src: url("/fonts/JetBrainsMono-VariableFont_wght.ttf") format("ttf");
+  }
+  @font-face {
+    font-family: Merriweather;
+    font-style: normal;
+    font-weight: 200 400 500 700;
+    font-display: swap;
+    src: url("/fonts/Merriweather-VariableFont_opsz,wdth,wght.ttf") format("ttf");
+  }
+  @font-face {
+    font-family: SourceSerif4;
+    font-style: normal;
+    font-weight: 200 400 500 700;
+    font-display: swap;
+    src: url("/fonts/SourceSerif4-VariableFont_opsz,wght.ttf") format("ttf");
+  }
   :root {
     --background: 45.0000 49.0566% 79.2157%;
     --foreground: 26.0000 19.4805% 30.1961%;
@@ -112,3 +134,5 @@
     --shadow-2xl: 3px 3px 2px 0px hsl(88 22% 35% / 0.38);
     }
 }
+
+

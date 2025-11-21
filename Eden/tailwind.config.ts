@@ -70,9 +70,9 @@ module.exports = {
         hairline: hairlineWidth(),
       },
       fontFamily: {
-        sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
+        sans: ["Merriweather", "serif"],
+        serif: ["SourceSerif4", "serif"],
+        mono: ["JetBrainsMono", "monospace"],
       },
       keyframes: {
         'accordion-down': {
