@@ -15,6 +15,8 @@ export default function AppLayout() {
       <Stack.Screen name="all-songs" />
       <Stack.Screen name="search-songs" />
       <Stack.Screen name="playing-song" />
+      <Stack.Screen name="artists" />
+      <Stack.Screen name="artist-detail" />
     </Stack>
   );
 }
