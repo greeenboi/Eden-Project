@@ -3,8 +3,6 @@
  */
 
 import { z } from '@hono/zod-openapi'
-import { SubscriptionTier, TrackStatus, UploadStatus } from './enums'
-
 /**
  * ====================
  * User DTOs

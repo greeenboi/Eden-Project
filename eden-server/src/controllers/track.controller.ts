@@ -7,26 +7,25 @@ import { createRoute, z } from '@hono/zod-openapi'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
+import { generateSignedUrl } from '../lib/r2'
 import {
   CreateTrackRequestSchema,
+  ErrorResponseSchema,
+  PaginationQuerySchema,
   TrackResponseSchema,
   TrackWithRelationsResponseSchema,
   UpdateTrackRequestSchema,
-  ErrorResponseSchema,
-  PaginationQuerySchema,
 } from '../models/dtos'
 import {
   createTrack,
-  getTrackById,
-  getTrackWithRelations,
-  listTracks,
-  updateTrack,
-  updateTrackStatus,
   deleteTrack,
   getPublishedTracks,
+  getTrackWithRelations,
+  listTracks,
   searchTracks,
+  updateTrack,
+  updateTrackStatus
 } from '../services/track.service'
-import { generateSignedUrl } from '../lib/r2'
 
 /**
  * POST /api/tracks
@@ -117,7 +116,7 @@ export const getTrackRoute = createRoute({
   description: 'Get track by ID with artist and album information',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -196,11 +195,11 @@ export const listTracksRoute = createRoute({
   description: 'List tracks with optional filters',
   request: {
     query: PaginationQuerySchema.extend({
-      artistId: z.string().uuid().optional().openapi({
+      artistId: z.uuid().optional().openapi({
         param: { name: 'artistId', in: 'query' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
-      albumId: z.string().uuid().optional().openapi({
+      albumId: z.uuid().optional().openapi({
         param: { name: 'albumId', in: 'query' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -290,7 +289,7 @@ export const updateTrackRoute = createRoute({
   description: 'Update track metadata',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -355,6 +354,99 @@ export async function updateTrackHandler(c: unknown) {
 }
 
 /**
+ * PATCH /api/tracks/:id/status
+ * Update track status
+ */
+export const updateTrackStatusRoute = createRoute({
+  method: 'patch',
+  path: '/api/tracks/{id}/status',
+  tags: ['Tracks'],
+  summary: 'Update track status',
+  description: 'Update track status (initiated → uploaded → processing → published)',
+  request: {
+    params: z.object({
+      id: z.uuid().openapi({
+        param: { name: 'id', in: 'path' },
+        example: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+    }),
+    body: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            status: z.enum(['initiated', 'uploaded', 'processing', 'published']).openapi({
+              description: 'New track status',
+              example: 'published',
+            }),
+            encodings: z.record(z.string(), z.string()).optional().openapi({
+              description: 'Encoding information (for processing/published status)',
+              example: { '320kbps': 'tracks/uuid/320.mp3' },
+            }),
+            duration: z.number().int().positive().optional().openapi({
+              description: 'Track duration in seconds',
+              example: 180,
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: TrackResponseSchema,
+        },
+      },
+      description: 'Track status updated successfully',
+    },
+    404: {
+      content: {
+        'application/json': {
+          schema: ErrorResponseSchema,
+        },
+      },
+      description: 'Track not found',
+    },
+  },
+})
+
+export async function updateTrackStatusHandler(c: unknown) {
+  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+  try {
+    const { id } = ctx.req.valid('param') as { id: string }
+    const body = ctx.req.valid('json') as { 
+      status: 'initiated' | 'uploaded' | 'processing' | 'published' | 'failed'
+      encodings?: Record<string, string>
+      duration?: number 
+    }
+    const db = getDb(ctx.env)
+    
+    const track = await updateTrackStatus(db, ctx.env, id, body.status, body)
+    
+    return ctx.json({
+      id: track.id,
+      artistId: track.artistId,
+      albumId: track.albumId,
+      title: track.title,
+      duration: track.duration,
+      r2KeyOriginal: track.r2KeyOriginal,
+      encodings: track.encodings,
+      status: track.status,
+      isrc: track.isrc,
+      genre: track.genre,
+      explicit: track.explicit,
+      publishedAt: track.publishedAt?.toISOString() || null,
+      createdAt: track.createdAt.toISOString(),
+      updatedAt: track.updatedAt.toISOString(),
+    }, 200)
+  } catch (error) {
+    const { status, body } = handleError(error)
+    return ctx.json(body, status)
+  }
+}
+
+/**
  * DELETE /api/tracks/:id
  * Delete track
  */
@@ -366,7 +458,7 @@ export const deleteTrackRoute = createRoute({
   description: 'Delete track and associated R2 objects',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -406,6 +498,95 @@ export async function deleteTrackHandler(c: unknown) {
     return ctx.json({
       success: true,
       message: 'Track deleted successfully',
+    }, 200)
+  } catch (error) {
+    const { status, body } = handleError(error)
+    return ctx.json(body, status)
+  }
+}
+
+/**
+ * GET /api/tracks/published
+ * Get published tracks
+ */
+export const getPublishedTracksRoute = createRoute({
+  method: 'get',
+  path: '/api/tracks/published',
+  tags: ['Tracks'],
+  summary: 'Get published tracks',
+  description: 'Get all tracks with published status (streaming-ready)',
+  request: {
+    query: PaginationQuerySchema.extend({
+      artistId: z.uuid().optional().openapi({
+        param: { name: 'artistId', in: 'query' },
+        example: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+      albumId: z.uuid().optional().openapi({
+        param: { name: 'albumId', in: 'query' },
+        example: '123e4567-e89b-12d3-a456-426614174000',
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      content: {
+        'application/json': {
+          schema: z.object({
+            tracks: z.array(TrackResponseSchema),
+            pagination: z.object({
+              page: z.number().int(),
+              limit: z.number().int(),
+              total: z.number().int(),
+            }),
+          }).openapi('PublishedTracksResponse'),
+        },
+      },
+      description: 'Published tracks retrieved successfully',
+    },
+  },
+})
+
+export async function getPublishedTracksHandler(c: unknown) {
+  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+  try {
+    const query = ctx.req.valid('query') as { page: number; limit: number; artistId?: string; albumId?: string }
+    const db = getDb(ctx.env)
+    
+    const { page, limit, artistId, albumId } = query
+    const offset = (page - 1) * limit
+    
+    const tracks = await getPublishedTracks(db, {
+      artistId,
+      albumId,
+      limit,
+      offset,
+    })
+    
+    // Transform tracks
+    const transformedTracks = tracks.map(track => ({
+      id: track.id,
+      artistId: track.artistId,
+      albumId: track.albumId,
+      title: track.title,
+      duration: track.duration,
+      r2KeyOriginal: track.r2KeyOriginal,
+      encodings: track.encodings,
+      status: track.status,
+      isrc: track.isrc,
+      genre: track.genre,
+      explicit: track.explicit,
+      publishedAt: track.publishedAt?.toISOString() || null,
+      createdAt: track.createdAt.toISOString(),
+      updatedAt: track.updatedAt.toISOString(),
+    }))
+    
+    return ctx.json({
+      tracks: transformedTracks,
+      pagination: {
+        page,
+        limit,
+        total: tracks.length, // TODO: Implement proper total count
+      },
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -498,7 +679,7 @@ export const getTrackStreamRoute = createRoute({
   description: 'Generate a signed URL for streaming/downloading a track',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         description: 'Track ID',
         example: '550e8400-e29b-41d4-a716-446655440000',
       }),
@@ -509,7 +690,7 @@ export const getTrackStreamRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            streamUrl: z.string().url().openapi({ description: 'Signed streaming URL' }),
+            streamUrl: z.url().openapi({ description: 'Signed streaming URL' }),
             expiresAt: z.string().datetime().openapi({ description: 'URL expiration timestamp' }),
             expiresIn: z.number().openapi({ description: 'Seconds until expiration' }),
             track: TrackResponseSchema,

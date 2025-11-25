@@ -3,15 +3,14 @@
  * Business logic for track management, CRUD operations, and status transitions
  */
 
-import { eq, and, desc, sql } from 'drizzle-orm'
-import type { DbClient } from '../lib/db'
-import type { Env } from '../lib/db'
-import { tracks, artists, albums } from '../schema'
-import type { Track, NewTrack } from '../models/types'
+import { and, desc, eq, sql } from 'drizzle-orm'
+import type { DbClient, Env } from '../lib/db'
+import { NotFoundError, ValidationError } from '../lib/errors'
+import { CachePrefix, CacheTTL, deleteCache, getCache, setCache } from '../lib/kv'
+import { deleteMultipleFromR2 } from '../lib/r2'
 import { TrackStatus } from '../models/enums'
-import { NotFoundError, ValidationError, ConflictError } from '../lib/errors'
-import { getCache, setCache, deleteCache, CachePrefix, CacheTTL } from '../lib/kv'
-import { deleteFromR2, deleteMultipleFromR2 } from '../lib/r2'
+import type { NewTrack, Track } from '../models/types'
+import { albums, artists, tracks } from '../schema'
 
 /**
  * Create a new track
@@ -244,7 +243,7 @@ export async function updateTrackStatus(
   // Validate status transition
   const validTransitions: Record<string, string[]> = {
     [TrackStatus.INITIATED]: [TrackStatus.UPLOADED, TrackStatus.FAILED],
-    [TrackStatus.UPLOADED]: [TrackStatus.PROCESSING, TrackStatus.FAILED],
+    [TrackStatus.UPLOADED]: [TrackStatus.PROCESSING, TrackStatus.PUBLISHED, TrackStatus.FAILED], // Allow direct publish
     [TrackStatus.PROCESSING]: [TrackStatus.PUBLISHED, TrackStatus.FAILED],
     [TrackStatus.PUBLISHED]: [TrackStatus.PROCESSING], // Allow re-processing
     [TrackStatus.FAILED]: [TrackStatus.UPLOADED, TrackStatus.PROCESSING], // Allow retry
@@ -394,6 +393,19 @@ export async function getPublishedTracks(
     conditions.push(eq(tracks.albumId, albumId))
   }
   
+  if (conditions.length === 0) {
+    // No filters
+    const results = await db
+      .select()
+      .from(tracks)
+      .where(eq(tracks.status, TrackStatus.PUBLISHED))
+      .orderBy(desc(tracks.createdAt))
+      .limit(limit)
+      .offset(offset)
+    
+    return results
+  }
+
   const results = await db
     .select()
     .from(tracks)

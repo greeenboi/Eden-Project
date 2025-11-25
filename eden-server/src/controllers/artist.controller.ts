@@ -10,13 +10,13 @@ import { handleError } from '../lib/errors'
 import { ErrorResponseSchema } from '../models/dtos'
 import {
   createArtist,
-  getArtistById,
-  updateArtist,
   deleteArtist,
-  listArtists,
+  getArtistById,
   getArtistStats,
   getArtistTracks,
+  listArtists,
   searchArtists,
+  updateArtist,
 } from '../services/artist.service'
 
 /**
@@ -35,10 +35,10 @@ export const createArtistRoute = createRoute({
         'application/json': {
           schema: z.object({
             name: z.string().min(1).openapi({ example: 'Artist Name' }),
-            email: z.string().email().openapi({ example: 'artist@example.com' }),
+            email: z.email().openapi({ example: 'artist@example.com' }),
             profile: z.string().optional().openapi({ example: 'Short bio or tagline' }),
             bio: z.string().optional().openapi({ example: 'Full artist biography' }),
-            avatarUrl: z.string().url().optional().openapi({ example: 'https://example.com/avatar.jpg' }),
+            avatarUrl: z.url().optional().openapi({ example: 'https://example.com/avatar.jpg' }),
           }),
         },
       },
@@ -49,7 +49,7 @@ export const createArtistRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            id: z.string().uuid(),
+            id: z.uuid(),
             name: z.string(),
             email: z.string(),
             profile: z.string().nullable(),
@@ -105,7 +105,7 @@ export const getArtistRoute = createRoute({
   description: 'Retrieve artist profile by ID',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -116,7 +116,7 @@ export const getArtistRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            id: z.string().uuid(),
+            id: z.uuid(),
             name: z.string(),
             email: z.string(),
             profile: z.string().nullable(),
@@ -172,7 +172,7 @@ export const updateArtistRoute = createRoute({
   description: 'Update artist profile information',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -182,10 +182,10 @@ export const updateArtistRoute = createRoute({
         'application/json': {
           schema: z.object({
             name: z.string().min(1).optional(),
-            email: z.string().email().optional(),
+            email: z.email().optional(),
             profile: z.string().optional(),
             bio: z.string().optional(),
-            avatarUrl: z.string().url().optional(),
+            avatarUrl: z.url().optional(),
             verified: z.boolean().optional(),
           }),
         },
@@ -197,7 +197,7 @@ export const updateArtistRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            id: z.string().uuid(),
+            id: z.uuid(),
             name: z.string(),
             email: z.string(),
             profile: z.string().nullable(),
@@ -258,7 +258,7 @@ export const deleteArtistRoute = createRoute({
   description: 'Delete an artist profile (only if no published tracks)',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -330,7 +330,7 @@ export const listArtistsRoute = createRoute({
         'application/json': {
           schema: z.object({
             artists: z.array(z.object({
-              id: z.string().uuid(),
+              id: z.uuid(),
               name: z.string(),
               email: z.string(),
               profile: z.string().nullable(),
@@ -395,7 +395,7 @@ export const getArtistStatsRoute = createRoute({
   description: 'Get track counts, album counts, and upload statistics for an artist',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -454,7 +454,7 @@ export const getArtistTracksRoute = createRoute({
   description: 'Get all tracks by an artist with pagination',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: { name: 'id', in: 'path' },
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
@@ -557,7 +557,7 @@ export const searchArtistsRoute = createRoute({
         'application/json': {
           schema: z.object({
             artists: z.array(z.object({
-              id: z.string().uuid(),
+              id: z.uuid(),
               name: z.string(),
               email: z.string(),
               profile: z.string().nullable(),

@@ -1,3 +1,13 @@
+import { View } from "@/components/Themed";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import {
@@ -12,17 +22,7 @@ import {
 	Users,
 } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { Dimensions, Pressable, StyleSheet } from "react-native";
-import { View } from "@/components/Themed";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Text } from "@/components/ui/text";
-import { type Track, useTrackStore } from "@/lib/actions/tracks";
+import { ActivityIndicator, Dimensions, Image, Pressable, RefreshControl, StyleSheet } from "react-native";
 
 const { width } = Dimensions.get("window");
 const CARD_PADDING = 16;
@@ -39,17 +39,18 @@ interface MasonryTrack extends Track {
 
 export default function AllSongsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");
+	const [refreshing, setRefreshing] = useState(false);
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 
 	useEffect(() => {
 		// Fetch published tracks on mount
-		fetchTracks(1, 50, undefined, undefined, "published");
+		fetchTracks(1, 50, undefined, undefined, 'published');
 
 		return () => {
 			clearTracks();
 		};
-	}, []);
+	}, [fetchTracks, clearTracks]);
 
 	// Transform tracks for masonry layout with varying heights and spans
 	const masonryTracks: MasonryTrack[] = useMemo(() => {
@@ -90,9 +91,20 @@ export default function AllSongsScreen() {
 		if (
 			pagination &&
 			!isLoading &&
+			!refreshing &&
 			pagination.page * pagination.limit < pagination.total
 		) {
-			fetchTracks(pagination.page + 1, 50, undefined, undefined, "published");
+			fetchTracks(pagination.page + 1, 50);
+		}
+	};
+
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			clearTracks();
+			await fetchTracks(1, 50);
+		} finally {
+			setRefreshing(false);
 		}
 	};
 
@@ -129,21 +141,27 @@ export default function AllSongsScreen() {
 				onPress={() => handleSongPress(item.id)}
 				style={{ padding: 4 }}
 			>
-				<Card className="overflow-hidden">
-					{/* Album Art / Cover */}
-					<View
-						style={{ backgroundColor: "transparent" }}
-						className={`w-full aspect-square ${getImageColors(index)} items-center justify-center`}
-					>
+			<Card className="overflow-hidden max-w-md max-h-min">
+				{/* Album Art / Cover */}
+				<View
+					style={{ backgroundColor: "transparent" }}
+					className={`w-full aspect-square ${getImageColors(index)} items-center justify-center relative overflow-hidden`}
+				>
+					{item.artworkUrl ? (
+						<Image 
+							source={{ uri: item.artworkUrl }} 
+							style={{ width: '100%', height: '100%' }}
+							resizeMode="cover"
+						/>
+					) : (
 						<Disc size={60} className="opacity-30" />
-						{item.explicit && (
-							<Badge variant="destructive" className="absolute top-2 right-2">
-								<Text className="text-xs">E</Text>
-							</Badge>
-						)}
-					</View>
-
-					<CardContent className="p-3">
+					)}
+					{item.explicit && (
+						<Badge variant="destructive" className="absolute top-2 right-2">
+							<Text className="text-xs">E</Text>
+						</Badge>
+					)}
+				</View>					<CardContent className="p-3">
 						<Text className="font-bold text-base mb-1" numberOfLines={2}>
 							{item.title}
 						</Text>
@@ -168,12 +186,6 @@ export default function AllSongsScreen() {
 							style={{ backgroundColor: "transparent" }}
 							className="flex-row items-center justify-between"
 						>
-							<Badge
-								variant={item.status === "published" ? "default" : "secondary"}
-								className="flex-1 mr-2"
-							>
-								<Text className="text-xs capitalize">{item.status}</Text>
-							</Badge>
 							<View
 								style={{ backgroundColor: "transparent" }}
 								className="w-8 h-8 rounded-full bg-primary items-center justify-center"
@@ -299,7 +311,6 @@ export default function AllSongsScreen() {
 						data={filteredTracks}
 						renderItem={renderTrackCard}
 						keyExtractor={(item) => item.id}
-						estimatedItemSize={200}
 						numColumns={NUM_COLUMNS}
 						masonry
 						optimizeItemArrangement
@@ -309,25 +320,36 @@ export default function AllSongsScreen() {
 						contentContainerStyle={styles.flashListContent}
 						onEndReached={handleLoadMore}
 						onEndReachedThreshold={0.5}
-						ListEmptyComponent={
-							<View
-								style={{ backgroundColor: "transparent" }}
-								className="py-8 items-center"
-							>
-								<Music size={48} className="opacity-30 mb-4" />
-								<Text className="text-center opacity-70">
-									{searchQuery
-										? "No tracks found matching your search"
-										: "No tracks available"}
-								</Text>
-							</View>
+						refreshControl={
+							<RefreshControl
+								refreshing={refreshing}
+								onRefresh={handleRefresh}
+								tintColor="#8b5cf6"
+								colors={["#8b5cf6"]}
+							/>
 						}
-						ListFooterComponent={
-							isLoading && tracks.length > 0 ? (
+						ListEmptyComponent={
+							!isLoading ? (
 								<View
 									style={{ backgroundColor: "transparent" }}
-									className="py-4 items-center"
+									className="py-8 items-center"
 								>
+									<Music size={48} className="opacity-30 mb-4" />
+									<Text className="text-center opacity-70">
+										{searchQuery
+											? "No tracks found matching your search"
+											: "No tracks available"}
+									</Text>
+								</View>
+							) : null
+						}
+						ListFooterComponent={
+							isLoading && tracks.length > 0 && !refreshing ? (
+								<View
+									style={{ backgroundColor: "transparent" }}
+									className="py-4 items-center flex-row justify-center gap-2"
+								>
+									<ActivityIndicator size="small" color="#8b5cf6" />
 									<Text className="text-sm opacity-70">
 										Loading more tracks...
 									</Text>

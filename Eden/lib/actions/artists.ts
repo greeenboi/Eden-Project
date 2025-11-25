@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import { API_BASE_URL } from "../../constants/constants";
 
+/**
+ * Artist profile information
+ * @interface Artist
+ */
 export interface Artist {
 	id: string;
 	name: string;
@@ -13,20 +17,37 @@ export interface Artist {
 	updatedAt: string;
 }
 
+/**
+ * Pagination metadata for artist lists
+ * @interface ArtistPagination
+ */
 export interface ArtistPagination {
 	page: number;
 	limit: number;
 	total: number;
 }
 
+/**
+ * Statistical data for an artist's content
+ * @interface ArtistStatistics
+ */
 export interface ArtistStatistics {
+	/** Total number of tracks (all statuses) */
 	totalTracks: number;
+	/** Number of published tracks */
 	publishedTracks: number;
+	/** Total number of albums */
 	totalAlbums: number;
+	/** Total number of uploads */
 	totalUploads: number;
+	/** Number of pending uploads */
 	pendingUploads: number;
 }
 
+/**
+ * Track information associated with an artist
+ * @interface Track
+ */
 export interface Track {
 	id: string;
 	title: string;
@@ -42,11 +63,19 @@ export interface Track {
 	updatedAt: string;
 }
 
+/**
+ * Paginated track results for an artist
+ * @interface TracksPagination
+ */
 export interface TracksPagination {
 	tracks: Track[];
 	pagination: ArtistPagination;
 }
 
+/**
+ * Zustand store state for managing artists and their content
+ * @interface ArtistState
+ */
 interface ArtistState {
 	artists: Artist[];
 	currentArtist: Artist | null;
@@ -93,8 +122,16 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 	isLoadingTracks: false,
 	error: null,
 
+	/**
+	 * Clears any error messages from the store
+	 * @returns {void}
+	 */
 	clearError: () => set({ error: null }),
 
+	/**
+	 * Clears the current artist and all related data (stats, tracks)
+	 * @returns {void}
+	 */
 	clearCurrentArtist: () =>
 		set({
 			currentArtist: null,
@@ -103,8 +140,25 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 			tracksPagination: null,
 		}),
 
+	/**
+	 * Clears search results from the store
+	 * @returns {void}
+	 */
 	clearSearchResults: () => set({ searchResults: [] }),
 
+	/**
+	 * Fetches a paginated list of artists with optional verification filter
+	 * @async
+	 * @param {number} [page=1] - Page number (1-indexed)
+	 * @param {number} [limit=20] - Number of artists per page (1-100)
+	 * @param {boolean | null} [verified=null] - Filter by verification status (true|false|null for all)
+	 * @returns {Promise<void>}
+	 * @throws {Error} When the API request fails
+	 * @example
+	 * ```ts
+	 * await fetchArtists(1, 20, true); // Fetch only verified artists
+	 * ```
+	 */
 	fetchArtists: async (page = 1, limit = 20, verified = null) => {
 		set({ isLoading: true, error: null });
 
@@ -152,6 +206,17 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 		}
 	},
 
+	/**
+	 * Fetches detailed information for a specific artist by ID
+	 * @async
+	 * @param {string} id - Artist UUID
+	 * @returns {Promise<void>}
+	 * @throws {Error} When artist is not found (404) or API request fails
+	 * @example
+	 * ```ts
+	 * await fetchArtistById('123e4567-e89b-12d3-a456-426614174000');
+	 * ```
+	 */
 	fetchArtistById: async (id: string) => {
 		set({ isLoading: true, error: null });
 
@@ -191,6 +256,17 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 		}
 	},
 
+	/**
+	 * Fetches statistical data for a specific artist (track counts, album counts, uploads)
+	 * @async
+	 * @param {string} id - Artist UUID
+	 * @returns {Promise<void>}
+	 * @throws {Error} When artist is not found (404) or API request fails
+	 * @example
+	 * ```ts
+	 * await fetchArtistStats('123e4567-e89b-12d3-a456-426614174000');
+	 * ```
+	 */
 	fetchArtistStats: async (id: string) => {
 		set({ isLoadingStats: true, error: null });
 
@@ -230,6 +306,20 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 		}
 	},
 
+	/**
+	 * Fetches paginated tracks for a specific artist with optional status filter
+	 * @async
+	 * @param {string} id - Artist UUID
+	 * @param {number} [page=1] - Page number (1-indexed)
+	 * @param {number} [limit=20] - Number of tracks per page (1-100)
+	 * @param {string} [status] - Filter by track status (initiated|uploaded|processing|published|failed)
+	 * @returns {Promise<void>}
+	 * @throws {Error} When artist is not found (404) or API request fails
+	 * @example
+	 * ```ts
+	 * await fetchArtistTracks('123e4567-e89b-12d3-a456-426614174000', 1, 20, 'published');
+	 * ```
+	 */
 	fetchArtistTracks: async (
 		id: string,
 		page = 1,
@@ -289,6 +379,18 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 		}
 	},
 
+	/**
+	 * Searches for artists by name
+	 * @async
+	 * @param {string} query - Search query string (minimum 1 character)
+	 * @param {number} [limit=20] - Maximum number of results (1-50)
+	 * @returns {Promise<void>}
+	 * @throws {Error} When query is invalid (400) or API request fails
+	 * @example
+	 * ```ts
+	 * await searchArtists('Queen', 20);
+	 * ```
+	 */
 	searchArtists: async (query: string, limit = 20) => {
 		set({ isLoading: true, error: null });
 

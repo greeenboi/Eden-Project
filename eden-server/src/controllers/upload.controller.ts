@@ -3,22 +3,22 @@
  * Handles HTTP requests for upload operations
  */
 
-import { createRoute, z, type OpenAPIHono } from '@hono/zod-openapi'
+import { createRoute, z } from '@hono/zod-openapi'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
 import {
-  InitiateUploadRequestSchema,
-  InitiateUploadResponseSchema,
-  CompleteUploadRequestSchema,
-  UploadStatusResponseSchema,
-  ErrorResponseSchema,
+    CompleteUploadRequestSchema,
+    ErrorResponseSchema,
+    InitiateUploadRequestSchema,
+    InitiateUploadResponseSchema,
+    UploadStatusResponseSchema,
 } from '../models/dtos'
 import {
-  initiateUpload,
-  completeUpload,
-  getUploadStatus,
-  listUploads,
+    completeUpload,
+    getUploadStatus,
+    initiateUpload,
+    listUploads,
 } from '../services/upload.service'
 
 /**
@@ -101,7 +101,7 @@ export const completeUploadRoute = createRoute({
   description: 'Verifies R2 upload and creates track record',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: {
           name: 'id',
           in: 'path',
@@ -123,7 +123,7 @@ export const completeUploadRoute = createRoute({
         'application/json': {
           schema: z.object({
             success: z.boolean(),
-            trackId: z.string().uuid(),
+            trackId: z.uuid(),
             message: z.string(),
           }).openapi('CompleteUploadResponse'),
         },
@@ -189,7 +189,7 @@ export const getUploadStatusRoute = createRoute({
   description: 'Check the current status of an upload',
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({
+      id: z.uuid().openapi({
         param: {
           name: 'id',
           in: 'path',
@@ -270,7 +270,7 @@ export const listUploadsRoute = createRoute({
   description: 'Get all uploads for a specific artist',
   request: {
     params: z.object({
-      artistId: z.string().uuid().openapi({
+      artistId: z.uuid().openapi({
         param: {
           name: 'artistId',
           in: 'path',

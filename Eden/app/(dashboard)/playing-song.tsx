@@ -1,19 +1,3 @@
-import { router, useLocalSearchParams } from "expo-router";
-import {
-	AlertCircle,
-	ArrowLeft,
-	Heart,
-	Music,
-	Pause,
-	Play,
-	Repeat,
-	Shuffle,
-	SkipBack,
-	SkipForward,
-	User,
-} from "lucide-react-native";
-import { useEffect, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -23,40 +7,114 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useTrackStore } from "@/lib/actions/tracks";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+	AlertCircle,
+	ArrowLeft,
+	Heart,
+	Music,
+	Pause,
+	Play,
+	Repeat,
+	SkipBack,
+	SkipForward,
+	User,
+	Volume2,
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Image, Pressable, StyleSheet } from "react-native";
 
 export default function PlayingSongScreen() {
 	const { id } = useLocalSearchParams();
-	const { currentTrack, isLoading, error, fetchTrackById, clearCurrentTrack } =
-		useTrackStore();
-	const [isPlaying, setIsPlaying] = useState(true);
-	const [progress, setProgress] = useState(33);
+	const {
+		currentTrack,
+		isLoading,
+		error,
+		fetchTrackById,
+		getStreamingUrl,
+		clearCurrentTrack,
+	} = useTrackStore();
+	
+	const [streamUrl, setStreamUrl] = useState<string | null>(null);
+	const [loadingStream, setLoadingStream] = useState(false);
 	const [isFavorite, setIsFavorite] = useState(false);
-	const [isRepeat, setIsRepeat] = useState(false);
-	const [isShuffle, setIsShuffle] = useState(false);
 
+	// Initialize player - pass null initially
+	const player = useAudioPlayer(null, {
+		updateInterval: 100,
+	});
+	const status = useAudioPlayerStatus(player);
+
+	// Fetch track details
 	useEffect(() => {
 		if (id) {
 			fetchTrackById(id as string);
 		}
-
 		return () => {
 			clearCurrentTrack();
 		};
-	}, [id]);
+	}, [id, fetchTrackById, clearCurrentTrack]);
 
-	const formatDuration = (seconds: number | null) => {
-		if (!seconds) return "--:--";
+	// Get streaming URL when track is loaded
+	useEffect(() => {
+		if (currentTrack && !streamUrl && !loadingStream) {
+			setLoadingStream(true);
+			getStreamingUrl(currentTrack.id)
+				.then((response) => {
+					console.log("✅ Got streaming URL");
+					setStreamUrl(response.streamUrl);
+				})
+				.catch((err) => {
+					console.error("❌ Failed to get streaming URL:", err);
+				})
+				.finally(() => setLoadingStream(false));
+		}
+	}, [currentTrack, streamUrl, loadingStream, getStreamingUrl]);
+
+	// Load audio when stream URL is available
+	useEffect(() => {
+		if (streamUrl) {
+			console.log("🎵 Loading audio source");
+			player.replace(streamUrl);
+		}
+	}, [streamUrl, player]);
+
+	const formatDuration = (seconds: number) => {
 		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
+		const secs = Math.floor(seconds % 60);
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
-	const getCurrentTime = () => {
-		if (!currentTrack?.duration) return "0:00";
-		const currentSeconds = Math.floor((currentTrack.duration * progress) / 100);
-		const mins = Math.floor(currentSeconds / 60);
-		const secs = currentSeconds % 60;
-		return `${mins}:${secs.toString().padStart(2, "0")}`;
+	const getProgress = () => {
+		if (!status.duration || status.duration === 0) return 0;
+		return (status.currentTime / status.duration) * 100;
+	};
+
+	const togglePlayback = () => {
+		if (status.playing) {
+			player.pause();
+		} else {
+			player.play();
+		}
+	};
+
+	const handleSeek = (seconds: number) => {
+		player.seekTo(seconds);
+	};
+
+	const toggleLoop = () => {
+		player.loop = !player.loop;
+	};
+
+	const skip10Forward = () => {
+		const newTime = Math.min(status.currentTime + 10, status.duration);
+		player.seekTo(newTime);
+	};
+
+	const skip10Back = () => {
+		const newTime = Math.max(status.currentTime - 10, 0);
+		player.seekTo(newTime);
 	};
 
 	return (
@@ -105,9 +163,17 @@ export default function PlayingSongScreen() {
 						style={{ backgroundColor: "transparent" }}
 						className="items-center justify-center flex-1 px-8"
 					>
-						<Card className="w-full aspect-square max-w-sm">
-							<CardContent className="flex-1 items-center justify-center bg-primary/10">
-								<Music size={120} className="text-primary opacity-50" />
+						<Card className="w-full aspect-square max-w-sm overflow-hidden">
+							<CardContent className="flex-1 items-center justify-center bg-primary/10 p-0">
+								{currentTrack.artworkUrl ? (
+									<Image
+										source={{ uri: currentTrack.artworkUrl }}
+										style={{ width: "100%", height: "100%" }}
+										resizeMode="cover"
+									/>
+								) : (
+									<Music size={120} className="text-primary opacity-50" />
+								)}
 								{currentTrack.explicit && (
 									<Badge
 										variant="destructive"
@@ -118,6 +184,34 @@ export default function PlayingSongScreen() {
 								)}
 							</CardContent>
 						</Card>
+
+						{/* Audio Status Indicators */}
+						{loadingStream && (
+							<View
+								style={{ backgroundColor: "transparent" }}
+								className="mt-4 flex-row items-center gap-2"
+							>
+								<ActivityIndicator size="small" color="#8b5cf6" />
+								<Text className="text-sm opacity-70">Loading audio...</Text>
+							</View>
+						)}
+						{status.isBuffering && (
+							<View
+								style={{ backgroundColor: "transparent" }}
+								className="mt-4 flex-row items-center gap-2"
+							>
+								<ActivityIndicator size="small" color="#8b5cf6" />
+								<Text className="text-sm opacity-70">Buffering...</Text>
+							</View>
+						)}
+						{streamUrl && status.isLoaded && !status.playing && !loadingStream && (
+							<View
+								style={{ backgroundColor: "transparent" }}
+								className="mt-4"
+							>
+								<Text className="text-sm opacity-70">Ready to play</Text>
+							</View>
+						)}
 					</View>
 
 					{/* Song Info */}
@@ -136,13 +230,26 @@ export default function PlayingSongScreen() {
 								<Text className="text-2xl font-bold mb-1">
 									{currentTrack.title}
 								</Text>
-								<Text className="text-lg opacity-70 mb-1">
-									{currentTrack.artist.name}
-								</Text>
-								{currentTrack.album ? (
-									<Text className="text-sm opacity-50">
-										{currentTrack.album.title}
+								<Pressable
+									onPress={() =>
+										router.push(`/artist-detail?id=${currentTrack.artistId}`)
+									}
+								>
+									<Text className="text-lg opacity-70 mb-1 underline">
+										{currentTrack.artist.name}
 									</Text>
+								</Pressable>
+								{currentTrack.album ? (
+									<Pressable
+										onPress={() =>
+											currentTrack.albumId &&
+											router.push(`/album-detail?id=${currentTrack.albumId}`)
+										}
+									>
+										<Text className="text-sm opacity-50 underline">
+											{currentTrack.album.title}
+										</Text>
+									</Pressable>
 								) : (
 									<Text className="text-sm opacity-50">Single</Text>
 								)}
@@ -169,14 +276,16 @@ export default function PlayingSongScreen() {
 						style={{ backgroundColor: "transparent" }}
 						className="px-8 pb-6"
 					>
-						<Progress value={progress} className="mb-2" />
+						<Progress value={getProgress()} className="mb-2" />
 						<View
 							style={{ backgroundColor: "transparent" }}
 							className="flex-row justify-between"
 						>
-							<Text className="text-sm opacity-50">{getCurrentTime()}</Text>
 							<Text className="text-sm opacity-50">
-								{formatDuration(currentTrack.duration)}
+								{formatDuration(status.currentTime)}
+							</Text>
+							<Text className="text-sm opacity-50">
+								{formatDuration(status.duration)}
 							</Text>
 						</View>
 					</View>
@@ -190,23 +299,26 @@ export default function PlayingSongScreen() {
 							style={{ backgroundColor: "transparent" }}
 							className="flex-row items-center justify-center gap-6 mb-4"
 						>
-							<Pressable onPress={() => setIsShuffle(!isShuffle)}>
-								<Shuffle
+							<Pressable onPress={toggleLoop}>
+								<Repeat
 									size={24}
-									className={isShuffle ? "text-primary" : "opacity-50"}
+									className={player.loop ? "text-primary" : "opacity-50"}
 								/>
 							</Pressable>
 
-							<Button variant="ghost" size="lg">
+							<Pressable onPress={skip10Back}>
 								<SkipBack size={32} />
-							</Button>
+							</Pressable>
 
-							<Pressable onPress={() => setIsPlaying(!isPlaying)}>
+							<Pressable
+								onPress={togglePlayback}
+								disabled={!status.isLoaded || loadingStream}
+							>
 								<View
 									style={{ backgroundColor: "transparent" }}
 									className="w-16 h-16 rounded-full bg-primary items-center justify-center"
 								>
-									{isPlaying ? (
+									{status.playing ? (
 										<Pause size={32} className="text-primary-foreground" />
 									) : (
 										<Play size={32} className="text-primary-foreground" />
@@ -214,14 +326,18 @@ export default function PlayingSongScreen() {
 								</View>
 							</Pressable>
 
-							<Button variant="ghost" size="lg">
+							<Pressable onPress={skip10Forward}>
 								<SkipForward size={32} />
-							</Button>
+							</Pressable>
 
-							<Pressable onPress={() => setIsRepeat(!isRepeat)}>
-								<Repeat
+							<Pressable
+								onPress={() => {
+									player.volume = player.volume > 0 ? 0 : 1;
+								}}
+							>
+								<Volume2
 									size={24}
-									className={isRepeat ? "text-primary" : "opacity-50"}
+									className={player.volume === 0 ? "opacity-50" : ""}
 								/>
 							</Pressable>
 						</View>
@@ -256,6 +372,30 @@ export default function PlayingSongScreen() {
 								</View>
 							</CardContent>
 						</Card>
+
+						{/* Audio Info Debug */}
+						{__DEV__ && (
+							<View
+								style={{ backgroundColor: "transparent" }}
+								className="mt-4 p-3 bg-primary/5 rounded"
+							>
+								<Text className="text-xs opacity-50 mb-1">
+									Status: {status.playing ? "Playing" : "Stopped"}
+								</Text>
+								<Text className="text-xs opacity-50 mb-1">
+									Loaded: {status.isLoaded ? "Yes" : "No"}
+								</Text>
+								<Text className="text-xs opacity-50 mb-1">
+									Buffering: {status.isBuffering ? "Yes" : "No"}
+								</Text>
+								<Text className="text-xs opacity-50 mb-1">
+									Duration: {status.duration.toFixed(1)}s
+								</Text>
+								<Text className="text-xs opacity-50">
+									Volume: {Math.round(player.volume * 100)}%
+								</Text>
+							</View>
+						)}
 					</View>
 				</>
 			)}

@@ -6,23 +6,27 @@
  */
 
 import type { OpenAPIHono } from '@hono/zod-openapi'
-import type { Env } from '../lib/db'
 import {
-  createTrackRoute,
   createTrackHandler,
-  getTrackRoute,
-  getTrackHandler,
-  listTracksRoute,
-  listTracksHandler,
-  updateTrackRoute,
-  updateTrackHandler,
-  deleteTrackRoute,
+  createTrackRoute,
   deleteTrackHandler,
-  searchTracksRoute,
-  searchTracksHandler,
-  getTrackStreamRoute,
+  deleteTrackRoute,
+  getPublishedTracksHandler,
+  getPublishedTracksRoute,
+  getTrackHandler,
+  getTrackRoute,
   getTrackStreamHandler,
+  getTrackStreamRoute,
+  listTracksHandler,
+  listTracksRoute,
+  searchTracksHandler,
+  searchTracksRoute,
+  updateTrackHandler,
+  updateTrackRoute,
+  updateTrackStatusHandler,
+  updateTrackStatusRoute,
 } from '../controllers/track.controller'
+import type { Env } from '../lib/db'
 
 /**
  * Register track routes to the provided Hono app instance
@@ -34,17 +38,23 @@ export function registerTrackRoutes(app: OpenAPIHono<{ Bindings: Env }>) {
   // GET /api/tracks/:id - Get track metadata by ID
   app.openapi(getTrackRoute, getTrackHandler as never)
 
+  // GET /api/tracks/published - Get published tracks only (streaming-ready)
+  app.openapi(getPublishedTracksRoute, getPublishedTracksHandler as never)
+
+  // GET /api/tracks/search - Search tracks by title, artist, or album
+  app.openapi(searchTracksRoute, searchTracksHandler as never)
+
   // GET /api/tracks - List tracks (with optional filtering and pagination)
   app.openapi(listTracksRoute, listTracksHandler as never)
 
   // PATCH /api/tracks/:id - Update track metadata
   app.openapi(updateTrackRoute, updateTrackHandler as never)
 
+  // PATCH /api/tracks/:id/status - Update track status
+  app.openapi(updateTrackStatusRoute, updateTrackStatusHandler as never)
+
   // DELETE /api/tracks/:id - Delete track and associated R2 objects
   app.openapi(deleteTrackRoute, deleteTrackHandler as never)
-
-  // GET /api/tracks/search - Search tracks by title, artist, or album
-  app.openapi(searchTracksRoute, searchTracksHandler as never)
 
   // GET /api/tracks/:id/stream - Get streaming URL for track
   app.openapi(getTrackStreamRoute, getTrackStreamHandler as never)

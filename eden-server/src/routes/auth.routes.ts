@@ -2,28 +2,26 @@
  * Authentication routes - Login and Signup
  */
 
-import { type OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { z } from '@hono/zod-openapi'
+import { type OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 import { eq } from 'drizzle-orm'
+import { generateJWT } from '../lib/auth'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
-import { users, artists } from '../schema'
-import { generateJWT } from '../lib/auth'
-import { hashPassword, verifyPassword } from '../lib/password'
-import { handleError } from '../lib/errors'
 import { logger } from '../lib/logger'
+import { hashPassword, verifyPassword } from '../lib/password'
+import { users } from '../schema'
 
 // ============================================================================
 // Schemas
 // ============================================================================
 
 const LoginRequestSchema = z.object({
-  email: z.string().email().openapi({ example: 'user@example.com' }),
+  email: z.email().openapi({ example: 'user@example.com' }),
   password: z.string().min(6).openapi({ example: 'password123' }),
 })
 
 const SignupRequestSchema = z.object({
-  email: z.string().email().openapi({ example: 'newuser@example.com' }),
+  email: z.email().openapi({ example: 'newuser@example.com' }),
   password: z.string().min(8).openapi({ 
     example: 'SecurePass123!',
     description: 'Minimum 8 characters',
@@ -35,7 +33,7 @@ const AuthResponseSchema = z.object({
   token: z.string().openapi({ example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' }),
   user: z.object({
     id: z.string().openapi({ example: 'user-123' }),
-    email: z.string().email().openapi({ example: 'user@example.com' }),
+    email: z.email().openapi({ example: 'user@example.com' }),
     name: z.string().openapi({ example: 'John Doe' }),
     role: z.enum(['user', 'artist', 'admin']).openapi({ example: 'user' }),
   }),
