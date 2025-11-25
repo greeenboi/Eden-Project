@@ -19,7 +19,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(dashboard)/all-songs',
+  initialRouteName: '(dashboard)/index',
 };
 
 SplashScreen.setOptions({
@@ -57,21 +57,29 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { session } = useSession();
-
+  const { session, isLoading } = useSession();
+  console.log(session)
+  console.log(!!session)
+  
+  // Wait for auth initialization
+  if (isLoading) {
+    return null;
+  }
+  
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkThemeCustom : LightTheme}>
       <Stack screenOptions={{ headerShown: false }}>
+
         <Stack.Protected guard={!session}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
 
         <Stack.Protected guard={!!session}>
-          <Stack.Screen name="(home)" />
           <Stack.Screen name="(dashboard)" />
+          <Stack.Screen name="(home)" />
         </Stack.Protected>
 
-        <Stack.Screen name="(tabs)" />
+
       </Stack>
       <PortalHost />
     </ThemeProvider>

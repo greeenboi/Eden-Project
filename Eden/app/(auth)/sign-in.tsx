@@ -34,8 +34,8 @@ export default function SignIn() {
       } else {
         await signIn(email, password);
       }
-      // Navigate to all-songs after signing in
-      router.replace('/(dashboard)/all-songs');
+      // Navigate to index after signing in
+      router.replace('/(dashboard)/index');
     } catch (err) {
       // Error is handled by the auth store
       console.error(err);

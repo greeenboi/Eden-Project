@@ -12,7 +12,7 @@ export default function AppLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="all-songs" />
+      <Stack.Screen name="index" />
       <Stack.Screen name="search-songs" />
       <Stack.Screen name="playing-song" />
       <Stack.Screen name="artists" />
