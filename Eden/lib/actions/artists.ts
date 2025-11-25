@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-
-const API_BASE_URL = 'https://eden-server.suvan-gowrishanker-204.workers.dev';
+import { API_BASE_URL } from '../../constants/constants';
 
 export interface Artist {
   id: string;

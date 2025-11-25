@@ -1,7 +1,7 @@
 import { create } from 'zustand';
+import { API_BASE_URL } from '../constants/constants';
 import { setStorageItemAsync } from './useStorageState';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL;
 
 export interface User {
   id: string;
