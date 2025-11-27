@@ -1,23 +1,27 @@
 <template>
-  <Card class="p-4 container">
-    <template #header>
-      <div class="flex items-center gap-2 p-4 pb-0">
-        <i class="pi pi-music text-2xl text-primary"></i>
-        <h2 class="text-xl font-semibold m-0">Eden Music</h2>
-      </div>
-    </template>
-    <template #content>
-      <div class="flex flex-col gap-4">
-        <!-- Current Tab URL -->
-        <div class="flex items-center gap-2">
-          <i class="pi pi-link text-muted"></i>
-          <span class="text-sm text-muted">{{ currentUrl }}</span>
+  <div style="width: 100%; height: 600px; position: relative;">
+    <Plasma
+      color="#84cc16"
+      :speed="0.6"
+      direction="forward"
+      :scale="1.1"
+      :opacity="0.8"
+      :mouseInteractive="true"
+      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"
+    />
+    <Card class="p-4 container bg-transparent" style="position: relative; z-index: 1; background-color: transparent;">
+      <template #header class="bg-transparent">
+        <div class="flex items-center gap-2 p-4 pb-0">
+          <i class="pi pi-music text-2xl text-primary"></i>
+          <h2 class="text-xl font-semibold m-0">Eden Music</h2>
         </div>
-
+      </template>
+      <template #content>
+        <div class="flex flex-col gap-4">
         <!-- YouTube Video Info (if available) -->
         <Card v-if="isLoading" style="width: 25rem; overflow: hidden">
           <template #header>
-            <div class="p-4 bg-lime-50 dark:bg-lime-900/20">
+            <div class="p-4 bg-[#0F172A] dark:bg-[#0F172A]">
               <i class="pi pi-youtube text-red-600 text-2xl"></i>
             </div>
           </template>
@@ -33,10 +37,22 @@
           </template>
         </Card>
 
-        <Card v-else-if="youtubeVideo" style="width: 25rem; overflow: hidden">
+        <Card v-else-if="youtubeVideo" class="bg-[#0C1920]" style="width: 25rem;  overflow: hidden">
           <template #header>
-            <div class="p-4 bg-lime-50 dark:bg-lime-900/20 flex items-center justify-center">
-              <i class="pi pi-youtube text-red-600 text-4xl"></i>
+            <div class="p-4 bg-[#0F172A] dark:bg-[#0F172A] grid grid-cols-3 items-center">
+              <div></div>
+              <i class="pi pi-youtube text-red-600 text-4xl justify-self-center"></i>
+              <Button 
+                icon="pi pi-refresh"
+                aria-label="Refresh Video Info" 
+                severity="secondary"
+                variant="text"
+                rounded
+                size="small"
+                @click="handleRefresh"
+                v-ripple
+                class="justify-self-center"
+              />
             </div>
           </template>
           <template #title>{{ youtubeVideo.title }}</template>
@@ -70,8 +86,7 @@
         
         <Button 
           :label="isLoading ? 'Finding video...' : 'Upload to Eden'" 
-          icon="pi pi-cloud-upload" 
-          class="w-full"
+          :icon="isLoading ? '' : 'pi pi-upload'"
           severity="primary"
           @click="handleUpload"
           v-ripple
@@ -79,9 +94,9 @@
         >
           <template v-if="isLoading" #icon>
             <ProgressSpinner 
-              style="width: 20px; height: 20px" 
+              style="width: 16px; height: 16px" 
               strokeWidth="4" 
-              fill="transparent"
+              fill="var(--p-button-primary-background)"
               animationDuration=".5s" 
             />
           </template>
@@ -90,9 +105,10 @@
         <p v-if="!youtubeVideo && !isLoading" class="text-xs text-center text-gray-500">
           Navigate to a YouTube video to enable upload
         </p>
-      </div>
-    </template>
-  </Card>
+        </div>
+      </template>
+    </Card>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -106,11 +122,11 @@ import ProgressSpinner from 'primevue/progressspinner';
 import Ripple from 'primevue/ripple';
 import Skeleton from 'primevue/skeleton';
 import { onMounted, ref } from "vue";
+import Plasma from "./Plasma.vue";
 import "./style.css";
-
 const storage = new Storage({ area: 'local' })
 
-type ChromeTab = { url?: string }
+type ChromeTab = { url?: string; id?: number }
 type ChromeTabs = { query: (queryInfo: { active: boolean; currentWindow: boolean }) => Promise<ChromeTab[]> }
 type ChromeStorage = { 
   local: { 
@@ -131,11 +147,10 @@ interface YouTubeVideo {
 
 const currentUrl = ref('')
 const youtubeVideo = ref<YouTubeVideo | null>(null)
-const isLoading = ref(true)
+const isLoading = ref(false)
 
 async function loadYouTubeVideo() {
   console.log('[Eden Popup] Loading YouTube video from storage...')
-  isLoading.value = true
   
   try {
     const result = await storage.get<YouTubeVideo>('lastYouTubeVideo')
@@ -149,11 +164,6 @@ async function loadYouTubeVideo() {
   } catch (error) {
     console.error('[Eden Popup] ❌ Failed to load from storage:', error)
   }
-  
-  // Stop loading after 5 seconds if nothing found
-  setTimeout(() => {
-    isLoading.value = false
-  }, 5000)
 }
 
 onMounted(async () => {
@@ -180,8 +190,12 @@ onMounted(async () => {
     lastYouTubeVideo: (change) => {
       console.log('[Eden Popup] YouTube video updated:', change.newValue)
       if (change.newValue) {
-        youtubeVideo.value = change.newValue as YouTubeVideo
-        isLoading.value = false
+        const newVideo = change.newValue as YouTubeVideo
+        // Only update if it's a different video
+        if (!youtubeVideo.value || youtubeVideo.value.id !== newVideo.id) {
+          console.log('[Eden Popup] 🔄 New video detected, updating...')
+          youtubeVideo.value = newVideo
+        }
       }
     }
   })
@@ -206,6 +220,36 @@ function handleOpenVideo() {
 function handleCopyId() {
   if (youtubeVideo.value?.id) {
     navigator.clipboard.writeText(youtubeVideo.value.id)
+  }
+}
+
+async function handleRefresh() {
+  console.log('[Eden Popup] Manual refresh triggered')
+  isLoading.value = true
+  
+  // Send message to content script to re-extract video info
+  if (typeof window !== 'undefined' && (window as Window & { chrome?: ChromeAPI }).chrome?.tabs) {
+    const w = window as Window & { chrome?: ChromeAPI }
+    try {
+      const tabs = await w.chrome?.tabs?.query({ active: true, currentWindow: true })
+      const tab = tabs?.[0]
+      if (tab?.id) {
+        // Reload YouTube video data from storage after a short delay
+        setTimeout(async () => {
+          await loadYouTubeVideo()
+          isLoading.value = false
+        }, 1500)
+         
+        console.log('[Eden Popup] Refreshing video info for tab:', tab.id)
+      }
+    } catch (error) {
+      console.error('[Eden Popup] Failed to refresh:', error)
+      isLoading.value = false
+    }
+  } else {
+    // Just reload from storage if chrome API not available
+    await loadYouTubeVideo()
+    isLoading.value = false
   }
 }
 

@@ -12,6 +12,7 @@
   "dependencies": {
     "@plasmohq/storage": "^1.15.0",
     "@primeuix/themes": "^2.0.1",
+    "ogl": "^1.0.11",
     "plasmo": "0.90.5",
     "primeicons": "^7.0.0",
     "primevue": "^4.4.1",

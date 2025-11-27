@@ -14,6 +14,9 @@ importers:
       '@primeuix/themes':
         specifier: ^2.0.1
         version: 2.0.1
+      ogl:
+        specifier: ^1.0.11
+        version: 1.0.11
       plasmo:
         specifier: 0.90.5
         version: 0.90.5(@swc/core@1.15.3(@swc/helpers@0.5.17))(@swc/helpers@0.5.17)(@types/node@20.11.5)(postcss@8.5.6)
@@ -2615,6 +2618,9 @@ packages:
   object-hash@3.0.0:
     resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
     engines: {node: '>= 6'}
+
+  ogl@1.0.11:
+    resolution: {integrity: sha512-kUpC154AFfxi16pmZUK4jk3J+8zxwTWGPo03EoYA8QPbzikHoaC82n6pNTbd+oEaJonaE8aPWBlX7ad9zrqLsA==}
 
   onetime@5.1.2:
     resolution: {integrity: sha512-kbpaSSGJTWdAY5KPVeMOKXSrPtr8C8C7wodJbcsd51jRnmD+GZu8Y0VoU6Dm5Z4vWr0Ig/1NKuWRKf7j5aaYSg==}
@@ -5952,6 +5958,8 @@ snapshots:
   object-assign@4.1.1: {}
 
   object-hash@3.0.0: {}
+
+  ogl@1.0.11: {}
 
   onetime@5.1.2:
     dependencies:

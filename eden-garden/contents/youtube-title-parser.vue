@@ -93,15 +93,33 @@ export default {
     
     // Watch for URL changes (for navigation within YouTube)
     let lastUrl = window.location.href
-    const observer = new MutationObserver(() => {
+    
+    // Use both navigation listener and mutation observer for reliability
+    const checkUrlChange = () => {
       const currentUrl = window.location.href
       if (currentUrl !== lastUrl) {
-        console.log('[Eden] URL changed, re-extracting...')
+        console.log('[Eden] URL changed from:', lastUrl)
+        console.log('[Eden] URL changed to:', currentUrl)
         lastUrl = currentUrl
-        setTimeout(extractVideoInfo, 1000)
+        
+        // Extract immediately, then retry after delays
+        setTimeout(() => {
+          console.log('[Eden] Extracting after URL change...')
+          extractVideoInfo()
+        }, 500)
+        
+        setTimeout(() => {
+          console.log('[Eden] Retrying extraction after 2 seconds...')
+          extractVideoInfo()
+        }, 2000)
       }
-    })
+    }
     
+    // Check URL every 500ms (lightweight check)
+    setInterval(checkUrlChange, 500)
+    
+    // Also use MutationObserver as backup
+    const observer = new MutationObserver(checkUrlChange)
     observer.observe(document.body, {
       childList: true,
       subtree: true
