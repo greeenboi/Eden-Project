@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.container {
+  min-width: 470px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 47px;
+}
+.text-center {
+  text-align: center;
+}
+.action {
+  color: #470;
+  font-weight: bold;
+}
+.text-muted {
+  color: var(--p-text-muted-color);
+}
