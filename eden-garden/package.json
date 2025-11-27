@@ -10,6 +10,7 @@
     "package": "plasmo package"
   },
   "dependencies": {
+    "@plasmohq/storage": "^1.15.0",
     "@primeuix/themes": "^2.0.1",
     "plasmo": "0.90.5",
     "primeicons": "^7.0.0",
