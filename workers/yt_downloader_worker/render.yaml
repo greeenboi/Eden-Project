@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: yt-downloader-worker
+    runtime: docker
+    plan: free
+    autoDeploy: false
+    dockerfilePath: ./Dockerfile
