@@ -13,30 +13,6 @@ from workers import WorkerEntrypoint
 app = FastAPI()
 
 
-def extract_artist_from_title(title: str) -> tuple[str, str]:
-    """
-    Extract artist and song name from YouTube title
-    Common patterns: "Artist - Song", "Song by Artist", "Artist: Song"
-    """
-    # Try different separators
-    for separator in [" - ", " – ", " | ", ": "]:
-        if separator in title:
-            parts = title.split(separator, 1)
-            if len(parts) == 2:
-                # Assume first part is artist for ' - ' pattern
-                if separator in [" - ", " – ", ": "]:
-                    return parts[0].strip(), parts[1].strip()
-
-    # Try "by" pattern: "Song Name by Artist"
-    if " by " in title.lower():
-        parts = title.lower().split(" by ", 1)
-        if len(parts) == 2:
-            return parts[1].strip().title(), parts[0].strip().title()
-
-    # Default: use full title as song name, unknown artist
-    return "Unknown Artist", title.strip()
-
-
 @app.get("/")
 async def root():
     return {
