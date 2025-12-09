@@ -1,9 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
 from functions.spotify_metadata import (
-    SpotifyArtistMetadata,
-    SpotifyMetadataRequest,
-    SpotifyMetadataResponse,
-    SpotifyTrackMetadata,
     search_spotify_api,
 )
 from workers import WorkerEntrypoint
