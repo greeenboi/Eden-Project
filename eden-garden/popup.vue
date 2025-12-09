@@ -105,6 +105,54 @@
         <p v-if="!youtubeVideo && !isLoading" class="text-xs text-center text-gray-500">
           Navigate to a YouTube video to enable upload
         </p>
+
+        <Card v-if="showDetails" class="bg-[#0C1920]" style="width: 25rem; overflow: hidden">
+          <template #header>
+            <div class="p-4 bg-[#0F172A] dark:bg-[#0F172A] flex items-center gap-2">
+              <i class="pi pi-info-circle text-primary text-2xl"></i>
+              <span class="font-semibold">Track Details</span>
+            </div>
+          </template>
+
+          <template #content>
+            <div v-if="isFetchingMetadata" class="flex flex-col gap-2">
+              <Skeleton class="h-5" width="70%" />
+              <Skeleton class="h-4" width="50%" />
+              <Skeleton class="h-4" width="60%" />
+            </div>
+
+            <div v-else-if="metadataError" class="text-sm text-red-400">
+              {{ metadataError }}
+            </div>
+
+            <div v-else-if="trackMetadata" class="flex flex-col gap-2 text-sm">
+              <div class="font-semibold text-lg">{{ trackMetadata.track?.title || 'Unknown title' }}</div>
+              <div class="text-muted">Artist: {{ trackMetadata.artist?.name || 'Unknown artist' }}</div>
+              <div>Album: {{ trackMetadata.track?.album || 'Unknown album' }}</div>
+              <div>Genre: {{ trackMetadata.track?.genre || 'Unknown' }}</div>
+              <div>Duration: {{ trackMetadata.track?.duration ? (trackMetadata.track.duration).toFixed(1) + 's' : 'Unknown' }}</div>
+              <div v-if="trackMetadata.track?.isrc">ISRC: {{ trackMetadata.track.isrc }}</div>
+              <div class="flex gap-2 mt-2">
+                <Button
+                  label="Push to Eden"
+                  icon="pi pi-cloud-upload"
+                  size="small"
+                  @click="handlePush"
+                />
+                <Button
+                  v-if="trackMetadata.track?.spotifyUri"
+                  label="Open in Spotify"
+                  icon="pi pi-external-link"
+                  severity="secondary"
+                  size="small"
+                  @click="() => handleOpenSpotify(trackMetadata.track?.spotifyUri)"
+                />
+              </div>
+            </div>
+
+            <div v-else class="text-sm text-muted">No metadata loaded yet.</div>
+          </template>
+        </Card>
         </div>
       </template>
     </Card>
@@ -148,6 +196,15 @@ interface YouTubeVideo {
 const currentUrl = ref('')
 const youtubeVideo = ref<YouTubeVideo | null>(null)
 const isLoading = ref(false)
+const isFetchingMetadata = ref(false)
+const metadataError = ref('')
+const trackMetadata = ref<any | null>(null)
+const showDetails = ref(false)
+
+function resetMetadataState() {
+  metadataError.value = ''
+  trackMetadata.value = null
+}
 
 async function loadYouTubeVideo() {
   console.log('[Eden Popup] Loading YouTube video from storage...')
@@ -203,11 +260,53 @@ onMounted(async () => {
 })
 
 function handleUpload() {
-  if (youtubeVideo.value) {
-    console.log('Uploading YouTube video:', youtubeVideo.value)
-    // TODO: Implement actual upload logic to Eden server
-  } else {
+  if (!youtubeVideo.value) {
     console.log('No YouTube video to upload')
+    return
+  }
+
+  // Query worker API for metadata
+  resetMetadataState()
+  isFetchingMetadata.value = true
+  showDetails.value = true
+
+  const body = { query: youtubeVideo.value.title }
+
+  fetch('https://youtube-extension-worker.suvan-gowrishanker-204.workers.dev/metadata/spotify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || `Request failed with status ${res.status}`)
+      }
+      return res.json()
+    })
+    .then((data) => {
+      trackMetadata.value = data
+    })
+    .catch((err) => {
+      console.error('[Eden Popup] Metadata fetch failed:', err)
+      metadataError.value = 'Failed to fetch metadata. Please try again.'
+    })
+    .finally(() => {
+      isFetchingMetadata.value = false
+    })
+}
+
+function handlePush() {
+  // TODO: fetch audio and push to R2 via Eden API
+  console.log('[Eden Popup] handlePush placeholder')
+}
+
+function handleOpenSpotify(uri?: string) {
+  if (!uri) return
+  if (typeof window !== 'undefined') {
+    window.open(uri, '_blank')
   }
 }
 
