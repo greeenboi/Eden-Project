@@ -44,13 +44,14 @@ async def root():
     }
 
 
-@app.post("/metadata/spotify", response_model=SpotifyMetadataResponse)
-async def spotify_metadata(req: Request, payload: SpotifyMetadataRequest):
+@app.post("/metadata/spotify")
+async def spotify_metadata(req: Request, payload: dict):
     env = req.scope["env"]
-    """
-    Fetch track and artist metadata from Spotify using the provided query.
-    """
-    track_data, artist_data = await search_spotify_api(payload.query, env)
+    # Basic validation without Pydantic
+    if not isinstance(payload, dict) or not payload.get("query"):
+        raise HTTPException(status_code=400, detail="Field 'query' is required")
+
+    track_data, artist_data = await search_spotify_api(payload.get("query"), env)
 
     if not track_data:
         raise HTTPException(status_code=404, detail="Track not found on Spotify")
@@ -73,30 +74,31 @@ async def spotify_metadata(req: Request, payload: SpotifyMetadataRequest):
     if artist_data and artist_data.get("followers") is not None:
         artist_bio = f"{artist_name} has {artist_data['followers']} Spotify followers"
 
-    return SpotifyMetadataResponse(
-        track=SpotifyTrackMetadata(
-            title=track_data.get("title") or payload.query,
-            duration=duration_seconds,
-            explicit=bool(track_data.get("explicit", False)),
-            genre=genres[0] if genres else None,
-            isrc=track_data.get("isrc"),
-            image=track_image,
-            album=track_data.get("album_name"),
-            spotifyTrackId=track_data.get("spotify_track_id"),
-            spotifyUri=track_data.get("spotify_uri"),
-        ),
-        artist=SpotifyArtistMetadata(
-            name=artist_name,
-            email=None,
-            avatarUrl=(artist_data or {}).get("image_url"),
-            bio=artist_bio,
-            profile=None,
-            genres=genres,
-            spotifyUri=(artist_data or {}).get("spotify_uri"),
-            followers=(artist_data or {}).get("followers"),
-            popularity=(artist_data or {}).get("popularity"),
-        ),
-    )
+    return {
+        "source": "spotify",
+        "track": {
+            "title": track_data.get("title") or payload.get("query"),
+            "duration": duration_seconds,
+            "explicit": bool(track_data.get("explicit", False)),
+            "genre": genres[0] if genres else None,
+            "isrc": track_data.get("isrc"),
+            "image": track_image,
+            "album": track_data.get("album_name"),
+            "spotifyTrackId": track_data.get("spotify_track_id"),
+            "spotifyUri": track_data.get("spotify_uri"),
+        },
+        "artist": {
+            "name": artist_name,
+            "email": None,
+            "avatarUrl": (artist_data or {}).get("image_url"),
+            "bio": artist_bio,
+            "profile": None,
+            "genres": genres,
+            "spotifyUri": (artist_data or {}).get("spotify_uri"),
+            "followers": (artist_data or {}).get("followers"),
+            "popularity": (artist_data or {}).get("popularity"),
+        },
+    }
 
 
 class Default(WorkerEntrypoint):

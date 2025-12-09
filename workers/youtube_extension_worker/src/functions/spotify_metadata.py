@@ -1,12 +1,8 @@
-"""Spotify metadata helper functions and response models."""
+"""Spotify metadata helper functions and lightweight dict schemas (no Pydantic)."""
 
-import os
-from typing import Tuple
-
+from typing import TypedDict, Tuple, Optional, List, Dict, Any
 import httpx
 from fastapi import HTTPException
-from pydantic import BaseModel
-from dotenv import load_dotenv
 
 __all__ = [
     "SpotifyMetadataRequest",
@@ -20,39 +16,42 @@ __all__ = [
 ]
 
 
-load_dotenv()
-
-
-class SpotifyMetadataRequest(BaseModel):
+class SpotifyMetadataRequest(TypedDict):
     query: str
 
 
-class SpotifyArtistMetadata(BaseModel):
-    name: str | None = None
-    email: str | None = None
-    avatarUrl: str | None = None
-    bio: str | None = None
-    profile: str | None = None
-    genres: list[str] | None = None
-    spotifyUri: str | None = None
-    followers: int | None = None
-    popularity: int | None = None
+class SpotifyArtistMetadata(TypedDict, total=False):
+    name: Optional[str]
+    email: Optional[str]
+    avatarUrl: Optional[str]
+    bio: Optional[str]
+    profile: Optional[str]
+    genres: Optional[List[str]]
+    spotifyUri: Optional[str]
+    followers: Optional[int]
+    popularity: Optional[int]
+    image_url: Optional[str]
 
 
-class SpotifyTrackMetadata(BaseModel):
+class SpotifyTrackMetadata(TypedDict, total=False):
     title: str
-    duration: float | None = None
-    explicit: bool = False
-    genre: str | None = None
-    isrc: str | None = None
-    image: str | None = None
-    album: str | None = None
-    spotifyTrackId: str | None = None
-    spotifyUri: str | None = None
+    duration: Optional[float]
+    explicit: bool
+    genre: Optional[str]
+    isrc: Optional[str]
+    image: Optional[str]
+    album: Optional[str]
+    spotifyTrackId: Optional[str]
+    spotifyUri: Optional[str]
+    album_image_url: Optional[str]
+    artist_name: Optional[str]
+    artist_id: Optional[str]
+    duration_ms: Optional[int]
+    popularity: Optional[int]
 
 
-class SpotifyMetadataResponse(BaseModel):
-    source: str = "spotify"
+class SpotifyMetadataResponse(TypedDict):
+    source: str
     track: SpotifyTrackMetadata
     artist: SpotifyArtistMetadata
 
@@ -72,7 +71,7 @@ async def get_spotify_token(client_id: str, client_secret: str) -> str:
         raise HTTPException(status_code=500, detail=detail)
 
 
-async def search_spotify_track(query: str, token: str) -> dict | None:
+async def search_spotify_track(query: str, token: str) -> Dict[str, Any] | None:
     """Search Spotify for track information and return minimal metadata."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -124,7 +123,7 @@ async def search_spotify_track(query: str, token: str) -> dict | None:
         )
 
 
-async def get_spotify_artist(artist_id: str, token: str) -> dict | None:
+async def get_spotify_artist(artist_id: str, token: str) -> Dict[str, Any] | None:
     """Get detailed Spotify artist information."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -157,7 +156,7 @@ async def get_spotify_artist(artist_id: str, token: str) -> dict | None:
         )
 
 
-async def search_spotify_api(query: str, env) -> Tuple[dict | None, dict | None]:
+async def search_spotify_api(query: str, env) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None]:
     """
     Search Spotify and return track and artist metadata.
 
