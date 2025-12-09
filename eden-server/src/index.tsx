@@ -9,19 +9,18 @@
  * - Hono with OpenAPI for type-safe API routing
  */
 
-import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
-import { prettyJSON } from 'hono/pretty-json'
-import { z } from '@hono/zod-openapi'
-import { renderer } from './renderer'
+import { OpenAPIHono } from '@hono/zod-openapi'
 import { Scalar } from '@scalar/hono-api-reference'
-import type { Env } from './lib/db'
-import { handleError } from './lib/errors'
 import { cors } from 'hono/cors'
-import { registerUploadRoutes } from './routes/upload.routes'
-import { registerTrackRoutes } from './routes/track.routes'
+import { prettyJSON } from 'hono/pretty-json'
+import type { Env } from './lib/db'
+import { logger as workerLogger } from './lib/logger'
+import { renderer } from './renderer'
 import { registerArtistRoutes } from './routes/artist.routes'
-import { registerHomeRoutes } from './routes/home.routes.tsx'
 import { registerAuthRoutes } from './routes/auth.routes'
+import { registerHomeRoutes } from './routes/home.routes.tsx'
+import { registerTrackRoutes } from './routes/track.routes'
+import { registerUploadRoutes } from './routes/upload.routes'
 
 // Initialize Hono app with Cloudflare bindings
 const app = new OpenAPIHono<{ Bindings: Env }>()
@@ -34,8 +33,41 @@ app.use('/api/*', cors({
   allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }))
-
 app.use(prettyJSON()) 
+
+// Custom request/response logger with status coloring and human-readable timings
+app.use('*', async (c, next) => {
+  const start = Date.now()
+  const { method } = c.req
+  const path = new URL(c.req.url).pathname
+
+  // Log incoming request
+  workerLogger.info('Incoming request', { method, path })
+  console.log(`<-- ${method} ${path}`)
+
+  await next()
+
+  const status = c.res.status || 0
+  const durationMs = Date.now() - start
+  const durationHuman = durationMs < 1000
+    ? `${durationMs}ms`
+    : `${(durationMs / 1000).toFixed(2)}s`
+
+  const statusColor = (() => {
+    if (status >= 500) return '\x1b[31m' // red
+    if (status >= 400) return '\x1b[33m' // yellow
+    if (status >= 300) return '\x1b[36m' // cyan
+    if (status >= 200) return '\x1b[32m' // green
+    return '\x1b[35m' // magenta for other codes
+  })()
+
+  const resetColor = '\x1b[0m'
+  const coloredStatus = `${statusColor}${status}${resetColor}`
+
+  // Structured log for observability; console for quick readability
+  workerLogger.info('Outgoing response', { method, path, status, durationMs })
+  console.log(`--> ${method} ${path} ${coloredStatus} ${durationHuman}`)
+})
 
 // Error handling middleware
 app.onError((err, c) => {
@@ -142,7 +174,7 @@ app.get(
   Scalar({
     url: '/doc',
     pageTitle: 'Eden Server API Documentation',
-    theme: 'mars',
+    theme: 'kepler',
     layout: 'modern',
     expandAllModelSections: true,
     defaultOpenAllTags: true,

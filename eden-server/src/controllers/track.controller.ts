@@ -4,6 +4,7 @@
  */
 
 import { createRoute, z } from '@hono/zod-openapi'
+import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
@@ -74,15 +75,18 @@ export const createTrackRoute = createRoute({
   },
 })
 
-export async function createTrackHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+type ValidatedContext = Context<{ Bindings: Env }> & {
+  req: Context['req'] & { valid: (t: 'json' | 'param' | 'query') => unknown }
+}
+
+export async function createTrackHandler(c: ValidatedContext) {
   try {
-    const body = ctx.req.valid('json') as { artistId: string; title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
-    const db = getDb(ctx.env)
+    const body = c.req.valid('json') as { artistId: string; title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
+    const db = getDb(c.env)
     
-    const track = await createTrack(db, ctx.env, body)
+    const track = await createTrack(db, c.env, body)
     
-    return ctx.json({
+    return c.json({
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
@@ -100,7 +104,7 @@ export async function createTrackHandler(c: unknown) {
     }, 201)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -142,16 +146,15 @@ export const getTrackRoute = createRoute({
   },
 })
 
-export async function getTrackHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function getTrackHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    const trackWithRelations = await getTrackWithRelations(db, ctx.env, id)
+    const trackWithRelations = await getTrackWithRelations(db, c.env, id)
     
     if (!trackWithRelations) {
-      return ctx.json({
+      return c.json({
         error: 'NotFoundError',
         message: `Track with id '${id}' not found`,
       }, 404)
@@ -176,10 +179,10 @@ export async function getTrackHandler(c: unknown) {
       } : null,
     }
     
-    return ctx.json(track, 200)
+    return c.json(track, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -228,11 +231,10 @@ export const listTracksRoute = createRoute({
   },
 })
 
-export async function listTracksHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function listTracksHandler(c: ValidatedContext) {
   try {
-    const query = ctx.req.valid('query') as { page: number; limit: number; artistId?: string; albumId?: string; status?: string }
-    const db = getDb(ctx.env)
+    const query = c.req.valid('query') as { page: number; limit: number; artistId?: string; albumId?: string; status?: string }
+    const db = getDb(c.env)
     
     const { page, limit, artistId, albumId, status } = query
     const offset = (page - 1) * limit
@@ -263,7 +265,7 @@ export async function listTracksHandler(c: unknown) {
       updatedAt: track.updatedAt.toISOString(),
     }))
     
-    return ctx.json({
+    return c.json({
       tracks: transformedTracks,
       pagination: {
         page,
@@ -273,7 +275,7 @@ export async function listTracksHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -322,16 +324,15 @@ export const updateTrackRoute = createRoute({
   },
 })
 
-export async function updateTrackHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function updateTrackHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const body = ctx.req.valid('json') as { title?: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const body = c.req.valid('json') as { title?: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
+    const db = getDb(c.env)
     
-    const track = await updateTrack(db, ctx.env, id, body)
+    const track = await updateTrack(db, c.env, id, body)
     
-    return ctx.json({
+    return c.json({
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
@@ -349,7 +350,7 @@ export async function updateTrackHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -411,20 +412,19 @@ export const updateTrackStatusRoute = createRoute({
   },
 })
 
-export async function updateTrackStatusHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function updateTrackStatusHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const body = ctx.req.valid('json') as { 
+    const { id } = c.req.valid('param') as { id: string }
+    const body = c.req.valid('json') as { 
       status: 'initiated' | 'uploaded' | 'processing' | 'published' | 'failed'
       encodings?: Record<string, string>
       duration?: number 
     }
-    const db = getDb(ctx.env)
+    const db = getDb(c.env)
     
-    const track = await updateTrackStatus(db, ctx.env, id, body.status, body)
+    const track = await updateTrackStatus(db, c.env, id, body.status, body)
     
-    return ctx.json({
+    return c.json({
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
@@ -442,7 +442,7 @@ export async function updateTrackStatusHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -487,21 +487,20 @@ export const deleteTrackRoute = createRoute({
   },
 })
 
-export async function deleteTrackHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function deleteTrackHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    await deleteTrack(db, ctx.env, id)
+    await deleteTrack(db, c.env, id)
     
-    return ctx.json({
+    return c.json({
       success: true,
       message: 'Track deleted successfully',
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -546,11 +545,10 @@ export const getPublishedTracksRoute = createRoute({
   },
 })
 
-export async function getPublishedTracksHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function getPublishedTracksHandler(c: ValidatedContext) {
   try {
-    const query = ctx.req.valid('query') as { page: number; limit: number; artistId?: string; albumId?: string }
-    const db = getDb(ctx.env)
+    const query = c.req.valid('query') as { page: number; limit: number; artistId?: string; albumId?: string }
+    const db = getDb(c.env)
     
     const { page, limit, artistId, albumId } = query
     const offset = (page - 1) * limit
@@ -580,7 +578,7 @@ export async function getPublishedTracksHandler(c: unknown) {
       updatedAt: track.updatedAt.toISOString(),
     }))
     
-    return ctx.json({
+    return c.json({
       tracks: transformedTracks,
       pagination: {
         page,
@@ -590,7 +588,7 @@ export async function getPublishedTracksHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -631,11 +629,10 @@ export const searchTracksRoute = createRoute({
   },
 })
 
-export async function searchTracksHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function searchTracksHandler(c: ValidatedContext) {
   try {
-    const { q: query, limit } = ctx.req.valid('query') as { q: string; limit: number }
-    const db = getDb(ctx.env)
+    const { q: query, limit } = c.req.valid('query') as { q: string; limit: number }
+    const db = getDb(c.env)
     
     const tracks = await searchTracks(db, query, limit)
     
@@ -657,13 +654,13 @@ export async function searchTracksHandler(c: unknown) {
       updatedAt: track.updatedAt.toISOString(),
     }))
     
-    return ctx.json({
+    return c.json({
       tracks: transformedTracks,
       query,
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -691,7 +688,7 @@ export const getTrackStreamRoute = createRoute({
         'application/json': {
           schema: z.object({
             streamUrl: z.url().openapi({ description: 'Signed streaming URL' }),
-            expiresAt: z.string().datetime().openapi({ description: 'URL expiration timestamp' }),
+            expiresAt: z.iso.datetime().openapi({ description: 'URL expiration timestamp' }),
             expiresIn: z.number().openapi({ description: 'Seconds until expiration' }),
             track: TrackResponseSchema,
           }),
@@ -710,39 +707,38 @@ export const getTrackStreamRoute = createRoute({
   },
 })
 
-export async function getTrackStreamHandler(c: unknown) {
-  const ctx = c as { req: { param: () => { id: string } }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function getTrackStreamHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.param()
-    const db = getDb(ctx.env)
+    const { id } = c.req.param()
+    const db = getDb(c.env)
     
     // Get track with relations to get all fields
-    const track = await getTrackWithRelations(db, ctx.env, id)
+    const track = await getTrackWithRelations(db, c.env, id)
     
     if (!track) {
-      return ctx.json({
+      return c.json({
         error: 'NotFoundError',
         message: `Track with id '${id}' not found`,
       }, 404)
     }
     
     if (!track.r2KeyOriginal) {
-      return ctx.json({
+      return c.json({
         error: 'ValidationError',
         message: 'Track does not have an audio file',
       }, 400)
     }
     
     // Generate signed GET URL (valid for 1 hour)
-    const { url: streamUrl, expiresAt } = await generateSignedUrl(ctx.env, {
+    const { url: streamUrl, expiresAt } = await generateSignedUrl(c.env, {
       key: track.r2KeyOriginal,
       method: 'GET',
-      expiresIn: 3600, // 1 hour
+      expiresIn: 36 , // 1 hour
     })
     
     const expiresIn = Math.floor((expiresAt.getTime() - Date.now()) / 1000)
     
-    return ctx.json({
+    return c.json({
       streamUrl,
       expiresAt: expiresAt.toISOString(),
       expiresIn,
@@ -764,6 +760,6 @@ export async function getTrackStreamHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }

@@ -4,21 +4,22 @@
  */
 
 import { createRoute, z } from '@hono/zod-openapi'
+import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
 import {
-    CompleteUploadRequestSchema,
-    ErrorResponseSchema,
-    InitiateUploadRequestSchema,
-    InitiateUploadResponseSchema,
-    UploadStatusResponseSchema,
+  CompleteUploadRequestSchema,
+  ErrorResponseSchema,
+  InitiateUploadRequestSchema,
+  InitiateUploadResponseSchema,
+  UploadStatusResponseSchema,
 } from '../models/dtos'
 import {
-    completeUpload,
-    getUploadStatus,
-    initiateUpload,
-    listUploads,
+  completeUpload,
+  getUploadStatus,
+  initiateUpload,
+  listUploads,
 } from '../services/upload.service'
 
 /**
@@ -68,13 +69,16 @@ export const initiateUploadRoute = createRoute({
   },
 })
 
-export async function initiateUploadHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+type ValidatedContext = Context<{ Bindings: Env }> & {
+  req: Context['req'] & { valid: (t: 'json' | 'param' | 'query') => unknown }
+}
+
+export async function initiateUploadHandler(c: ValidatedContext) {
   try {
-    const body = ctx.req.valid('json') as { artistId: string; filename: string; fileSize: number; mimeType: string; metadata?: Record<string, unknown> }
-    const db = getDb(ctx.env)
+    const body = c.req.valid('json') as { artistId: string; filename: string; fileSize: number; mimeType: string; metadata?: Record<string, unknown> }
+    const db = getDb(c.env)
     
-    const result = await initiateUpload(db, ctx.env, {
+    const result = await initiateUpload(db, c.env, {
       artistId: body.artistId,
       filename: body.filename,
       fileSize: body.fileSize,
@@ -82,10 +86,10 @@ export async function initiateUploadHandler(c: unknown) {
       metadata: body.metadata,
     })
     
-    return ctx.json(result, 200)
+    return c.json(result, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -157,23 +161,22 @@ export const completeUploadRoute = createRoute({
   },
 })
 
-export async function completeUploadHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function completeUploadHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const body = ctx.req.valid('json') as { trackMetadata: { title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean } }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const body = c.req.valid('json') as { trackMetadata: { title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean } }
+    const db = getDb(c.env)
     
-    const track = await completeUpload(db, ctx.env, id, body.trackMetadata)
+    const track = await completeUpload(db, c.env, id, body.trackMetadata)
     
-    return ctx.json({
+    return c.json({
       success: true,
       trackId: track.id,
       message: 'Upload completed successfully. Track is now being processed.',
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -226,22 +229,21 @@ export const getUploadStatusRoute = createRoute({
   },
 })
 
-export async function getUploadStatusHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function getUploadStatusHandler(c: ValidatedContext) {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    const upload = await getUploadStatus(db, ctx.env, id)
+    const upload = await getUploadStatus(db, c.env, id)
     
     if (!upload) {
-      return ctx.json({
+      return c.json({
         error: 'NotFoundError',
         message: `Upload with id '${id}' not found`,
       }, 404)
     }
     
-    return ctx.json({
+    return c.json({
       uploadId: upload.id,
       status: upload.status,
       trackId: upload.trackId,
@@ -254,7 +256,7 @@ export async function getUploadStatusHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -316,12 +318,11 @@ export const listUploadsRoute = createRoute({
   },
 })
 
-export async function listUploadsHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export async function listUploadsHandler(c: ValidatedContext) {
   try {
-    const { artistId } = ctx.req.valid('param') as { artistId: string }
-    const { page, limit } = ctx.req.valid('query') as { page: number; limit: number }
-    const db = getDb(ctx.env)
+    const { artistId } = c.req.valid('param') as { artistId: string }
+    const { page, limit } = c.req.valid('query') as { page: number; limit: number }
+    const db = getDb(c.env)
     
     const offset = (page - 1) * limit
     const uploads = await listUploads(db, artistId, limit, offset)
@@ -339,7 +340,7 @@ export async function listUploadsHandler(c: unknown) {
       completedAt: upload.completedAt?.toISOString() || null,
     }))
     
-    return ctx.json({
+    return c.json({
       uploads: transformedUploads,
       pagination: {
         page,
@@ -349,6 +350,6 @@ export async function listUploadsHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }

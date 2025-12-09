@@ -149,15 +149,20 @@ export async function generateSignedUrl(
   }
   
   // Sign the URL
-  const signedRequest = await client.sign(url, {
-    method,
-    headers,
-    aws: {
-      signQuery: true,
-      datetime: new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
-      allHeaders: false,
-    },
-  })
+  // aws4fetch supports an expires option for query-signed URLs, but its types do not include it.
+  const signedRequest = await client.sign(
+    url,
+    {
+      method,
+      headers,
+      aws: {
+        signQuery: true,
+        datetime: new Date().toISOString().replace(/[:-]|\.\d{3}/g, ''),
+        allHeaders: false,
+        expires: expiresIn, // seconds until expiration
+      } as Record<string, unknown>,
+    } as RequestInit & { aws?: Record<string, unknown> }
+  )
   
   return {
     url: signedRequest.url,

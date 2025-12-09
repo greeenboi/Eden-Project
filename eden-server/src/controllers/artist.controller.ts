@@ -4,6 +4,7 @@
  */
 
 import { createRoute, z } from '@hono/zod-openapi'
+import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
@@ -74,22 +75,25 @@ export const createArtistRoute = createRoute({
   },
 })
 
-export async function createArtistHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+type ValidatedContext = Context<{ Bindings: Env }> & {
+  req: Context['req'] & { valid: (t: 'json' | 'param' | 'query') => unknown }
+}
+
+export const createArtistHandler = async (c: ValidatedContext) => {
   try {
-    const body = ctx.req.valid('json') as { name: string; email: string; profile?: string; bio?: string; avatarUrl?: string }
-    const db = getDb(ctx.env)
+    const body = c.req.valid('json') as { name: string; email: string; profile?: string; bio?: string; avatarUrl?: string }
+    const db = getDb(c.env)
     
-    const artist = await createArtist(db, ctx.env, body)
+    const artist = await createArtist(db, c.env, body)
     
-    return ctx.json({
+    return c.json({
       ...artist,
       createdAt: artist.createdAt?.toISOString() || '',
       updatedAt: artist.updatedAt?.toISOString() || '',
     }, 201)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -141,22 +145,21 @@ export const getArtistRoute = createRoute({
   },
 })
 
-export async function getArtistHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const getArtistHandler = async (c: ValidatedContext) => {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    const artist = await getArtistById(db, ctx.env, id)
+    const artist = await getArtistById(db, c.env, id)
     
-    return ctx.json({
+    return c.json({
       ...artist,
       createdAt: artist.createdAt?.toISOString() || '',
       updatedAt: artist.updatedAt?.toISOString() || '',
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -226,23 +229,22 @@ export const updateArtistRoute = createRoute({
   },
 })
 
-export async function updateArtistHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const updateArtistHandler = async (c: ValidatedContext) => {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const body = ctx.req.valid('json') as { name?: string; email?: string; profile?: string; bio?: string; avatarUrl?: string; verified?: boolean }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const body = c.req.valid('json') as { name?: string; email?: string; profile?: string; bio?: string; avatarUrl?: string; verified?: boolean }
+    const db = getDb(c.env)
     
-    const artist = await updateArtist(db, ctx.env, id, body)
+    const artist = await updateArtist(db, c.env, id, body)
     
-    return ctx.json({
+    return c.json({
       ...artist,
       createdAt: artist.createdAt?.toISOString() || '',
       updatedAt: artist.updatedAt?.toISOString() || '',
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -283,18 +285,17 @@ export const deleteArtistRoute = createRoute({
   },
 })
 
-export async function deleteArtistHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const deleteArtistHandler = async (c: ValidatedContext) => {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    await deleteArtist(db, ctx.env, id)
+    await deleteArtist(db, c.env, id)
     
-    return ctx.json({ success: true }, 204)
+    return c.json({ success: true }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -357,15 +358,14 @@ export const listArtistsRoute = createRoute({
   },
 })
 
-export async function listArtistsHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const listArtistsHandler = async (c: ValidatedContext) => {
   try {
-    const { page, limit, verified } = ctx.req.valid('query') as { page: number; limit: number; verified?: boolean }
-    const db = getDb(ctx.env)
+    const { page, limit, verified } = c.req.valid('query') as { page: number; limit: number; verified?: boolean }
+    const db = getDb(c.env)
     
     const result = await listArtists(db, page, limit, verified)
     
-    return ctx.json({
+    return c.json({
       artists: result.artists.map(artist => ({
         ...artist,
         createdAt: artist.createdAt?.toISOString() || '',
@@ -379,7 +379,7 @@ export async function listArtistsHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -427,18 +427,17 @@ export const getArtistStatsRoute = createRoute({
   },
 })
 
-export async function getArtistStatsHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const getArtistStatsHandler = async (c: ValidatedContext) => {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const db = getDb(c.env)
     
-    const stats = await getArtistStats(db, ctx.env, id)
+    const stats = await getArtistStats(db, c.env, id)
     
-    return ctx.json(stats, 200)
+    return c.json(stats, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -501,16 +500,15 @@ export const getArtistTracksRoute = createRoute({
   },
 })
 
-export async function getArtistTracksHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const getArtistTracksHandler = async (c: ValidatedContext) => {
   try {
-    const { id } = ctx.req.valid('param') as { id: string }
-    const query = ctx.req.valid('query') as { page: number; limit: number; status?: 'initiated' | 'uploaded' | 'processing' | 'published' | 'failed' }
-    const db = getDb(ctx.env)
+    const { id } = c.req.valid('param') as { id: string }
+    const query = c.req.valid('query') as { page: number; limit: number; status?: 'initiated' | 'uploaded' | 'processing' | 'published' | 'failed' }
+    const db = getDb(c.env)
     
     const result = await getArtistTracks(db, id, query.page, query.limit, query.status)
     
-    return ctx.json({
+    return c.json({
       tracks: result.tracks.map(track => ({
         ...track,
         createdAt: track.createdAt?.toISOString() || '',
@@ -525,7 +523,7 @@ export async function getArtistTracksHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }
 
@@ -584,15 +582,14 @@ export const searchArtistsRoute = createRoute({
   },
 })
 
-export async function searchArtistsHandler(c: unknown) {
-  const ctx = c as { req: { valid: (t: string) => unknown }; env: Env; json: (data: unknown, status?: number) => unknown }
+export const searchArtistsHandler = async (c: ValidatedContext) => {
   try {
-    const { q, limit } = ctx.req.valid('query') as { q: string; limit: number }
-    const db = getDb(ctx.env)
+    const { q, limit } = c.req.valid('query') as { q: string; limit: number }
+    const db = getDb(c.env)
     
     const artists = await searchArtists(db, q, limit)
     
-    return ctx.json({
+    return c.json({
       artists: artists.map(artist => ({
         ...artist,
         createdAt: artist.createdAt?.toISOString() || '',
@@ -602,6 +599,6 @@ export async function searchArtistsHandler(c: unknown) {
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
-    return ctx.json(body, status)
+    return c.json(body, status)
   }
 }

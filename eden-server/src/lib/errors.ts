@@ -2,13 +2,15 @@
  * Custom error classes for the Eden Server API
  */
 
+import type { ContentfulStatusCode } from "hono/utils/http-status"
+
 /**
  * Base API error class
  */
 export class ApiError extends Error {
   constructor(
     message: string,
-    public statusCode = 500,
+    public statusCode: ContentfulStatusCode,
     public code?: string,
     public details?: unknown
   ) {
@@ -152,7 +154,7 @@ export class UploadError extends ApiError {
  * Converts errors to JSON responses
  */
 export function handleError(error: unknown): {
-  status: number
+  status: ContentfulStatusCode
   body: Record<string, unknown>
 } {
   if (error instanceof ApiError) {
