@@ -1,4 +1,3 @@
-import httpx
 from fastapi import FastAPI, HTTPException, Request
 from functions.spotify_metadata import (
     SpotifyArtistMetadata,
