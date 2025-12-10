@@ -250,8 +250,8 @@ export async function getUploadStatusHandler(c: ValidatedContext) {
       r2Key: upload.r2Key,
       fileSize: upload.fileSize,
       errorMessage: upload.errorMessage,
-      createdAt: upload.createdAt?.toISOString() || '',
-      updatedAt: upload.updatedAt?.toISOString() || '',
+      createdAt: upload.createdAt.toISOString(),
+      updatedAt: upload.updatedAt.toISOString(),
       completedAt: upload.completedAt?.toISOString() || null,
     }, 200)
   } catch (error) {
@@ -335,8 +335,8 @@ export async function listUploadsHandler(c: ValidatedContext) {
       r2Key: upload.r2Key,
       fileSize: upload.fileSize,
       errorMessage: upload.errorMessage,
-      createdAt: upload.createdAt?.toISOString() || '',
-      updatedAt: upload.updatedAt?.toISOString() || '',
+      createdAt: upload.createdAt.toISOString(),
+      updatedAt: upload.updatedAt.toISOString(),
       completedAt: upload.completedAt?.toISOString() || null,
     }))
     

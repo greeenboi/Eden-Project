@@ -81,7 +81,7 @@ type ValidatedContext = Context<{ Bindings: Env }> & {
 
 export async function createTrackHandler(c: ValidatedContext) {
   try {
-    const body = c.req.valid('json') as { artistId: string; title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
+    const body = c.req.valid('json') as z.infer<typeof CreateTrackRequestSchema>
     const db = getDb(c.env)
     
     const track = await createTrack(db, c.env, body)
@@ -90,6 +90,7 @@ export async function createTrackHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -163,6 +164,7 @@ export async function getTrackHandler(c: ValidatedContext) {
     // Transform dates to ISO strings
     const track = {
       ...trackWithRelations,
+      artworkUrl: trackWithRelations.artworkUrl,
       publishedAt: trackWithRelations.publishedAt?.toISOString() || null,
       createdAt: trackWithRelations.createdAt.toISOString(),
       updatedAt: trackWithRelations.updatedAt.toISOString(),
@@ -252,6 +254,7 @@ export async function listTracksHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -327,7 +330,7 @@ export const updateTrackRoute = createRoute({
 export async function updateTrackHandler(c: ValidatedContext) {
   try {
     const { id } = c.req.valid('param') as { id: string }
-    const body = c.req.valid('json') as { title?: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean }
+    const body = c.req.valid('json') as z.infer<typeof UpdateTrackRequestSchema>
     const db = getDb(c.env)
     
     const track = await updateTrack(db, c.env, id, body)
@@ -336,6 +339,7 @@ export async function updateTrackHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -428,6 +432,7 @@ export async function updateTrackStatusHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -565,6 +570,7 @@ export async function getPublishedTracksHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -641,6 +647,7 @@ export async function searchTracksHandler(c: ValidatedContext) {
       id: track.id,
       artistId: track.artistId,
       albumId: track.albumId,
+      artworkUrl: track.artworkUrl,
       title: track.title,
       duration: track.duration,
       r2KeyOriginal: track.r2KeyOriginal,
@@ -745,6 +752,7 @@ export async function getTrackStreamHandler(c: ValidatedContext) {
       track: {
         id: track.id,
         artistId: track.artistId,
+        artworkUrl: track.artworkUrl,
         title: track.title,
         duration: track.duration,
         status: track.status,

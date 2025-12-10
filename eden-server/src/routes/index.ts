@@ -4,6 +4,8 @@
  * Central export for all route registration functions.
  */
 
-export { registerUploadRoutes } from './upload.routes'
-export { registerTrackRoutes } from './track.routes'
+export { registerAlbumRoutes } from './album.routes'
 export { registerArtistRoutes } from './artist.routes'
+export { registerTrackRoutes } from './track.routes'
+export { registerUploadRoutes } from './upload.routes'
+

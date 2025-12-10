@@ -1,4 +1,4 @@
-import { sqliteTable, AnySQLiteColumn, foreignKey, text, integer, uniqueIndex, real } from "drizzle-orm/sqlite-core"
+import { sqliteTable, AnySQLiteColumn, foreignKey, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core"
   import { sql } from "drizzle-orm"
 
 export const albums = sqliteTable("albums", {
@@ -15,17 +15,12 @@ export const albums = sqliteTable("albums", {
 export const artists = sqliteTable("artists", {
 	id: text().primaryKey().notNull(),
 	name: text().notNull(),
-	email: text().notNull(),
-	profile: text(),
 	bio: text(),
 	avatarUrl: text("avatar_url"),
 	verified: integer().default(false).notNull(),
 	createdAt: integer("created_at").default(sql`(unixepoch())`).notNull(),
 	updatedAt: integer("updated_at").default(sql`(unixepoch())`).notNull(),
-},
-(table) => [
-	uniqueIndex("artists_email_unique").on(table.email),
-]);
+});
 
 export const playbackEvents = sqliteTable("playback_events", {
 	id: text().primaryKey().notNull(),
@@ -70,6 +65,7 @@ export const tracks = sqliteTable("tracks", {
 	publishedAt: integer("published_at"),
 	createdAt: integer("created_at").default(sql`(unixepoch())`).notNull(),
 	updatedAt: integer("updated_at").default(sql`(unixepoch())`).notNull(),
+	artworkUrl: text("artwork_url"),
 });
 
 export const uploadRecords = sqliteTable("upload_records", {
@@ -97,6 +93,7 @@ export const users = sqliteTable("users", {
 	deviceLimits: integer("device_limits").default(1).notNull(),
 	createdAt: integer("created_at").default(sql`(unixepoch())`).notNull(),
 	updatedAt: integer("updated_at").default(sql`(unixepoch())`).notNull(),
+	passwordHash: text("password_hash"),
 },
 (table) => [
 	uniqueIndex("users_email_unique").on(table.email),

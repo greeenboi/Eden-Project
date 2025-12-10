@@ -15,6 +15,13 @@
       "when": 1763665278645,
       "tag": "0001_cultured_norman_osborn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1765393176126,
+      "tag": "0002_black_black_bolt",
+      "breakpoints": true
     }
   ]
 }

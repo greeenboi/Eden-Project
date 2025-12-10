@@ -1,5 +1,5 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
+import { integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 
 /**
  * Users Table
@@ -30,8 +30,6 @@ export const users = sqliteTable('users', {
 export const artists = sqliteTable('artists', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  profile: text('profile'), // Short bio/tagline
   bio: text('bio'), // Full biography
   avatarUrl: text('avatar_url'),
   verified: integer('verified', { mode: 'boolean' }).notNull().default(false),
@@ -74,6 +72,7 @@ export const tracks = sqliteTable('tracks', {
     .notNull()
     .references(() => artists.id, { onDelete: 'cascade' }),
   albumId: text('album_id').references(() => albums.id, { onDelete: 'set null' }),
+  artworkUrl: text('artwork_url'),
   title: text('title').notNull(),
   duration: real('duration'), // Duration in seconds
   r2KeyOriginal: text('r2_key_original'), // R2 object key for original upload

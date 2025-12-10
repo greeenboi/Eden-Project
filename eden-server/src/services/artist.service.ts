@@ -3,13 +3,12 @@
  * Business logic for artist profile management and related operations
  */
 
-import { eq, desc, and, sql } from 'drizzle-orm'
-import type { DbClient } from '../lib/db'
-import { artists, tracks, albums, uploadRecords } from '../schema'
-import type { NewArtist, Artist } from '../models/types'
+import { and, desc, eq, sql } from 'drizzle-orm'
+import type { DbClient, Env } from '../lib/db'
 import { NotFoundError, ValidationError } from '../lib/errors'
-import { getCache, setCache, deleteCache } from '../lib/kv'
-import type { Env } from '../lib/db'
+import { deleteCache, getCache, setCache } from '../lib/kv'
+import type { Artist, NewArtist } from '../models/types'
+import { albums, artists, tracks, uploadRecords } from '../schema'
 
 /**
  * Create a new artist
@@ -19,41 +18,22 @@ export async function createArtist(
   env: Env,
   data: {
     name: string
-    email: string
-    profile?: string
-    bio?: string
-    avatarUrl?: string
+    bio?: string | null
+    avatarUrl?: string | null
   }
 ): Promise<Artist> {
-  const { name, email, profile, bio, avatarUrl } = data
+  const { name, bio, avatarUrl } = data
 
   // Validate required fields
   if (!name || name.trim().length === 0) {
     throw new ValidationError('Artist name is required')
   }
 
-  if (!email || email.trim().length === 0) {
-    throw new ValidationError('Artist email is required')
-  }
-
-  // Check if email is already taken
-  const existing = await db
-    .select()
-    .from(artists)
-    .where(eq(artists.email, email))
-    .limit(1)
-
-  if (existing.length > 0) {
-    throw new ValidationError(`Artist with email '${email}' already exists`)
-  }
-
   // Create artist record
   const newArtist: NewArtist = {
     name: name.trim(),
-    email: email.trim(),
-    profile: profile || null,
-    bio: bio || null,
-    avatarUrl: avatarUrl || null,
+    bio: bio ?? null,
+    avatarUrl: avatarUrl ?? null,
     verified: false,
   }
 
@@ -104,10 +84,8 @@ export async function updateArtist(
   artistId: string,
   updates: {
     name?: string
-    email?: string
-    profile?: string
-    bio?: string
-    avatarUrl?: string
+    bio?: string | null
+    avatarUrl?: string | null
     verified?: boolean
   }
 ): Promise<Artist> {
@@ -119,31 +97,12 @@ export async function updateArtist(
     throw new ValidationError('Artist name cannot be empty')
   }
 
-  if (updates.email !== undefined && updates.email.trim().length === 0) {
-    throw new ValidationError('Artist email cannot be empty')
-  }
-
-  // Check email uniqueness if being updated
-  if (updates.email) {
-    const existing = await db
-      .select()
-      .from(artists)
-      .where(and(eq(artists.email, updates.email), sql`${artists.id} != ${artistId}`))
-      .limit(1)
-
-    if (existing.length > 0) {
-      throw new ValidationError(`Email '${updates.email}' is already taken`)
-    }
-  }
-
   // Build update object (only include defined fields)
   const updateData: Partial<Artist> = {
     updatedAt: new Date(),
   }
 
   if (updates.name !== undefined) updateData.name = updates.name.trim()
-  if (updates.email !== undefined) updateData.email = updates.email.trim()
-  if (updates.profile !== undefined) updateData.profile = updates.profile
   if (updates.bio !== undefined) updateData.bio = updates.bio
   if (updates.avatarUrl !== undefined) updateData.avatarUrl = updates.avatarUrl
   if (updates.verified !== undefined) updateData.verified = updates.verified

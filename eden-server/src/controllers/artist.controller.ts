@@ -8,7 +8,14 @@ import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
-import { ErrorResponseSchema } from '../models/dtos'
+import {
+  ArtistResponseSchema,
+  CreateArtistRequestSchema,
+  ErrorResponseSchema,
+  PaginationQuerySchema,
+  TrackResponseSchema,
+  UpdateArtistRequestSchema,
+} from '../models/dtos'
 import {
   createArtist,
   deleteArtist,
@@ -34,13 +41,7 @@ export const createArtistRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            name: z.string().min(1).openapi({ example: 'Artist Name' }),
-            email: z.email().openapi({ example: 'artist@example.com' }),
-            profile: z.string().optional().openapi({ example: 'Short bio or tagline' }),
-            bio: z.string().optional().openapi({ example: 'Full artist biography' }),
-            avatarUrl: z.url().optional().openapi({ example: 'https://example.com/avatar.jpg' }),
-          }),
+          schema: CreateArtistRequestSchema,
         },
       },
     },
@@ -49,17 +50,7 @@ export const createArtistRoute = createRoute({
     201: {
       content: {
         'application/json': {
-          schema: z.object({
-            id: z.uuid(),
-            name: z.string(),
-            email: z.string(),
-            profile: z.string().nullable(),
-            bio: z.string().nullable(),
-            avatarUrl: z.string().nullable(),
-            verified: z.boolean(),
-            createdAt: z.string(),
-            updatedAt: z.string(),
-          }),
+          schema: ArtistResponseSchema,
         },
       },
       description: 'Artist created successfully',
@@ -81,7 +72,7 @@ type ValidatedContext = Context<{ Bindings: Env }> & {
 
 export const createArtistHandler = async (c: ValidatedContext) => {
   try {
-    const body = c.req.valid('json') as { name: string; email: string; profile?: string; bio?: string; avatarUrl?: string }
+    const body = c.req.valid('json') as z.infer<typeof CreateArtistRequestSchema>
     const db = getDb(c.env)
     
     const artist = await createArtist(db, c.env, body)
@@ -119,17 +110,7 @@ export const getArtistRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.object({
-            id: z.uuid(),
-            name: z.string(),
-            email: z.string(),
-            profile: z.string().nullable(),
-            bio: z.string().nullable(),
-            avatarUrl: z.string().nullable(),
-            verified: z.boolean(),
-            createdAt: z.string(),
-            updatedAt: z.string(),
-          }),
+          schema: ArtistResponseSchema,
         },
       },
       description: 'Artist retrieved successfully',
@@ -154,8 +135,8 @@ export const getArtistHandler = async (c: ValidatedContext) => {
     
     return c.json({
       ...artist,
-      createdAt: artist.createdAt?.toISOString() || '',
-      updatedAt: artist.updatedAt?.toISOString() || '',
+      createdAt: artist.createdAt.toISOString(),
+      updatedAt: artist.updatedAt.toISOString(),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -183,14 +164,7 @@ export const updateArtistRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            name: z.string().min(1).optional(),
-            email: z.email().optional(),
-            profile: z.string().optional(),
-            bio: z.string().optional(),
-            avatarUrl: z.url().optional(),
-            verified: z.boolean().optional(),
-          }),
+          schema: UpdateArtistRequestSchema,
         },
       },
     },
@@ -199,17 +173,7 @@ export const updateArtistRoute = createRoute({
     200: {
       content: {
         'application/json': {
-          schema: z.object({
-            id: z.uuid(),
-            name: z.string(),
-            email: z.string(),
-            profile: z.string().nullable(),
-            bio: z.string().nullable(),
-            avatarUrl: z.string().nullable(),
-            verified: z.boolean(),
-            createdAt: z.string(),
-            updatedAt: z.string(),
-          }),
+          schema: ArtistResponseSchema,
         },
       },
       description: 'Artist updated successfully',
@@ -232,15 +196,15 @@ export const updateArtistRoute = createRoute({
 export const updateArtistHandler = async (c: ValidatedContext) => {
   try {
     const { id } = c.req.valid('param') as { id: string }
-    const body = c.req.valid('json') as { name?: string; email?: string; profile?: string; bio?: string; avatarUrl?: string; verified?: boolean }
+    const body = c.req.valid('json') as z.infer<typeof UpdateArtistRequestSchema>
     const db = getDb(c.env)
     
     const artist = await updateArtist(db, c.env, id, body)
     
     return c.json({
       ...artist,
-      createdAt: artist.createdAt?.toISOString() || '',
-      updatedAt: artist.updatedAt?.toISOString() || '',
+      createdAt: artist.createdAt.toISOString(),
+      updatedAt: artist.updatedAt.toISOString(),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -310,15 +274,7 @@ export const listArtistsRoute = createRoute({
   summary: 'List artists',
   description: 'Get paginated list of artists',
   request: {
-    query: z.object({
-      page: z.coerce.number().int().min(1).default(1).openapi({
-        param: { name: 'page', in: 'query' },
-        example: 1,
-      }),
-      limit: z.coerce.number().int().min(1).max(100).default(20).openapi({
-        param: { name: 'limit', in: 'query' },
-        example: 20,
-      }),
+    query: PaginationQuerySchema.extend({
       verified: z.coerce.boolean().optional().openapi({
         param: { name: 'verified', in: 'query' },
         example: true,
@@ -330,17 +286,7 @@ export const listArtistsRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            artists: z.array(z.object({
-              id: z.uuid(),
-              name: z.string(),
-              email: z.string(),
-              profile: z.string().nullable(),
-              bio: z.string().nullable(),
-              avatarUrl: z.string().nullable(),
-              verified: z.boolean(),
-              createdAt: z.string(),
-              updatedAt: z.string(),
-            })),
+            artists: z.array(ArtistResponseSchema),
             pagination: z.object({
               page: z.number(),
               limit: z.number(),
@@ -368,8 +314,8 @@ export const listArtistsHandler = async (c: ValidatedContext) => {
     return c.json({
       artists: result.artists.map(artist => ({
         ...artist,
-        createdAt: artist.createdAt?.toISOString() || '',
-        updatedAt: artist.updatedAt?.toISOString() || '',
+        createdAt: artist.createdAt.toISOString(),
+        updatedAt: artist.updatedAt.toISOString(),
       })),
       pagination: {
         page: result.page,
@@ -458,15 +404,7 @@ export const getArtistTracksRoute = createRoute({
         example: '123e4567-e89b-12d3-a456-426614174000',
       }),
     }),
-    query: z.object({
-      page: z.coerce.number().int().min(1).default(1).openapi({
-        param: { name: 'page', in: 'query' },
-        example: 1,
-      }),
-      limit: z.coerce.number().int().min(1).max(100).default(20).openapi({
-        param: { name: 'limit', in: 'query' },
-        example: 20,
-      }),
+    query: PaginationQuerySchema.extend({
       status: z.enum(['initiated', 'uploaded', 'processing', 'published', 'failed']).optional().openapi({
         param: { name: 'status', in: 'query' },
         example: 'published',
@@ -478,7 +416,7 @@ export const getArtistTracksRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            tracks: z.array(z.any()), // Use track schema from DTOs
+            tracks: z.array(TrackResponseSchema),
             pagination: z.object({
               page: z.number(),
               limit: z.number(),
@@ -511,8 +449,8 @@ export const getArtistTracksHandler = async (c: ValidatedContext) => {
     return c.json({
       tracks: result.tracks.map(track => ({
         ...track,
-        createdAt: track.createdAt?.toISOString() || '',
-        updatedAt: track.updatedAt?.toISOString() || '',
+        createdAt: track.createdAt.toISOString(),
+        updatedAt: track.updatedAt.toISOString(),
         publishedAt: track.publishedAt?.toISOString() || null,
       })),
       pagination: {
@@ -554,17 +492,7 @@ export const searchArtistsRoute = createRoute({
       content: {
         'application/json': {
           schema: z.object({
-            artists: z.array(z.object({
-              id: z.uuid(),
-              name: z.string(),
-              email: z.string(),
-              profile: z.string().nullable(),
-              bio: z.string().nullable(),
-              avatarUrl: z.string().nullable(),
-              verified: z.boolean(),
-              createdAt: z.string(),
-              updatedAt: z.string(),
-            })),
+            artists: z.array(ArtistResponseSchema),
             query: z.string(),
           }),
         },
@@ -592,8 +520,8 @@ export const searchArtistsHandler = async (c: ValidatedContext) => {
     return c.json({
       artists: artists.map(artist => ({
         ...artist,
-        createdAt: artist.createdAt?.toISOString() || '',
-        updatedAt: artist.updatedAt?.toISOString() || '',
+        createdAt: artist.createdAt.toISOString(),
+        updatedAt: artist.updatedAt.toISOString(),
       })),
       query: q,
     }, 200)

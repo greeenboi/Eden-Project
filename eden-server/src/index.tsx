@@ -16,6 +16,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import type { Env } from './lib/db'
 import { logger as workerLogger } from './lib/logger'
 import { renderer } from './renderer'
+import { registerAlbumRoutes } from './routes/album.routes'
 import { registerArtistRoutes } from './routes/artist.routes'
 import { registerAuthRoutes } from './routes/auth.routes'
 import { registerHomeRoutes } from './routes/home.routes.tsx'
@@ -85,6 +86,7 @@ app.onError((err, c) => {
 registerHomeRoutes(app)
 registerAuthRoutes(app)
 registerUploadRoutes(app)
+registerAlbumRoutes(app)
 registerTrackRoutes(app)
 registerArtistRoutes(app)
 
