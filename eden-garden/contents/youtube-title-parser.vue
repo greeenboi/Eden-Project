@@ -1,8 +1,8 @@
 <script lang="ts">
-import { Storage } from "@plasmohq/storage";
 import type { PlasmoCSConfig } from "plasmo";
 
-const storage = new Storage({ area: "local" });
+// Provided by the extension runtime
+declare const chrome: typeof globalThis.chrome
 
 export const config: PlasmoCSConfig = {
   matches: ["https://www.youtube.com/watch*", "https://youtube.com/watch*"]
@@ -47,29 +47,16 @@ function extractVideoInfo() {
   }
   
   if (videoTitle && videoId) {
-    console.log('✅ [Eden] Successfully extracted video info!')
-    console.log('🎵 YouTube Video Detected!')
-    console.log('📹 Video ID:', videoId)
-    console.log('📝 Video Title:', videoTitle)
-    
-    const videoData = {
+    return {
       id: videoId,
       title: videoTitle,
       url: window.location.href,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
-    
-    console.log('[Eden] Storing to Plasmo storage:', videoData)
-    
-    // Store data for potential use by popup/sidepanel
-    storage.set('lastYouTubeVideo', videoData).then(() => {
-      console.log('[Eden] ✅ Data stored successfully!')
-    }).catch((error) => {
-      console.error('[Eden] ❌ Failed to store data:', error)
-    })
-  } else {
-    console.warn('[Eden] ⚠️ Could not extract video info. Title:', videoTitle, 'ID:', videoId)
   }
+
+  console.warn('[Eden] ⚠️ Could not extract video info. Title:', videoTitle, 'ID:', videoId)
+  return null
 }
 
 export default {
@@ -126,6 +113,16 @@ export default {
     })
     
     console.log('[Eden] Observer set up for URL changes')
+
+    // Respond to popup requests for video info via runtime messaging
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message?.type === 'eden-get-video-info') {
+        const info = extractVideoInfo()
+        sendResponse(info)
+        return true
+      }
+      return undefined
+    })
   }
 }
 </script>

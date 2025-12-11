@@ -102,6 +102,9 @@
           </template>
         </Button>
 
+        <p v-if="uploadSuccess" class="text-sm text-green-400 m-0">{{ uploadSuccess }}</p>
+        <p v-if="metadataError && !uploadSuccess" class="text-sm text-red-400 m-0">{{ metadataError }}</p>
+
         <p v-if="!youtubeVideo && !isLoading" class="text-xs text-center text-gray-500">
           Navigate to a YouTube video to enable upload
         </p>
@@ -138,6 +141,7 @@
                   icon="pi pi-cloud-upload"
                   size="small"
                   @click="handlePush"
+                  :disabled="isPushing"
                 />
                 <Button
                   v-if="trackMetadata.track?.spotifyUri"
@@ -160,7 +164,7 @@
 </template>
 
 <script setup lang="ts">
-import { Storage } from '@plasmohq/storage';
+import { sendToBackground } from '@plasmohq/messaging';
 import Aura from '@primeuix/themes/dist/aura';
 import 'primeicons/primeicons.css';
 import Button from 'primevue/button';
@@ -172,19 +176,22 @@ import Skeleton from 'primevue/skeleton';
 import { onMounted, ref } from "vue";
 import Plasma from "./Plasma.vue";
 import "./style.css";
-const storage = new Storage({ area: 'local' })
+
+declare global {
+  interface ImportMetaEnv {
+    readonly PLASMO_PUBLIC_YT_METADATA_WORKER?: string
+    readonly PLASMO_PUBLIC_YT_DOWNLOADER_WORKER?: string
+    readonly PLASMO_PUBLIC_EDEN_GATEWAY?: string
+  }
+
+  interface ImportMeta {
+    readonly env: ImportMetaEnv
+  }
+}
 
 type ChromeTab = { url?: string; id?: number }
 type ChromeTabs = { query: (queryInfo: { active: boolean; currentWindow: boolean }) => Promise<ChromeTab[]> }
-type ChromeStorage = { 
-  local: { 
-    get: (keys: string | string[]) => Promise<{ lastYouTubeVideo?: YouTubeVideo | undefined }>
-    onChanged: {
-      addListener: (callback: (changes: Record<string, { newValue?: YouTubeVideo | undefined }>) => void) => void
-    }
-  } 
-}
-type ChromeAPI = { tabs?: ChromeTabs; storage?: ChromeStorage }
+type ChromeAPI = { tabs?: ChromeTabs }
 
 interface YouTubeVideo {
   id: string
@@ -193,33 +200,65 @@ interface YouTubeVideo {
   timestamp: number
 }
 
+interface ArtistMetadata {
+  name: string
+  email?: string | null
+  avatarUrl?: string | null
+  bio?: string | null
+  profile?: string | null
+  genres?: string[]
+  spotifyUri?: string | null
+  followers?: number | null
+  popularity?: number | null
+}
+
+interface TrackMetadata {
+  title: string
+  duration?: number | null
+  explicit?: boolean | null
+  genre?: string | null
+  isrc?: string | null
+  image?: string | null
+  album?: string | null
+  spotifyTrackId?: string | null
+  spotifyUri?: string | null
+}
+
+interface SpotifyMetadata {
+  source: string
+  track: TrackMetadata
+  artist: ArtistMetadata
+}
+
 const currentUrl = ref('')
 const youtubeVideo = ref<YouTubeVideo | null>(null)
 const isLoading = ref(false)
 const isFetchingMetadata = ref(false)
 const metadataError = ref('')
-const trackMetadata = ref<any | null>(null)
+const trackMetadata = ref<SpotifyMetadata | null>(null)
 const showDetails = ref(false)
+const isPushing = ref(false)
+const uploadSuccess = ref('')
 
+const YtMetadataWorker = import.meta.env.PLASMO_PUBLIC_YT_METADATA_WORKER
+const EdenGateway = import.meta.env.PLASMO_PUBLIC_EDEN_GATEWAY 
 function resetMetadataState() {
   metadataError.value = ''
   trackMetadata.value = null
+  uploadSuccess.value = ''
 }
 
-async function loadYouTubeVideo() {
-  console.log('[Eden Popup] Loading YouTube video from storage...')
-  
+async function fetchYouTubeVideoViaMessaging() {
   try {
-    const result = await storage.get<YouTubeVideo>('lastYouTubeVideo')
-    console.log('[Eden Popup] Storage result:', result)
-    if (result) {
-      console.log('[Eden Popup] ✅ YouTube video found:', result)
-      youtubeVideo.value = result
-    } else {
-      console.log('[Eden Popup] ⚠️ No YouTube video in storage')
-    }
+    const result = await sendToBackground<{ activeTabOnly?: boolean }, YouTubeVideo | null>({
+      name: 'get-video',
+      body: { activeTabOnly: true },
+    })
+
+    youtubeVideo.value = result
   } catch (error) {
-    console.error('[Eden Popup] ❌ Failed to load from storage:', error)
+    console.error('[Eden Popup] ❌ Failed to fetch video info via messaging:', error)
+    youtubeVideo.value = null
   }
 }
 
@@ -238,25 +277,8 @@ onMounted(async () => {
     currentUrl.value = 'Extension context not available'
   }
 
-  // Load YouTube video data from storage
-  await loadYouTubeVideo()
-
-  // Listen for storage changes (real-time updates)
-  console.log('[Eden Popup] Setting up storage change listener...')
-  storage.watch({
-    lastYouTubeVideo: (change) => {
-      console.log('[Eden Popup] YouTube video updated:', change.newValue)
-      if (change.newValue) {
-        const newVideo = change.newValue as YouTubeVideo
-        // Only update if it's a different video
-        if (!youtubeVideo.value || youtubeVideo.value.id !== newVideo.id) {
-          console.log('[Eden Popup] 🔄 New video detected, updating...')
-          youtubeVideo.value = newVideo
-        }
-      }
-    }
-  })
-  console.log('[Eden Popup] ✅ Storage listener set up')
+  // Load YouTube video data via messaging to the content script
+  await fetchYouTubeVideoViaMessaging()
 })
 
 function handleUpload() {
@@ -272,7 +294,7 @@ function handleUpload() {
 
   const body = { query: youtubeVideo.value.title }
 
-  fetch('https://youtube-extension-worker.suvan-gowrishanker-204.workers.dev/metadata/spotify', {
+  fetch(`${YtMetadataWorker}/metadata/spotify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -286,7 +308,7 @@ function handleUpload() {
       }
       return res.json()
     })
-    .then((data) => {
+    .then((data: SpotifyMetadata) => {
       trackMetadata.value = data
     })
     .catch((err) => {
@@ -299,8 +321,78 @@ function handleUpload() {
 }
 
 function handlePush() {
-  // TODO: fetch audio and push to R2 via Eden API
-  console.log('[Eden Popup] handlePush placeholder')
+  metadataError.value = ''
+  uploadSuccess.value = ''
+
+  if (!youtubeVideo.value) {
+    metadataError.value = 'No YouTube video to push.'
+    return
+  }
+
+  if (!trackMetadata.value) {
+    metadataError.value = 'No track metadata available. Fetch metadata first.'
+    return
+  }
+
+  const { track, artist, source } = trackMetadata.value
+
+  if (!track.image) {
+    metadataError.value = 'Artwork is required before pushing to Eden.'
+    return
+  }
+
+  isPushing.value = true
+
+  const payload = {
+    url: youtubeVideo.value.url,
+    source,
+    artist: {
+      name: artist.name,
+      bio: artist.bio ?? undefined,
+      avatarUrl: artist.avatarUrl ?? track.image,
+      spotifyUri: artist.spotifyUri ?? undefined,
+      followers: artist.followers ?? undefined,
+      popularity: artist.popularity ?? undefined,
+    },
+    track: {
+      title: track.title,
+      duration: track.duration ?? undefined,
+      isrc: track.isrc ?? undefined,
+      genre: track.genre ?? undefined,
+      explicit: track.explicit ?? false,
+      image: track.image,
+      album: track.album ?? undefined,
+      spotifyTrackId: track.spotifyTrackId ?? undefined,
+      spotifyUri: track.spotifyUri ?? undefined,
+    },
+  }
+
+  fetch(`${EdenGateway}/api/jobs/downloader`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+    .then(async (res) => {
+      if (!res.ok) {
+        const text = await res.text()
+        throw new Error(text || `Request failed with status ${res.status}`)
+      }
+      return res.json()
+    })
+    .then(() => {
+      console.log('[Eden Popup] Push succeeded')
+      uploadSuccess.value = 'Upload completed successfully.'
+    })
+    .catch((err) => {
+      console.error('[Eden Popup] Push failed:', err)
+      metadataError.value = 'Push failed. Please try again.'
+      uploadSuccess.value = ''
+    })
+    .finally(() => {
+      isPushing.value = false
+    })
 }
 
 function handleOpenSpotify(uri?: string) {
@@ -333,9 +425,9 @@ async function handleRefresh() {
       const tabs = await w.chrome?.tabs?.query({ active: true, currentWindow: true })
       const tab = tabs?.[0]
       if (tab?.id) {
-        // Reload YouTube video data from storage after a short delay
+        // Reload YouTube video data from messaging after a short delay
         setTimeout(async () => {
-          await loadYouTubeVideo()
+          await fetchYouTubeVideoViaMessaging()
           isLoading.value = false
         }, 1500)
          
@@ -346,8 +438,8 @@ async function handleRefresh() {
       isLoading.value = false
     }
   } else {
-    // Just reload from storage if chrome API not available
-    await loadYouTubeVideo()
+    // Just reload via messaging if chrome API not available
+    await fetchYouTubeVideoViaMessaging()
     isLoading.value = false
   }
 }
