@@ -34,7 +34,7 @@ const buildRedisOptions = (env: GatewayEnv): RedisOptions => {
 	};
 };
 
-const waitForServiceHealthy = async (serviceUrl: string, timeoutMs = 60000, intervalMs = 1000) => {
+const waitForServiceHealthy = async (serviceUrl: string, timeoutMs = 120000, intervalMs = 3000) => {
 	const healthUrl = new URL(serviceUrl);
 	healthUrl.pathname = "/";
 	healthUrl.search = "";
