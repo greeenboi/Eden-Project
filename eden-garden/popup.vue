@@ -177,18 +177,6 @@ import { onMounted, ref } from "vue";
 import Plasma from "./Plasma.vue";
 import "./style.css";
 
-declare global {
-  interface ImportMetaEnv {
-    readonly PLASMO_PUBLIC_YT_METADATA_WORKER?: string
-    readonly PLASMO_PUBLIC_YT_DOWNLOADER_WORKER?: string
-    readonly PLASMO_PUBLIC_EDEN_GATEWAY?: string
-  }
-
-  interface ImportMeta {
-    readonly env: ImportMetaEnv
-  }
-}
-
 type ChromeTab = { url?: string; id?: number }
 type ChromeTabs = { query: (queryInfo: { active: boolean; currentWindow: boolean }) => Promise<ChromeTab[]> }
 type ChromeAPI = { tabs?: ChromeTabs }
@@ -240,8 +228,16 @@ const showDetails = ref(false)
 const isPushing = ref(false)
 const uploadSuccess = ref('')
 
-const YtMetadataWorker = import.meta.env.PLASMO_PUBLIC_YT_METADATA_WORKER
-const EdenGateway = import.meta.env.PLASMO_PUBLIC_EDEN_GATEWAY 
+// idk why but vue cli and plasmo have conflicting import env resolutions so just keep em here.
+
+const YtMetadataWorker = ref(
+  (typeof import.meta !== 'undefined' && import.meta.env?.PLASMO_PUBLIC_YT_METADATA_WORKER) || 
+  'https://youtube-extension-worker.suvan-gowrishanker-204.workers.dev'
+)
+const EdenGateway = ref(
+  (typeof import.meta !== 'undefined' && import.meta.env?.PLASMO_PUBLIC_EDEN_GATEWAY) ||
+    'https://eden-gateway.suvan-gowrishanker-204.workers.dev'
+)
 function resetMetadataState() {
   metadataError.value = ''
   trackMetadata.value = null
@@ -250,11 +246,13 @@ function resetMetadataState() {
 
 async function fetchYouTubeVideoViaMessaging() {
   try {
+    console.log('[Eden Popup] sending get-video message')
     const result = await sendToBackground<{ activeTabOnly?: boolean }, YouTubeVideo | null>({
       name: 'get-video',
       body: { activeTabOnly: true },
     })
 
+    console.log('[Eden Popup] received video via messaging', result)
     youtubeVideo.value = result
   } catch (error) {
     console.error('[Eden Popup] ❌ Failed to fetch video info via messaging:', error)
@@ -292,9 +290,15 @@ function handleUpload() {
   isFetchingMetadata.value = true
   showDetails.value = true
 
+  if (!YtMetadataWorker.value) {
+    metadataError.value = 'Metadata worker URL is not configured.'
+    isFetchingMetadata.value = false
+    return
+  }
+
   const body = { query: youtubeVideo.value.title }
 
-  fetch(`${YtMetadataWorker}/metadata/spotify`, {
+  fetch(`${YtMetadataWorker.value}/metadata/spotify`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -341,6 +345,11 @@ function handlePush() {
     return
   }
 
+  if (!EdenGateway.value) {
+    metadataError.value = 'Gateway URL is not configured.'
+    return
+  }
+
   isPushing.value = true
 
   const payload = {
@@ -367,7 +376,9 @@ function handlePush() {
     },
   }
 
-  fetch(`${EdenGateway}/api/jobs/downloader`, {
+  console.log('[Eden Popup] pushing payload', payload)
+
+  fetch(`${EdenGateway.value}/api/jobs/downloader`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -375,8 +386,10 @@ function handlePush() {
     body: JSON.stringify(payload),
   })
     .then(async (res) => {
+      console.log('[Eden Popup] gateway response status', res.status)
       if (!res.ok) {
         const text = await res.text()
+        console.error('[Eden Popup] gateway error body', text)
         throw new Error(text || `Request failed with status ${res.status}`)
       }
       return res.json()

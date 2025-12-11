@@ -117,7 +117,9 @@ export default {
     // Respond to popup requests for video info via runtime messaging
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message?.type === 'eden-get-video-info') {
+        console.log('[Eden] Received eden-get-video-info request')
         const info = extractVideoInfo()
+        console.log('[Eden] Responding with', info)
         sendResponse(info)
         return true
       }
