@@ -3,15 +3,15 @@
  * Business logic for upload initialization, completion, and R2 coordination
  */
 
-import { eq, and } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import type { DbClient, Env } from '../lib/db'
-import { uploadRecords, tracks } from '../schema'
-import type { UploadRecord, NewUploadRecord, NewTrack } from '../models/types'
-import { UploadStatus, TrackStatus } from '../models/enums'
-import { NotFoundError, ValidationError, UploadError } from '../lib/errors'
+import { NotFoundError, UploadError, ValidationError } from '../lib/errors'
+import { CachePrefix, CacheTTL, getCache, setCache } from '../lib/kv'
 import { generateR2Key, generateSignedUrl, r2ObjectExists } from '../lib/r2'
-import { setCache, getCache, CachePrefix, CacheTTL } from '../lib/kv'
-import { createTrack, updateTrackStatus } from './track.service'
+import { TrackStatus, UploadStatus } from '../models/enums'
+import type { NewTrack, NewUploadRecord, UploadRecord } from '../models/types'
+import { uploadRecords } from '../schema'
+import { createTrack } from './track.service'
 
 /**
  * Initiate upload session
@@ -114,6 +114,7 @@ export async function completeUpload(
     isrc?: string
     genre?: string
     explicit?: boolean
+    artworkUrl?: string
   }
 ) {
   // Get upload record
@@ -157,12 +158,13 @@ export async function completeUpload(
     artistId: upload.artistId,
     title: trackMetadata.title,
     albumId: trackMetadata.albumId,
+    artworkUrl: trackMetadata.artworkUrl,
     duration: trackMetadata.duration,
     isrc: trackMetadata.isrc,
     genre: trackMetadata.genre,
     explicit: trackMetadata.explicit ?? false,
     r2KeyOriginal: upload.r2Key,
-    status: TrackStatus.UPLOADED,
+    status: TrackStatus.PUBLISHED,
   }
   
   const track = await createTrack(db, env, trackData)

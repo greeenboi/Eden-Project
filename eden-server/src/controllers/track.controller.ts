@@ -387,9 +387,9 @@ export const updateTrackStatusRoute = createRoute({
               description: 'Encoding information (for processing/published status)',
               example: { '320kbps': 'tracks/uuid/320.mp3' },
             }),
-            duration: z.number().int().positive().optional().openapi({
+            duration: z.number().positive().optional().openapi({
               description: 'Track duration in seconds',
-              example: 180,
+              example: 180.60,
             }),
           }),
         },

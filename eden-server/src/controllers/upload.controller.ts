@@ -73,6 +73,18 @@ type ValidatedContext = Context<{ Bindings: Env }> & {
   req: Context['req'] & { valid: (t: 'json' | 'param' | 'query') => unknown }
 }
 
+const toIso = (value: Date | string | null | undefined) => {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString()
+}
+
+const toIsoNullable = (value: Date | string | null | undefined) => {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date.toISOString()
+}
+
 export async function initiateUploadHandler(c: ValidatedContext) {
   try {
     const body = c.req.valid('json') as { artistId: string; filename: string; fileSize: number; mimeType: string; metadata?: Record<string, unknown> }
@@ -164,7 +176,7 @@ export const completeUploadRoute = createRoute({
 export async function completeUploadHandler(c: ValidatedContext) {
   try {
     const { id } = c.req.valid('param') as { id: string }
-    const body = c.req.valid('json') as { trackMetadata: { title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean } }
+    const body = c.req.valid('json') as { trackMetadata: { title: string; albumId?: string; duration?: number; isrc?: string; genre?: string; explicit?: boolean; artworkUrl?: string } }
     const db = getDb(c.env)
     
     const track = await completeUpload(db, c.env, id, body.trackMetadata)
@@ -250,9 +262,9 @@ export async function getUploadStatusHandler(c: ValidatedContext) {
       r2Key: upload.r2Key,
       fileSize: upload.fileSize,
       errorMessage: upload.errorMessage,
-      createdAt: upload.createdAt.toISOString(),
-      updatedAt: upload.updatedAt.toISOString(),
-      completedAt: upload.completedAt?.toISOString() || null,
+      createdAt: toIso(upload.createdAt),
+      updatedAt: toIso(upload.updatedAt),
+      completedAt: toIsoNullable(upload.completedAt),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -335,9 +347,9 @@ export async function listUploadsHandler(c: ValidatedContext) {
       r2Key: upload.r2Key,
       fileSize: upload.fileSize,
       errorMessage: upload.errorMessage,
-      createdAt: upload.createdAt.toISOString(),
-      updatedAt: upload.updatedAt.toISOString(),
-      completedAt: upload.completedAt?.toISOString() || null,
+      createdAt: toIso(upload.createdAt),
+      updatedAt: toIso(upload.updatedAt),
+      completedAt: toIsoNullable(upload.completedAt),
     }))
     
     return c.json({

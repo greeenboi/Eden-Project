@@ -5,13 +5,13 @@
 import { z } from '@hono/zod-openapi'
 import { createSchemaFactory } from 'drizzle-zod'
 import {
-  albums,
-  artists,
-  playbackEvents,
-  playlistTracks,
-  playlists,
-  tracks,
-  users,
+	albums,
+	artists,
+	playbackEvents,
+	playlistTracks,
+	playlists,
+	tracks,
+	users,
 } from '../schema'
 
 const { createInsertSchema, createSelectSchema, createUpdateSchema } = createSchemaFactory({
@@ -174,6 +174,7 @@ export const CompleteUploadRequestSchema = z.object({
 		isrc: z.string().optional(),
 		genre: z.string().optional(),
 		explicit: z.boolean().default(false),
+		artworkUrl: z.string().url().optional(),
 	}),
 }).openapi('CompleteUploadRequest')
 
