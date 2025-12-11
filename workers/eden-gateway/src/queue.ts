@@ -9,6 +9,8 @@ let redisClient: IORedis | null = null;
 let downloaderQueue: Queue<DownloaderJobPayloadType> | null = null;
 let downloaderWorker: Worker<DownloaderJobPayloadType> | null = null;
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const buildRedisOptions = (env: GatewayEnv): RedisOptions => {
 	const rawUrl = env.REDIS_URL?.trim();
 	if (!rawUrl) {
@@ -30,6 +32,22 @@ const buildRedisOptions = (env: GatewayEnv): RedisOptions => {
 		tls: parsed.protocol === "rediss:" ? {} : undefined,
 		maxRetriesPerRequest: null,
 	};
+};
+
+const waitForServiceHealthy = async (serviceUrl: string, timeoutMs = 60000, intervalMs = 1000) => {
+	const healthUrl = new URL(serviceUrl);
+	healthUrl.pathname = "/";
+	healthUrl.search = "";
+
+	const start = Date.now();
+	while (true) {
+		const resp = await fetch(healthUrl.toString(), { method: "GET" }).catch(() => null);
+		if (resp?.ok) return;
+		if (Date.now() - start >= timeoutMs) {
+			throw new Error(`Downloader service health check timed out after ${timeoutMs}ms`);
+		}
+		await sleep(intervalMs);
+	}
 };
 
 const getRedis = (env: GatewayEnv) => {
@@ -67,6 +85,7 @@ export const getDownloaderWorker = (env: GatewayEnv) => {
 		downloaderWorker = new Worker<DownloaderJobPayloadType>(
 			DEFAULT_QUEUE_NAME,
 			async (job) => {
+				await waitForServiceHealthy(serviceUrl);
 				const response = await fetch(serviceUrl, {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
