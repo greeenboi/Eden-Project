@@ -1,4 +1,4 @@
-import { Queue } from "bullmq";
+import { Queue, Worker } from "bullmq";
 import IORedis, { type RedisOptions } from "ioredis";
 import type { DownloaderJobPayloadType, GatewayEnv } from "./types";
 
@@ -7,33 +7,27 @@ const JOB_NAME = "youtube-to-ogg";
 
 let redisClient: IORedis | null = null;
 let downloaderQueue: Queue<DownloaderJobPayloadType> | null = null;
-
-const redisTlsEnabled = (env: GatewayEnv) => (env.REDIS_TLS || "false").toLowerCase() === "true";
+let downloaderWorker: Worker<DownloaderJobPayloadType> | null = null;
 
 const buildRedisOptions = (env: GatewayEnv): RedisOptions => {
-	const url = env.REDIS_URL;
-	if (url) {
-		const parsed = new URL(url);
-		return {
-			host: parsed.hostname,
-			port: parsed.port ? Number(parsed.port) : 6379,
-			username: parsed.username || env.REDIS_USERNAME || undefined,
-			password: parsed.password || env.REDIS_PASSWORD || undefined,
-			tls: parsed.protocol === "rediss:" || redisTlsEnabled(env) ? {} : undefined,
-			maxRetriesPerRequest: null,
-		};
+	const rawUrl = env.REDIS_URL?.trim();
+	if (!rawUrl) {
+		throw new Error("Redis connection is not configured. Set REDIS_URL (e.g. upstash rediss:// URL).");
 	}
 
-	if (!env.REDIS_HOST || !env.REDIS_PORT) {
-		throw new Error("Redis connection is not configured. Provide REDIS_URL or REDIS_HOST and REDIS_PORT.");
+	let parsed: URL;
+	try {
+		parsed = new URL(rawUrl);
+	} catch (err) {
+		throw new Error(`Invalid REDIS_URL: ${rawUrl}`);
 	}
 
 	return {
-		host: env.REDIS_HOST,
-		port: Number(env.REDIS_PORT),
-		username: env.REDIS_USERNAME ?? undefined,
-		password: env.REDIS_PASSWORD ?? undefined,
-		tls: redisTlsEnabled(env) ? {} : undefined,
+		host: parsed.hostname,
+		port: parsed.port ? Number(parsed.port) : 6379,
+		username: parsed.username || undefined,
+		password: parsed.password || undefined,
+		tls: parsed.protocol === "rediss:" ? {} : undefined,
 		maxRetriesPerRequest: null,
 	};
 };
@@ -47,8 +41,7 @@ const getRedis = (env: GatewayEnv) => {
 
 export const getDownloaderQueue = (env: GatewayEnv) => {
 	if (!downloaderQueue) {
-		const queueName = env.DOWNLOADER_QUEUE_NAME || DEFAULT_QUEUE_NAME;
-		downloaderQueue = new Queue<DownloaderJobPayloadType>(queueName, {
+		downloaderQueue = new Queue<DownloaderJobPayloadType>(DEFAULT_QUEUE_NAME, {
 			connection: getRedis(env),
 			defaultJobOptions: {
 				removeOnComplete: 100,
@@ -62,6 +55,33 @@ export const getDownloaderQueue = (env: GatewayEnv) => {
 		});
 	}
 	return downloaderQueue;
+};
+
+export const getDownloaderWorker = (env: GatewayEnv) => {
+	if (!downloaderWorker) {
+		const serviceUrl = env.DOWNLOADER_SERVICE_URL?.trim();
+		if (!serviceUrl) {
+			throw new Error("DOWNLOADER_SERVICE_URL is not set");
+		}
+
+		downloaderWorker = new Worker<DownloaderJobPayloadType>(
+			DEFAULT_QUEUE_NAME,
+			async (job) => {
+				const response = await fetch(serviceUrl, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(job.data),
+				});
+				if (!response.ok) {
+					const text = await response.text();
+					throw new Error(`Downloader service returned ${response.status}: ${text}`);
+				}
+				return response.status;
+			},
+			{ connection: getRedis(env) },
+		);
+	}
+	return downloaderWorker;
 };
 
 export const downloaderJobName = JOB_NAME;

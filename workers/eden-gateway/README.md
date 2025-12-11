@@ -24,9 +24,8 @@ This is an example project made to be used as a quick start into building OpenAP
 2. Open `http://localhost:8787/` in your browser to see the Swagger interface where you can try the endpoints.
 3. Changes made in the `src/` folder will automatically trigger the server to reload, you only need to refresh the Swagger interface.
 
-## Redis setup for BullMQ
+## Redis + downloader service setup
 
-- Set Redis connection via `REDIS_URL` (supports `redis://` or `rediss://`) or `REDIS_HOST`/`REDIS_PORT` with optional `REDIS_USERNAME`, `REDIS_PASSWORD`, and `REDIS_TLS=true` for TLS.
-- Optional: override queue name with `DOWNLOADER_QUEUE_NAME`.
-- Ensure the gateway can reach the Redis instance (BullMQ uses Redis; Cloudflare Workers may require a Redis over HTTP provider or a Node-compatible runtime).
-- If the gateway also needs to call the downloader service directly, configure `DOWNLOADER_SERVICE_URL` (e.g. the worker base URL), optional `DOWNLOADER_SERVICE_PATH` (default `/youtube-to-ogg`), and `DOWNLOADER_SERVICE_API_KEY` if your worker is protected.
+- Set Redis connection via `REDIS_URL` (supports `redis://` or `rediss://`, e.g. Upstash `rediss://...`).
+- Provide `DOWNLOADER_SERVICE_URL` — the HTTP endpoint that receives each job payload; the worker processes the queue sequentially and waits for 200 OK.
+- Ensure the gateway can reach both Redis and the downloader service (BullMQ uses Redis; worker forwards jobs via HTTP).

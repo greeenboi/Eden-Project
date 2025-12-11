@@ -47,6 +47,12 @@ export class DownloaderJobCreate extends OpenAPIRoute {
 		const data = await this.getValidatedData<typeof this.schema>();
 		const payload = data.body;
 
+		console.log("[eden-gateway] enqueue request", {
+			url: payload.url,
+			artist: payload.artist?.name,
+			track: payload.track?.title,
+		});
+
 		try {
 			const queue = getDownloaderQueue(c.env);
 			const job = await queue.add(downloaderJobName, payload, {
@@ -61,10 +67,11 @@ export class DownloaderJobCreate extends OpenAPIRoute {
 			};
 		} catch (error) {
 			console.error("queue enqueue failed", error);
+			const message = error instanceof Error ? error.message : "Queue unavailable. Check Redis configuration.";
 			return Response.json(
 				{
 					success: false,
-					error: "Queue unavailable. Check Redis configuration.",
+					error: message,
 				},
 				{ status: 503 },
 			);

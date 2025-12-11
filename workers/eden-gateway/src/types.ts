@@ -4,12 +4,7 @@ import { z } from "zod";
 
 export type GatewayEnv = {
 	REDIS_URL?: string;
-	REDIS_HOST?: string;
-	REDIS_PORT?: string;
-	REDIS_USERNAME?: string;
-	REDIS_PASSWORD?: string;
-	REDIS_TLS?: string;
-	DOWNLOADER_QUEUE_NAME?: string;
+	DOWNLOADER_SERVICE_URL?: string;
 };
 
 export type AppContext = Context<{ Bindings: GatewayEnv }>;
