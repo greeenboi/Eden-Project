@@ -1,10 +1,17 @@
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
@@ -14,23 +21,17 @@ import {
 	AlertCircle,
 	Clock,
 	Disc,
+	Menu,
 	Music,
-	Play,
-	Search,
-	Settings,
-	User,
-	Users,
+	X
 } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Dimensions, Image, Pressable, RefreshControl, StyleSheet } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Animated, Easing, Image, type NativeScrollEvent, type NativeSyntheticEvent, Pressable, RefreshControl } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
-const CARD_PADDING = 16;
-const CARD_GAP = 8;
 const NUM_COLUMNS = 2;
-const CARD_WIDTH =
-	(width - CARD_PADDING * 2 - CARD_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
-
+const TRACK_STATUS_FILTER = "published";
+const NAV_COLLAPSE_THRESHOLD = 4;
 // Extended track interface for masonry layout
 interface MasonryTrack extends Track {
 	span: number;
@@ -40,17 +41,28 @@ interface MasonryTrack extends Track {
 export default function AllSongsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [refreshing, setRefreshing] = useState(false);
+	const [menuButtonState, setMenuButtonState] = useState(false);
+	const [navCollapsed, setNavCollapsed] = useState(false);
+	const navAnim = useRef(new Animated.Value(0)).current;
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 
 	useEffect(() => {
 		// Fetch published tracks on mount
-		fetchTracks(1, 50, undefined, undefined, 'published');
+		fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
 
 		return () => {
 			clearTracks();
 		};
 	}, [fetchTracks, clearTracks]);
+	
+	const insets = useSafeAreaInsets();
+	const contentInsets = {
+		top: insets.top,
+		bottom: insets.bottom,
+		left: 4,
+		right: 4,
+	};
 
 	// Transform tracks for masonry layout with varying heights and spans
 	const masonryTracks: MasonryTrack[] = useMemo(() => {
@@ -83,6 +95,33 @@ export default function AllSongsScreen() {
 			track.title.toLowerCase().includes(searchQuery.toLowerCase()),
 	);
 
+	const navHeight = navAnim.interpolate({ inputRange: [0, 1], outputRange: [92, 64] });
+	const navPaddingTop = navAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
+	const navPaddingBottom = navAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 6] });
+	const navTextScale = navAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] });
+	const navIconScale = navAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] });
+
+	const handleListScroll = useCallback(
+		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+			const offsetY = event?.nativeEvent?.contentOffset?.y ?? 0;
+			if (offsetY > NAV_COLLAPSE_THRESHOLD && !navCollapsed) {
+				setNavCollapsed(true);
+			} else if (offsetY <= NAV_COLLAPSE_THRESHOLD && navCollapsed) {
+				setNavCollapsed(false);
+			}
+		},
+		[navCollapsed],
+	);
+
+	useEffect(() => {
+		Animated.timing(navAnim, {
+			toValue: navCollapsed ? 1 : 0,
+			duration: 180,
+			easing: Easing.out(Easing.quad),
+			useNativeDriver: false, // layout + font sizes animate
+		}).start();
+	}, [navCollapsed, navAnim]);
+
 	const handleSongPress = (songId: string) => {
 		router.push(`/playing-song?id=${songId}`);
 	};
@@ -94,7 +133,7 @@ export default function AllSongsScreen() {
 			!refreshing &&
 			pagination.page * pagination.limit < pagination.total
 		) {
-			fetchTracks(pagination.page + 1, 50);
+			fetchTracks(pagination.page + 1, 50, undefined, undefined, TRACK_STATUS_FILTER);
 		}
 	};
 
@@ -102,7 +141,7 @@ export default function AllSongsScreen() {
 		setRefreshing(true);
 		try {
 			clearTracks();
-			await fetchTracks(1, 50);
+			await fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
 		} finally {
 			setRefreshing(false);
 		}
@@ -110,8 +149,9 @@ export default function AllSongsScreen() {
 
 	const formatDuration = (seconds: number | null) => {
 		if (!seconds) return "--:--";
-		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
+		const totalSeconds = Math.max(0, Math.floor(seconds));
+		const mins = Math.floor(totalSeconds / 60);
+		const secs = totalSeconds % 60;
 		return `${mins}:${secs.toString().padStart(2, "0")}`;
 	};
 
@@ -141,58 +181,44 @@ export default function AllSongsScreen() {
 				onPress={() => handleSongPress(item.id)}
 				style={{ padding: 4 }}
 			>
-			<Card className="overflow-hidden max-w-md max-h-min">
-				{/* Album Art / Cover */}
-				<View
-					style={{ backgroundColor: "transparent" }}
-					className={`w-full aspect-square ${getImageColors(index)} items-center justify-center relative overflow-hidden`}
-				>
-					{item.artworkUrl ? (
-						<Image 
-							source={{ uri: item.artworkUrl }} 
-							style={{ width: '100%', height: '100%' }}
-							resizeMode="cover"
-						/>
-					) : (
-						<Disc size={60} className="opacity-30" />
-					)}
-					{item.explicit && (
-						<Badge variant="destructive" className="absolute top-2 right-2">
-							<Text className="text-xs">E</Text>
-						</Badge>
-					)}
-				</View>					<CardContent className="p-3">
-						<Text className="font-bold text-base mb-1" numberOfLines={2}>
-							{item.title}
-						</Text>
-
-						{item.genre && (
-							<Badge variant="secondary" className="self-start mb-2">
-								<Text className="text-xs">{item.genre}</Text>
+				<Card className="bg-transparent border-0 p-0">
+					<View
+						style={{ backgroundColor: "transparent" }}
+						className={`w-full aspect-square ${getImageColors(index)} items-center justify-center relative`}
+					>
+						{item.artworkUrl ? (
+							<Image
+								source={{ uri: item.artworkUrl }}
+								style={{ width: "100%", height: "100%" }}
+								resizeMode="cover"
+							/>
+						) : (
+							<Disc size={60} className="opacity-30" />
+						)}
+						{item.explicit && (
+							<Badge variant="destructive" className="absolute top-2 right-2">
+								<Text className="text-xs">E</Text>
 							</Badge>
 						)}
-
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="flex-row items-center gap-1 mb-2"
+						<Badge
+							variant="default"
+							className="flex-row items-center gap-1 absolute bottom-2 right-2"
 						>
 							<Clock size={12} className="opacity-50" />
 							<Text className="text-xs opacity-70">
 								{formatDuration(item.duration)}
 							</Text>
-						</View>
-
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="flex-row items-center justify-between"
-						>
-							<View
-								style={{ backgroundColor: "transparent" }}
-								className="w-8 h-8 rounded-full bg-primary items-center justify-center"
-							>
-								<Play size={14} fill="white" color="white" />
-							</View>
-						</View>
+						</Badge>
+					</View>
+					<CardContent className="px-1 pb-3 mt-0 items-center justify-between flex flex-row">
+						<Text className="font-bold text-base" numberOfLines={2}>
+							{item.title}
+						</Text>
+						{item.genre && (
+							<Badge variant="secondary" className="self-start">
+								<Text className="text-xs">{item.genre}</Text>
+							</Badge>
+						)}
 					</CardContent>
 				</Card>
 			</Pressable>
@@ -200,55 +226,58 @@ export default function AllSongsScreen() {
 	};
 
 	return (
-		<View style={styles.container}>
+		<SafeAreaView style={{flex:1}}>
 			{/* Header with Navigation */}
-			<View
-				style={{ backgroundColor: "transparent" }}
-				className="flex-row items-center justify-between p-4 pb-2"
+			<Animated.View
+				style={{
+					backgroundColor: "transparent",
+					paddingHorizontal: 16,
+					paddingTop: navPaddingTop,
+					paddingBottom: navPaddingBottom,
+					height: navHeight,
+				}}
+				className="flex-row items-center justify-between"
 			>
 				<View
 					style={{ backgroundColor: "transparent" }}
 					className="flex-row items-center gap-3"
 				>
-					<Music size={32} className="text-primary" />
-					<View style={{ backgroundColor: "transparent" }}>
-						<Text className="text-3xl font-bold">All Songs</Text>
-						{pagination && !isLoading && (
-							<Text className="text-xs opacity-70">
-								{pagination.total} tracks available
-							</Text>
-						)}
-					</View>
+						<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
+							<Music size={32} className="text-primary" />
+						</Animated.View>
+						<Animated.View style={{ backgroundColor: "transparent", transform: [{ scale: navTextScale }] }}>
+							<Text className="text-3xl font-bold">All Songs</Text>
+							{pagination && !isLoading && (
+								<Text className="text-xs opacity-70">
+									{pagination.total} tracks available
+								</Text>
+							)}
+						</Animated.View>
 				</View>
-				<View
-					style={{ backgroundColor: "transparent" }}
-					className="flex-row gap-2"
-				>
-					<Pressable onPress={() => router.push("/artists")}>
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="w-10 h-10 items-center justify-center"
-						>
-							<Users size={24} />
-						</View>
-					</Pressable>
-					<Pressable onPress={() => router.push("/account")}>
-						<Avatar alt="User" className="w-10 h-10">
-							<AvatarFallback>
-								<User size={20} />
-							</AvatarFallback>
-						</Avatar>
-					</Pressable>
-					<Pressable onPress={() => router.push("/settings")}>
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="w-10 h-10 items-center justify-center"
-						>
-							<Settings size={24} />
-						</View>
-					</Pressable>
-				</View>
-			</View>
+				<DropdownMenu onOpenChange={(open: boolean) => setMenuButtonState(open)}>
+					<DropdownMenuTrigger asChild>
+						<Button variant="ghost">
+							{menuButtonState ? <X /> : <Menu />}
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent insets={contentInsets} sideOffset={2} className="w-56" align="start">
+						<DropdownMenuItem onPress={() => router.push("/artists")}>
+							<Text>Artists</Text>
+						</DropdownMenuItem>
+						<DropdownMenuSeparator />
+						<DropdownMenuLabel>My Account</DropdownMenuLabel>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+						<DropdownMenuItem onPress={() => router.push("/account")}>
+							<Text>Account</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem onPress={() => router.push("/settings")}>
+							<Text>Settings</Text>
+						</DropdownMenuItem>
+						</DropdownMenuGroup>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</Animated.View>
 
 			{/* Error Alert */}
 			{error && (
@@ -260,7 +289,7 @@ export default function AllSongsScreen() {
 				</View>
 			)}
 
-			{/* Search Bar */}
+			{/* Search Bar
 			<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
 				<Card>
 					<CardContent className="pt-4">
@@ -285,7 +314,7 @@ export default function AllSongsScreen() {
 						</View>
 					</CardContent>
 				</Card>
-			</View>
+			</View> */}
 
 			{/* Loading State */}
 			{isLoading && tracks.length === 0 ? (
@@ -306,18 +335,22 @@ export default function AllSongsScreen() {
 					</View>
 				</View>
 			) : (
-				<View style={styles.listContainer}>
+				<View style={{flex: 1, paddingHorizontal: 12, backgroundColor:"transparent"}}>
 					<FlashList
 						data={filteredTracks}
 						renderItem={renderTrackCard}
 						keyExtractor={(item) => item.id}
 						numColumns={NUM_COLUMNS}
 						masonry
+						onScroll={handleListScroll}
+						scrollEventThrottle={16}
+						
 						optimizeItemArrangement
 						overrideItemLayout={(layout, item) => {
 							layout.span = item.span;
 						}}
-						contentContainerStyle={styles.flashListContent}
+						showsVerticalScrollIndicator={false}
+						contentContainerStyle={{paddingTop: 8, paddingBottom: 16,}}
 						onEndReached={handleLoadMore}
 						onEndReachedThreshold={0.5}
 						refreshControl={
@@ -359,20 +392,6 @@ export default function AllSongsScreen() {
 					/>
 				</View>
 			)}
-		</View>
+		</SafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	listContainer: {
-		flex: 1,
-		paddingHorizontal: 12,
-	},
-	flashListContent: {
-		paddingTop: 8,
-		paddingBottom: 16,
-	},
-});

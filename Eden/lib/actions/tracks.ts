@@ -19,7 +19,7 @@ export interface TrackEncodings {
 }
 
 /**
- * Basic track information without artist/album details
+ * Basic track information
  * @interface Track
  */
 export interface Track {
