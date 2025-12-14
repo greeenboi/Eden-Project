@@ -1,6 +1,6 @@
 import { Bool, OpenAPIRoute, Str } from "chanfana";
 import { z } from "zod";
-import { getDownloaderQueue } from "../queue";
+import { fetchDownloaderJobStatus } from "../queue";
 import type { AppContext } from "../types";
 
 export class JobStatus extends OpenAPIRoute {
@@ -9,7 +9,7 @@ export class JobStatus extends OpenAPIRoute {
 		summary: "Fetch downloader job status",
 		request: {
 			params: z.object({
-				jobId: Str({ description: "BullMQ job id" }),
+				jobId: Str({ description: "Downloader job id" }),
 			}),
 		},
 		responses: {
@@ -47,8 +47,7 @@ export class JobStatus extends OpenAPIRoute {
 		const { jobId } = params;
 
 		try {
-			const queue = getDownloaderQueue(c.env);
-			const job = await queue.getJob(jobId);
+			const job = await fetchDownloaderJobStatus(c.env, jobId);
 			if (!job) {
 				return Response.json(
 					{ success: false, error: "Job not found" },
@@ -56,19 +55,18 @@ export class JobStatus extends OpenAPIRoute {
 				);
 			}
 
-			const state = await job.getState();
 			return {
 				success: true,
-				state,
-				progress: job.progress,
-				attemptsMade: job.attemptsMade,
-				failedReason: job.failedReason ?? undefined,
-				returnValue: job.returnvalue,
+				state: job.state,
+				progress: undefined,
+				attemptsMade: job.attempts,
+				failedReason: job.error,
+				returnValue: job.result,
 			};
 		} catch (error) {
 			console.error("job status lookup failed", error);
 			return Response.json(
-				{ success: false, error: "Queue unavailable. Check Redis configuration." },
+				{ success: false, error: "Queue unavailable." },
 				{ status: 503 },
 			);
 		}

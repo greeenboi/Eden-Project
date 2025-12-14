@@ -3,8 +3,8 @@ import type { Context } from "hono";
 import { z } from "zod";
 
 export type GatewayEnv = {
-	REDIS_URL?: string;
 	DOWNLOADER_SERVICE_URL?: string;
+	DOWNLOADER_QUEUE: DurableObjectNamespace;
 };
 
 export type AppContext = Context<{ Bindings: GatewayEnv }>;

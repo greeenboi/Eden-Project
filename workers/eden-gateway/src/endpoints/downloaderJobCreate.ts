@@ -1,6 +1,6 @@
 import { Bool, OpenAPIRoute } from "chanfana";
 import { z } from "zod";
-import { downloaderJobName, getDownloaderQueue } from "../queue";
+import { enqueueDownloaderJob } from "../queue";
 import { type AppContext, DownloaderJobPayload } from "../types";
 
 export class DownloaderJobCreate extends OpenAPIRoute {
@@ -54,16 +54,12 @@ export class DownloaderJobCreate extends OpenAPIRoute {
 		});
 
 		try {
-			const queue = getDownloaderQueue(c.env);
-			const job = await queue.add(downloaderJobName, payload, {
-				removeOnComplete: 100,
-				removeOnFail: 100,
-			});
+			const { jobId } = await enqueueDownloaderJob(c.env, payload);
 
 			return {
 				success: true,
-				jobId: job.id,
-				queue: queue.name,
+				jobId,
+				queue: "durable-object",
 			};
 		} catch (error) {
 			console.error("queue enqueue failed", error);

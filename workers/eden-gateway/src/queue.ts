@@ -1,106 +1,53 @@
-import { Queue, Worker } from "bullmq";
-import IORedis, { type RedisOptions } from "ioredis";
 import type { DownloaderJobPayloadType, GatewayEnv } from "./types";
 
-const DEFAULT_QUEUE_NAME = "downloader";
-const JOB_NAME = "youtube-to-ogg";
+type JobState = "queued" | "processing" | "completed" | "failed";
 
-let redisClient: IORedis | null = null;
-let downloaderQueue: Queue<DownloaderJobPayloadType> | null = null;
-let downloaderWorker: Worker<DownloaderJobPayloadType> | null = null;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-const buildRedisOptions = (env: GatewayEnv): RedisOptions => {
-	const rawUrl = env.REDIS_URL?.trim();
-	if (!rawUrl) {
-		throw new Error("Redis connection is not configured. Set REDIS_URL (e.g. upstash rediss:// URL).");
-	}
-
-	let parsed: URL;
-	try {
-		parsed = new URL(rawUrl);
-	} catch (err) {
-		throw new Error(`Invalid REDIS_URL: ${rawUrl}`);
-	}
-
-	return {
-		host: parsed.hostname,
-		port: parsed.port ? Number(parsed.port) : 6379,
-		username: parsed.username || undefined,
-		password: parsed.password || undefined,
-		tls: parsed.protocol === "rediss:" ? {} : undefined,
-		maxRetriesPerRequest: null,
-	};
+type JobRecord = {
+    id: string;
+    state: JobState;
+    attempts: number;
+    result?: unknown;
+    error?: string;
+    enqueuedAt: number;
+    updatedAt: number;
 };
 
-const waitForServiceHealthy = async (serviceUrl: string, timeoutMs = 120000, intervalMs = 3000) => {
-	const healthUrl = new URL(serviceUrl);
-	healthUrl.pathname = "/";
-	healthUrl.search = "";
+const DO_NAME = "downloader-queue";
 
-	const start = Date.now();
-	while (true) {
-		const resp = await fetch(healthUrl.toString(), { method: "GET" }).catch(() => null);
-		if (resp?.ok) return;
-		if (Date.now() - start >= timeoutMs) {
-			throw new Error(`Downloader service health check timed out after ${timeoutMs}ms`);
-		}
-		await sleep(intervalMs);
-	}
+const getQueueStub = (env: GatewayEnv) => env.DOWNLOADER_QUEUE.get(env.DOWNLOADER_QUEUE.idFromName(DO_NAME));
+
+export const enqueueDownloaderJob = async (env: GatewayEnv, payload: DownloaderJobPayloadType) => {
+    const stub = getQueueStub(env);
+    console.log("[do-client] enqueue request", { queue: DO_NAME });
+    const response = await stub.fetch("https://do/enqueue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payload }),
+    });
+    if (!response.ok) {
+        const text = await response.text();
+        console.error("[do-client] enqueue failed", { queue: DO_NAME, error: text });
+        throw new Error(`Failed to enqueue job: ${text}`);
+    }
+    const data = (await response.json()) as { success: boolean; jobId: string };
+    console.log("[do-client] enqueued", { queue: DO_NAME, jobId: data.jobId });
+    return { jobId: data.jobId };
 };
 
-const getRedis = (env: GatewayEnv) => {
-	if (!redisClient) {
-		redisClient = new IORedis(buildRedisOptions(env));
-	}
-	return redisClient;
+export const fetchDownloaderJobStatus = async (env: GatewayEnv, jobId: string) => {
+    const stub = getQueueStub(env);
+    console.log("[do-client] status request", { queue: DO_NAME, jobId });
+    const response = await stub.fetch(`https://do/status/${jobId}`, { method: "GET" });
+    if (response.status === 404) {
+        console.warn("[do-client] job not found", { queue: DO_NAME, jobId });
+        return null;
+    }
+    if (!response.ok) {
+        const text = await response.text();
+        console.error("[do-client] status failed", { queue: DO_NAME, jobId, error: text });
+        throw new Error(`Failed to fetch job status: ${text}`);
+    }
+    const data = (await response.json()) as { success: boolean; job: JobRecord };
+    console.log("[do-client] status ok", { queue: DO_NAME, jobId, state: data.job.state });
+    return data.job;
 };
-
-export const getDownloaderQueue = (env: GatewayEnv) => {
-	if (!downloaderQueue) {
-		downloaderQueue = new Queue<DownloaderJobPayloadType>(DEFAULT_QUEUE_NAME, {
-			connection: getRedis(env),
-			defaultJobOptions: {
-				removeOnComplete: 100,
-				removeOnFail: 100,
-				attempts: 2,
-				backoff: {
-					type: "exponential",
-					delay: 1000,
-				},
-			},
-		});
-	}
-	return downloaderQueue;
-};
-
-export const getDownloaderWorker = (env: GatewayEnv) => {
-	if (!downloaderWorker) {
-		const serviceUrl = env.DOWNLOADER_SERVICE_URL?.trim();
-		if (!serviceUrl) {
-			throw new Error("DOWNLOADER_SERVICE_URL is not set");
-		}
-
-		downloaderWorker = new Worker<DownloaderJobPayloadType>(
-			DEFAULT_QUEUE_NAME,
-			async (job) => {
-				await waitForServiceHealthy(serviceUrl);
-				const response = await fetch(serviceUrl, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify(job.data),
-				});
-				if (!response.ok) {
-					const text = await response.text();
-					throw new Error(`Downloader service returned ${response.status}: ${text}`);
-				}
-				return response.status;
-			},
-			{ connection: getRedis(env) },
-		);
-	}
-	return downloaderWorker;
-};
-
-export const downloaderJobName = JOB_NAME;
