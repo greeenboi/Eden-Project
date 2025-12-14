@@ -21,6 +21,7 @@ logger = logging.getLogger("yt_downloader_worker")
 API_BASE_DEFAULT = os.getenv(
     "API_BASE_DEFAULT",
 )
+YTDLP_COOKIES_PATH = os.getenv("YTDLP_COOKIES_PATH")
 
 
 class ArtistInput(BaseModel):
@@ -87,6 +88,14 @@ def download_ogg(url: str) -> dict[str, Any]:
         # Prefer android client to avoid SABR-gated web clients; nodejs runtime available in container.
         "extractor_args": {"youtube": {"player_client": ["android"]}},
     }
+
+    if YTDLP_COOKIES_PATH:
+        cookie_path = Path(YTDLP_COOKIES_PATH)
+        if cookie_path.exists():
+            ydl_opts["cookiefile"] = str(cookie_path)
+            logger.info("[download] using cookies file: %s", cookie_path)
+        else:
+            logger.warning("[download] YTDLP_COOKIES_PATH set but file missing: %s", cookie_path)
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
