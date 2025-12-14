@@ -19,7 +19,7 @@
 		]
 	},
 	"migrations": [
-		{ "tag": "v1-downloader-queue", "new_classes": ["DownloaderQueueDO"] }
+		{ "tag": "v1-downloader-queue", "new_sqlite_classes": ["DownloaderQueueDO"] }
 	]
 	/**
 	 * Smart Placement
