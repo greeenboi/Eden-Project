@@ -1,13 +1,3 @@
-import { router } from "expo-router";
-import { AlertTriangle } from "lucide-react-native";
-import { useState } from "react";
-import {
-	KeyboardAvoidingView,
-	Platform,
-	View as RNView,
-	ScrollView,
-	StyleSheet,
-} from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -23,6 +13,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { useSession } from "@/lib/ctx";
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { AlertTriangle } from "lucide-react-native";
+import { useState } from "react";
+import {
+	KeyboardAvoidingView,
+	Platform,
+	View as RNView,
+	ScrollView,
+	StyleSheet,
+} from "react-native";
 
 export default function SignIn() {
 	const { signIn, signUp, error, clearError } = useSession();
@@ -48,7 +49,7 @@ export default function SignIn() {
 				await signIn(email, password);
 			}
 			// Navigate to index after signing in
-			router.replace("/(dashboard)/index");
+			router.replace("/(dashboard)");
 		} catch (err) {
 			// Error is handled by the auth store
 			console.error(err);
@@ -67,6 +68,12 @@ export default function SignIn() {
 			behavior={Platform.OS === "ios" ? "padding" : "height"}
 			style={styles.container}
 		>
+			<Image
+				source={require("@/assets/images/banner.png")}
+				style={styles.background}
+				contentFit="cover"
+				pointerEvents="none"
+			/>
 			<ScrollView
 				contentContainerStyle={styles.scrollContent}
 				keyboardShouldPersistTaps="handled"
@@ -178,6 +185,10 @@ export default function SignIn() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
+	},
+	background: {
+		...StyleSheet.absoluteFillObject,
+		opacity: 0.55,
 	},
 	scrollContent: {
 		flexGrow: 1,
