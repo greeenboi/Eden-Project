@@ -1,7 +1,7 @@
 import { View } from "@/components/Themed";
+import { PlayingSongContent } from "@/components/pages/player";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
 	DropdownMenu,
@@ -15,6 +15,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
+import { BottomSheetModal, BottomSheetModalProvider, BottomSheetView, useBottomSheet } from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import {
@@ -23,11 +26,13 @@ import {
 	Disc,
 	Menu,
 	Music,
+	Search,
 	X
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Animated, Easing, Image, type NativeScrollEvent, type NativeSyntheticEvent, Pressable, RefreshControl } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
@@ -38,12 +43,25 @@ interface MasonryTrack extends Track {
 	estimatedHeight: number;
 }
 
+// Auto-expand the sheet to the target snap point when the content mounts
+function AutoExpandOnMount({ targetIndex }: { targetIndex: number }) {
+	const { snapToIndex } = useBottomSheet();
+
+	useEffect(() => {
+		snapToIndex(targetIndex);
+	}, [snapToIndex, targetIndex]);
+
+	return null;
+}
+
 export default function AllSongsScreen() {
-	const [searchQuery, setSearchQuery] = useState("");
 	const [refreshing, setRefreshing] = useState(false);
 	const [menuButtonState, setMenuButtonState] = useState(false);
 	const [navCollapsed, setNavCollapsed] = useState(false);
+	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+	const [sheetIndex, setSheetIndex] = useState(0);
 	const navAnim = useRef(new Animated.Value(0)).current;
+	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 
@@ -89,11 +107,8 @@ export default function AllSongsScreen() {
 		});
 	}, [tracks]);
 
-	const filteredTracks = masonryTracks.filter(
-		(track) =>
-			searchQuery.trim() === "" ||
-			track.title.toLowerCase().includes(searchQuery.toLowerCase()),
-	);
+	const snapPoints = useMemo(() => ["20%", "50%", "100%"], []);
+	const FULL_SNAP_INDEX = snapPoints.length - 1;
 
 	const navHeight = navAnim.interpolate({ inputRange: [0, 1], outputRange: [92, 64] });
 	const navPaddingTop = navAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
@@ -123,7 +138,14 @@ export default function AllSongsScreen() {
 	}, [navCollapsed, navAnim]);
 
 	const handleSongPress = (songId: string) => {
-		router.push(`/playing-song?id=${songId}`);
+		setSelectedTrackId(songId);
+		bottomSheetRef.current?.present();
+		requestAnimationFrame(() => bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX));
+	};
+
+	const handleSheetDismiss = () => {
+		setSelectedTrackId(null);
+		setSheetIndex(0);
 	};
 
 	const handleLoadMore = () => {
@@ -189,7 +211,7 @@ export default function AllSongsScreen() {
 						{item.artworkUrl ? (
 							<Image
 								source={{ uri: item.artworkUrl }}
-								style={{ width: "100%", height: "100%" }}
+								style={{ width: "100%", height: "100%", borderRadius: 11 }}
 								resizeMode="cover"
 							/>
 						) : (
@@ -226,6 +248,7 @@ export default function AllSongsScreen() {
 	};
 
 	return (
+		<BottomSheetModalProvider>
 		<SafeAreaView style={{flex:1}}>
 			{/* Header with Navigation */}
 			<Animated.View
@@ -236,7 +259,7 @@ export default function AllSongsScreen() {
 					paddingBottom: navPaddingBottom,
 					height: navHeight,
 				}}
-				className="flex-row items-center justify-between"
+				className="flex flex-row items-center justify-between"
 			>
 				<View
 					style={{ backgroundColor: "transparent" }}
@@ -254,29 +277,36 @@ export default function AllSongsScreen() {
 							)}
 						</Animated.View>
 				</View>
-				<DropdownMenu onOpenChange={(open: boolean) => setMenuButtonState(open)}>
-					<DropdownMenuTrigger asChild>
-						<Button variant="ghost">
-							{menuButtonState ? <X /> : <Menu />}
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent insets={contentInsets} sideOffset={2} className="w-56" align="start">
-						<DropdownMenuItem onPress={() => router.push("/artists")}>
-							<Text>Artists</Text>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel>My Account</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-						<DropdownMenuItem onPress={() => router.push("/account")}>
-							<Text>Account</Text>
-						</DropdownMenuItem>
-						<DropdownMenuItem onPress={() => router.push("/settings")}>
-							<Text>Settings</Text>
-						</DropdownMenuItem>
-						</DropdownMenuGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<View style={{backgroundColor: "transparent"}} className="flex flex-row items-center justify-end gap-2.5">
+					<Pressable onPress={() => router.push('/search-songs')}>
+						<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
+							<Search size={32} />
+						</Animated.View>
+					</Pressable>
+					<DropdownMenu onOpenChange={(open: boolean) => setMenuButtonState(open)}>
+						<DropdownMenuTrigger asChild>
+							<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
+								{menuButtonState ? <X size={32} /> : <Menu size={32} />}
+							</Animated.View>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent insets={contentInsets} sideOffset={2} className="w-56" align="start">
+							<DropdownMenuItem onPress={() => router.push("/artists")}>
+								<Text>Artists</Text>
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
+							<DropdownMenuLabel>My Account</DropdownMenuLabel>
+							<DropdownMenuSeparator />
+							<DropdownMenuGroup>
+							<DropdownMenuItem onPress={() => router.push("/account")}>
+								<Text>Account</Text>
+							</DropdownMenuItem>
+							<DropdownMenuItem onPress={() => router.push("/settings")}>
+								<Text>Settings</Text>
+							</DropdownMenuItem>
+							</DropdownMenuGroup>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</View>
 			</Animated.View>
 
 			{/* Error Alert */}
@@ -288,33 +318,6 @@ export default function AllSongsScreen() {
 					</Alert>
 				</View>
 			)}
-
-			{/* Search Bar
-			<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
-				<Card>
-					<CardContent className="pt-4">
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="flex-row items-center gap-2"
-						>
-							<Search size={20} className="opacity-50" />
-							<Input
-								placeholder="Search tracks..."
-								value={searchQuery}
-								onChangeText={setSearchQuery}
-								className="flex-1"
-							/>
-							<Button
-								variant="ghost"
-								size="sm"
-								onPress={() => router.push("/search-songs")}
-							>
-								<Text>Advanced</Text>
-							</Button>
-						</View>
-					</CardContent>
-				</Card>
-			</View> */}
 
 			{/* Loading State */}
 			{isLoading && tracks.length === 0 ? (
@@ -337,7 +340,7 @@ export default function AllSongsScreen() {
 			) : (
 				<View style={{flex: 1, paddingHorizontal: 12, backgroundColor:"transparent"}}>
 					<FlashList
-						data={filteredTracks}
+						data={masonryTracks}
 						renderItem={renderTrackCard}
 						keyExtractor={(item) => item.id}
 						numColumns={NUM_COLUMNS}
@@ -369,9 +372,7 @@ export default function AllSongsScreen() {
 								>
 									<Music size={48} className="opacity-30 mb-4" />
 									<Text className="text-center opacity-70">
-										{searchQuery
-											? "No tracks found matching your search"
-											: "No tracks available"}
+										{"No tracks available"}
 									</Text>
 								</View>
 							) : null
@@ -393,5 +394,28 @@ export default function AllSongsScreen() {
 				</View>
 			)}
 		</SafeAreaView>
+		<BottomSheetModal
+			ref={bottomSheetRef}
+			snapPoints={snapPoints}
+			index={2}
+			enablePanDownToClose={false}
+			// onDismiss={handleSheetDismiss}
+			onChange={(index) => setSheetIndex(index)}
+			backgroundStyle={{ backgroundColor: useIsDark() ? THEME.dark.background : THEME.light.background }}
+			handleIndicatorStyle={{ backgroundColor: useIsDark() ? THEME.dark.primary : THEME.light.primary }}
+			detached={sheetIndex === 1}
+			style={sheetIndex === 1 ? { marginHorizontal: 16, marginTop: 8 } : undefined}
+			animateOnMount
+		>
+			<BottomSheetView style={{ flex: 1 }}>
+				<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
+				<PlayingSongContent
+					trackId={selectedTrackId ?? undefined}
+					onClose={() => bottomSheetRef.current?.dismiss()}
+					variant={sheetIndex === 0 ? "mini" : sheetIndex === 1 ? "compact" : "full"}
+				/>
+			</BottomSheetView>
+		</BottomSheetModal>
+		</BottomSheetModalProvider>
 	);
 }
