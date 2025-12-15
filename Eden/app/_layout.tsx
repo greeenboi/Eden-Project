@@ -1,3 +1,6 @@
+import { useColorScheme } from "@/components/useColorScheme";
+import { SessionProvider, useSession } from "@/lib/ctx";
+import { SplashScreenController } from "@/lib/splash";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
@@ -5,16 +8,14 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
-import { useColorScheme } from "@/components/useColorScheme";
-import { SessionProvider, useSession } from "@/lib/ctx";
-import { SplashScreenController } from "@/lib/splash";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import "react-native-reanimated";
 import "../global.css";
 import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
 
 export {
 	// Catch any errors thrown by the Layout component.
-	ErrorBoundary,
+	ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -70,17 +71,19 @@ function RootLayoutNav() {
 		<ThemeProvider
 			value={colorScheme === "dark" ? DarkThemeCustom : LightTheme}
 		>
-			<Stack screenOptions={{ headerShown: false }}>
-				<Stack.Protected guard={!session}>
-					<Stack.Screen name="(auth)" />
-				</Stack.Protected>
+			<GestureHandlerRootView >
+				<Stack screenOptions={{ headerShown: false }}>
+					<Stack.Protected guard={!session}>
+						<Stack.Screen name="(auth)" />
+					</Stack.Protected>
 
-				<Stack.Protected guard={!!session}>
-					<Stack.Screen name="(dashboard)" />
-					<Stack.Screen name="(home)" />
-				</Stack.Protected>
-			</Stack>
-			<PortalHost />
+					<Stack.Protected guard={!!session}>
+						<Stack.Screen name="(dashboard)" />
+						<Stack.Screen name="(home)" />
+					</Stack.Protected>
+				</Stack>
+				<PortalHost />
+			</GestureHandlerRootView>
 		</ThemeProvider>
 	);
 }

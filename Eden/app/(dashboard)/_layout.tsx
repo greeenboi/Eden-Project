@@ -1,5 +1,5 @@
-import { Redirect, Stack } from "expo-router";
 import { useSession } from "@/lib/ctx";
+import { Redirect, Stack } from "expo-router";
 
 export default function AppLayout() {
 	const { session, isLoading } = useSession();
@@ -14,7 +14,6 @@ export default function AppLayout() {
 		<Stack screenOptions={{ headerShown: false }}>
 			<Stack.Screen name="index" />
 			<Stack.Screen name="search-songs" />
-			<Stack.Screen name="playing-song" />
 			<Stack.Screen name="artists" />
 			<Stack.Screen name="artist-detail" />
 		</Stack>
