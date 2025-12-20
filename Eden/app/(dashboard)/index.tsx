@@ -266,12 +266,12 @@ export default function AllSongsScreen() {
 					className="flex-row items-center gap-3"
 				>
 						<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
-							<Music size={32} className="text-primary" />
+							<Music size={32} color={useIsDark() ? THEME.dark.foreground : THEME.light.foreground } />
 						</Animated.View>
 						<Animated.View style={{ backgroundColor: "transparent", transform: [{ scale: navTextScale }] }}>
-							<Text className="text-3xl font-bold">All Songs</Text>
+							<Text className="text-3xl text-foreground font-bold">All Songs</Text>
 							{pagination && !isLoading && (
-								<Text className="text-xs opacity-70">
+								<Text className="text-xs text-muted-foreground opacity-70">
 									{pagination.total} tracks available
 								</Text>
 							)}
@@ -280,15 +280,15 @@ export default function AllSongsScreen() {
 				<View style={{backgroundColor: "transparent"}} className="flex flex-row items-center justify-end gap-2.5">
 					<Pressable onPress={() => router.push('/search-songs')}>
 						<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
-							<Search size={32} />
+							<Search color={useIsDark() ? THEME.dark.foreground : THEME.light.foreground } size={32} />
 						</Animated.View>
 					</Pressable>
 					<DropdownMenu onOpenChange={(open: boolean) => setMenuButtonState(open)}>
-						<DropdownMenuTrigger asChild>
-							<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
-								{menuButtonState ? <X size={32} /> : <Menu size={32} />}
-							</Animated.View>
-						</DropdownMenuTrigger>
+						<Animated.View style={{ transform: [{ scale: navIconScale }] }}> 
+							<DropdownMenuTrigger>
+								{menuButtonState ? <X size={32} color={useIsDark() ? THEME.dark.foreground : THEME.light.foreground } /> : <Menu size={32} color={useIsDark() ? THEME.dark.foreground : THEME.light.foreground } />}
+							</DropdownMenuTrigger>
+						</Animated.View>
 						<DropdownMenuContent insets={contentInsets} sideOffset={2} className="w-56" align="start">
 							<DropdownMenuItem onPress={() => router.push("/artists")}>
 								<Text>Artists</Text>

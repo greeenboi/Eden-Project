@@ -3,27 +3,27 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
+import { formatDuration, useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import { useTrackStore } from "@/lib/actions/tracks";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import {
-    AlertCircle,
-    ArrowLeft,
-    Music,
-    Pause,
-    Play,
-    Repeat,
-    SkipBack,
-    SkipForward,
-    User,
-    Volume2
+	AlertCircle,
+	ArrowLeft,
+	Music,
+	Pause,
+	Play,
+	Repeat,
+	SkipBack,
+	SkipForward,
+	User,
+	Volume2
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Image, Pressable, StyleSheet } from "react-native";
 
 type PlayingSongContentProps = {
@@ -48,29 +48,72 @@ export function PlayingSongContent({
 		getStreamingUrl,
 		clearCurrentTrack,
 	} = useTrackStore();
-
-	const [streamUrl, setStreamUrl] = useState<string | null>(null);
-	const [loadingStream, setLoadingStream] = useState(false);
-	const [isFavorite, setIsFavorite] = useState(false);
 	const colorScheme = useColorScheme();
-
-	const player = useAudioPlayer(null, { updateInterval: 100 });
-	const status = useAudioPlayerStatus(player);
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
+
+	const {
+		player,
+		status,
+		streamUrl,
+		loadingStream,
+		seekForward,
+		seekBackward,
+		toggleLoop,
+		toggleMute,
+		togglePlayback,
+		isMuted,
+	} = useTrackAudioPlayer({
+		trackId,
+		fetchStream: getStreamingUrl,
+		enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
+		updateInterval: 100,
+	});
+
+	const [scrubValue, setScrubValue] = useState(0);
+	const [isScrubbing, setIsScrubbing] = useState(false);
+
+	useEffect(() => {
+		if (!isScrubbing) {
+			setScrubValue(status.currentTime ?? 0);
+		}
+	}, [status.currentTime, isScrubbing]);
+
+	const sliderValue = useMemo(() => {
+		return isScrubbing ? scrubValue : status.currentTime ?? 0;
+	}, [isScrubbing, scrubValue, status.currentTime]);
+
+	const sliderMax = useMemo(() => {
+		return status.duration && status.duration > 0 ? status.duration : 1;
+	}, [status.duration]);
+
+	const safeSliderMax = useMemo(() => {
+		if (!Number.isFinite(sliderMax) || sliderMax <= 0) return 1;
+		return sliderMax;
+	}, [sliderMax]);
+
+	const safeSliderValue = useMemo(() => {
+		if (!Number.isFinite(sliderValue)) return 0;
+		return Math.min(safeSliderMax, Math.max(0, sliderValue));
+	}, [safeSliderMax, sliderValue]);
+
+	const handleSlidingStart = (value: number) => {
+		setIsScrubbing(true);
+		setScrubValue(Number.isFinite(value) ? value : 0);
+	};
+
+	const handleValueChange = (value: number) => {
+		if (!Number.isFinite(value)) return;
+		setScrubValue(value);
+	};
+
+	const handleSlidingComplete = (value: number) => {
+		setIsScrubbing(false);
+		if (!status.isLoaded || !Number.isFinite(value)) return;
+		player.seekTo(Math.min(safeSliderMax, Math.max(0, value)));
+	};
 
 	// Localize loading to this track so list fetches elsewhere don't block the player UI
 	const isTrackLoading = isLoading && (!currentTrack || currentTrack.id !== trackId);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	const safePause = useCallback(() => {
-		try {
-			if (status?.isLoaded) {
-				player.pause();
-			}
-		} catch (err) {
-			console.warn("pause failed", err);
-		}
-	}, [player]);
 
 	const handleClose = () => {
 		log("handleClose");
@@ -85,9 +128,6 @@ export function PlayingSongContent({
 	useEffect(() => {
 		log("track effect", { trackId });
 		if (trackId) {
-			setStreamUrl(null);
-			setLoadingStream(false);
-			safePause();
 			fetchTrackById(trackId);
 		} else {
 			clearCurrentTrack();
@@ -95,79 +135,9 @@ export function PlayingSongContent({
 
 		return () => {
 			log("cleanup track effect", { trackId });
-			safePause();
 			clearCurrentTrack();
 		};
-	}, [trackId, fetchTrackById, clearCurrentTrack, safePause]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		log("stream url effect", { currentTrack: currentTrack?.id, trackId, streamUrl, loadingStream });
-		if (!trackId) return;
-		if (!currentTrack || currentTrack.id !== trackId) return;
-		if (streamUrl) return;
-		if (loadingStream) return;
-
-		setLoadingStream(true);
-		getStreamingUrl(currentTrack.id)
-			.then((response) => {
-				log("got streaming url", response.streamUrl);
-				setStreamUrl(response.streamUrl);
-			})
-			.catch((err) => {
-				console.error("Failed to get streaming URL", err);
-			})
-			.finally(() => setLoadingStream(false));
-	}, [currentTrack?.id, trackId, streamUrl, loadingStream, getStreamingUrl]);
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	useEffect(() => {
-		log("apply stream", { streamUrl });
-		if (streamUrl) {
-			player.replace(streamUrl);
-		}
-	}, [streamUrl]);
-
-	const formatDuration = (seconds?: number) => {
-		if (!Number.isFinite(seconds)) return "0:00";
-		const value = Math.max(0, Math.floor(seconds ?? 0));
-		const mins = Math.floor(value / 60);
-		const secs = value % 60;
-		return `${mins}:${secs.toString().padStart(2, "0")}`;
-	};
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-	const progressValue = useMemo(() => {
-		log("progress calc", { currentTime: status.currentTime, duration: status.duration });
-		if (!status.duration || status.duration === 0) return 0;
-		return (status.currentTime / status.duration) * 100;
-	}, [status.currentTime, status.duration]);
-
-	const togglePlayback = () => {
-		log("togglePlayback", { playing: status.playing });
-		if (status.playing) {
-			player.pause();
-		} else {
-			player.play();
-		}
-	};
-
-	const toggleLoop = () => {
-		log("toggleLoop", { loop: player.loop });
-		player.loop = !player.loop;
-	};
-
-	const skip10Forward = () => {
-		const newTime = Math.min(status.currentTime + 10, status.duration);
-		log("skip10Forward", { newTime });
-		player.seekTo(newTime);
-	};
-
-	const skip10Back = () => {
-		const newTime = Math.max(status.currentTime - 10, 0);
-		log("skip10Back", { newTime });
-		player.seekTo(newTime);
-	};
+	}, [trackId, fetchTrackById, clearCurrentTrack]);
 
 	if (!trackId) {
 		return (
@@ -321,7 +291,7 @@ export function PlayingSongContent({
 										/>
 									</Pressable>
 
-									<Pressable onPress={skip10Back}>
+									<Pressable onPress={() => seekBackward()}>
 										<SkipBack size={32} />
 									</Pressable>
 
@@ -341,19 +311,12 @@ export function PlayingSongContent({
 										</View>
 									</Pressable>
 
-									<Pressable onPress={skip10Forward}>
+									<Pressable onPress={() => seekForward()}>
 										<SkipForward size={32} />
 									</Pressable>
 
-									<Pressable
-										onPress={() => {
-											player.volume = player.volume > 0 ? 0 : 1;
-										}}
-									>
-										<Volume2
-											size={24}
-											className={player.volume === 0 ? "opacity-50" : ""}
-										/>
+									<Pressable onPress={toggleMute}>
+										<Volume2 size={24} className={isMuted ? "opacity-50" : ""} />
 									</Pressable>
 								</View>
 
@@ -363,13 +326,26 @@ export function PlayingSongContent({
 								style={{ backgroundColor: "transparent" }}
 								className="px-8 pb-6"
 							>
-								<Progress value={progressValue} className="mb-2" />
+								<Slider
+									key={`slider-full-${trackId ?? "none"}`}
+									style={{ width: "100%", height: 40 }}
+									minimumValue={0}
+									maximumValue={safeSliderMax}
+									value={safeSliderValue}
+									minimumTrackTintColor={themeColors.primary}
+									maximumTrackTintColor={themeColors.muted}
+									thumbTintColor={themeColors.primary}
+									onSlidingStart={handleSlidingStart}
+									onValueChange={handleValueChange}
+									onSlidingComplete={handleSlidingComplete}
+									disabled={!status.isLoaded || loadingStream}
+								/>
 								<View
 									style={{ backgroundColor: "transparent" }}
 									className="flex-row justify-between"
 								>
 									<Text className="text-sm opacity-50">
-										{formatDuration(status.currentTime)}
+										{formatDuration(sliderValue)}
 									</Text>
 									<Text className="text-sm opacity-50">
 										{formatDuration(status.duration)}
@@ -437,10 +413,10 @@ export function PlayingSongContent({
                                         Buffering: {status.isBuffering ? "Yes" : "No"}
                                     </Text>
                                     <Text className="text-xs opacity-50 mb-1">
-                                        Duration: {status.duration.toFixed(1)}s
+										Duration: {(status.duration ?? 0).toFixed(1)}s
                                     </Text>
                                     <Text className="text-xs opacity-50">
-                                        Volume: {Math.round(player.volume * 100)}%
+										Volume: {Math.round((player.volume ?? 0) * 100)}%
                                     </Text>
                                 </View>
                             )}
@@ -475,10 +451,23 @@ export function PlayingSongContent({
 							</View>
 
 							<View className="px-2">
-								<Progress value={progressValue} className="mb-2" />
+								<Slider
+									key={`slider-compact-${trackId ?? "none"}`}
+									style={{ width: "100%", height: 36 }}
+									minimumValue={0}
+									maximumValue={safeSliderMax}
+									value={safeSliderValue}
+									minimumTrackTintColor={themeColors.primary}
+									maximumTrackTintColor={themeColors.muted}
+									thumbTintColor={themeColors.primary}
+									onSlidingStart={handleSlidingStart}
+									onValueChange={handleValueChange}
+									onSlidingComplete={handleSlidingComplete}
+									disabled={!status.isLoaded || loadingStream}
+								/>
 								<View className="flex-row justify-between">
 									<Text className="text-xs opacity-50">
-										{formatDuration(status.currentTime)}
+										{formatDuration(sliderValue)}
 									</Text>
 									<Text className="text-xs opacity-50">
 										{formatDuration(status.duration)}
@@ -487,7 +476,7 @@ export function PlayingSongContent({
 							</View>
 
 							<View className="flex-row items-center justify-center gap-6">
-								<Pressable onPress={skip10Back}>
+								<Pressable onPress={() => seekBackward()}>
 									<SkipBack size={28} />
 								</Pressable>
 								<Pressable
@@ -502,7 +491,7 @@ export function PlayingSongContent({
 										)}
 									</View>
 								</Pressable>
-								<Pressable onPress={skip10Forward}>
+								<Pressable onPress={() => seekForward()}>
 									<SkipForward size={28} />
 								</Pressable>
 							</View>
@@ -534,10 +523,23 @@ export function PlayingSongContent({
 								<Text className="text-xs opacity-70" numberOfLines={1}>
 									{currentTrack.artist.name}
 								</Text>
-								<Progress value={progressValue} className="mt-2" />
+								<Slider
+									key={`slider-mini-${trackId ?? "none"}`}
+									style={{ width: "100%", height: 32 }}
+									minimumValue={0}
+									maximumValue={safeSliderMax}
+									value={safeSliderValue}
+									minimumTrackTintColor={themeColors.primary}
+									maximumTrackTintColor={themeColors.muted}
+									thumbTintColor={themeColors.primary}
+									onSlidingStart={handleSlidingStart}
+									onValueChange={handleValueChange}
+									onSlidingComplete={handleSlidingComplete}
+									disabled={!status.isLoaded || loadingStream}
+								/>
 							</View>
 							<View className="flex-row items-center gap-3">
-								<Pressable onPress={skip10Back}>
+								<Pressable onPress={() => seekBackward()}>
 									<SkipBack size={22} />
 								</Pressable>
 								<Pressable
@@ -552,7 +554,7 @@ export function PlayingSongContent({
 										)}
 									</View>
 								</Pressable>
-								<Pressable onPress={skip10Forward}>
+								<Pressable onPress={() => seekForward()}>
 									<SkipForward size={22} />
 								</Pressable>
 							</View>
