@@ -11,6 +11,28 @@ type ResponseBody =
     }
   | null
 
+async function tryGetVideoFromContent(tabId: number) {
+  try {
+    return await chrome.tabs.sendMessage(tabId, { type: "eden-get-video-info" })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error('[Eden BG] content script message failed', err)
+
+    // Retry once when the tab context was just refreshed (common on YouTube navigations).
+    if (message.toLowerCase().includes('context invalidated') || message.includes('Receiving end does not exist')) {
+      await new Promise((resolve) => setTimeout(resolve, 300))
+      try {
+        return await chrome.tabs.sendMessage(tabId, { type: "eden-get-video-info" })
+      } catch (retryErr) {
+        console.error('[Eden BG] retry after context invalidation failed', retryErr)
+        return null
+      }
+    }
+
+    return null
+  }
+}
+
 const handler: PlasmoMessaging.MessageHandler<RequestBody, ResponseBody> = async (_req, res) => {
   console.log('[Eden BG] get-video handler invoked')
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
@@ -22,13 +44,14 @@ const handler: PlasmoMessaging.MessageHandler<RequestBody, ResponseBody> = async
     return
   }
 
+  if (!tab.url || !tab.url.includes('youtube.com/watch')) {
+    console.warn('[Eden BG] active tab is not a YouTube watch page', tab.url)
+    res.send(null)
+    return
+  }
+
   console.log('[Eden BG] sending message to tab', tab.id, tab.url)
-  const response = await chrome.tabs
-    .sendMessage(tab.id, { type: "eden-get-video-info" })
-    .catch((err) => {
-      console.error('[Eden BG] content script message failed', err)
-      return null
-    })
+  const response = await tryGetVideoFromContent(tab.id)
 
   console.log('[Eden BG] response from content script', response)
 
