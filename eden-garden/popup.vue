@@ -128,14 +128,47 @@
               {{ metadataError }}
             </div>
 
-            <div v-else-if="trackMetadata" class="flex flex-col gap-2 text-sm">
-              <div class="font-semibold text-lg">{{ trackMetadata.track?.title || 'Unknown title' }}</div>
-              <div class="text-muted">Artist: {{ trackMetadata.artist?.name || 'Unknown artist' }}</div>
-              <div>Album: {{ trackMetadata.track?.album || 'Unknown album' }}</div>
-              <div>Genre: {{ trackMetadata.track?.genre || 'Unknown' }}</div>
-              <div>Duration: {{ trackMetadata.track?.duration ? (trackMetadata.track.duration).toFixed(1) + 's' : 'Unknown' }}</div>
-              <div v-if="trackMetadata.track?.isrc">ISRC: {{ trackMetadata.track.isrc }}</div>
-              <div class="flex gap-2 mt-2">
+            <div v-else-if="trackOptions.length" class="flex flex-col gap-3 text-sm">
+              <div class="flex flex-col gap-2">
+                <div
+                  v-for="(option, idx) in trackOptions"
+                  :key="idx"
+                  class="flex gap-3 rounded border border-slate-800 bg-slate-900/40 p-3 cursor-pointer hover:border-primary"
+                  :class="{ 'border-primary': selectedIndex === idx }"
+                  @click="selectedIndex = idx"
+                >
+                  <input
+                    class="mt-1"
+                    type="radio"
+                    name="track-option"
+                    :value="idx"
+                    v-model.number="selectedIndex"
+                  />
+                  <img
+                    v-if="option.track?.image"
+                    :src="option.track.image"
+                    alt="Album art"
+                    class="h-16 w-16 rounded object-cover"
+                  />
+                  <div class="flex flex-col gap-1">
+                    <div class="font-semibold text-base">{{ option.track?.title || 'Unknown title' }}</div>
+                    <div class="text-muted">Artist: {{ option.artist?.name || 'Unknown artist' }}</div>
+                    <div>Album: {{ option.track?.album || 'Unknown album' }}</div>
+                    <div>Album image URL: <span class="break-all">{{ option.track?.image || 'N/A' }}</span></div>
+                    <div>Genre: {{ option.track?.genre || 'Unknown' }}</div>
+                    <div>
+                      Duration:
+                      {{ option.track?.duration ? (option.track.duration).toFixed(1) + 's' : 'Unknown' }}
+                    </div>
+                    <div v-if="option.track?.isrc">ISRC: {{ option.track.isrc }}</div>
+                    <div v-if="option.track?.spotifyUri" class="text-xs text-primary">
+                      {{ option.track.spotifyUri }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="selectedMetadata" class="flex gap-2 mt-1">
                 <Button
                   label="Push to Eden"
                   icon="pi pi-cloud-upload"
@@ -144,12 +177,12 @@
                   :disabled="isPushing"
                 />
                 <Button
-                  v-if="trackMetadata.track?.spotifyUri"
+                  v-if="selectedMetadata.track?.spotifyUri"
                   label="Open in Spotify"
                   icon="pi pi-external-link"
                   severity="secondary"
                   size="small"
-                  @click="() => handleOpenSpotify(trackMetadata.track?.spotifyUri)"
+                  @click="() => handleOpenSpotify(selectedMetadata.track?.spotifyUri)"
                 />
               </div>
             </div>
@@ -169,11 +202,13 @@ import Aura from '@primeuix/themes/dist/aura';
 import 'primeicons/primeicons.css';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
+import Image from 'primevue/image';
 import PrimeVue from 'primevue/config';
 import ProgressSpinner from 'primevue/progressspinner';
+import RadioButton from 'primevue/radiobutton';
 import Ripple from 'primevue/ripple';
 import Skeleton from 'primevue/skeleton';
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import Plasma from "./Plasma.vue";
 import "./style.css";
 
@@ -185,29 +220,32 @@ interface YouTubeVideo {
   id: string
   title: string
   url: string
-  timestamp: number
+                  class="flex gap-3 rounded border border-slate-800 bg-slate-900/40 p-3 cursor-pointer hover:border-primary"
 }
 
 interface ArtistMetadata {
-  name: string
-  email?: string | null
-  avatarUrl?: string | null
-  bio?: string | null
-  profile?: string | null
-  genres?: string[]
-  spotifyUri?: string | null
-  followers?: number | null
-  popularity?: number | null
-}
-
-interface TrackMetadata {
-  title: string
+                  <RadioButton
+                    class="mt-1"
+                    name="track-option"
+                    :inputId="'track-option-' + idx"
+                    :value="idx"
+                    v-model="selectedIndex"
+                  />
+                  <Image
+                    v-if="option.track?.image"
+                    :src="option.track.image"
+                    alt="Album art"
+                    imageClass="h-16 w-16 rounded object-cover"
+                    preview
+                  />
   duration?: number | null
-  explicit?: boolean | null
-  genre?: string | null
-  isrc?: string | null
-  image?: string | null
-  album?: string | null
+                    <label class="font-semibold text-base" :for="'track-option-' + idx">
+                      {{ option.track?.title || 'Unknown title' }}
+                    </label>
+                    <div class="text-muted">Artist: {{ option.artist?.name || 'Unknown artist' }}</div>
+                    <div>Album: {{ option.track?.album || 'Unknown album' }}</div>
+                    <div>Album image URL: <span class="break-all">{{ option.track?.image || 'N/A' }}</span></div>
+                    <div>Genre: {{ option.track?.genre || 'Unknown' }}</div>
   spotifyTrackId?: string | null
   spotifyUri?: string | null
 }
@@ -223,10 +261,12 @@ const youtubeVideo = ref<YouTubeVideo | null>(null)
 const isLoading = ref(false)
 const isFetchingMetadata = ref(false)
 const metadataError = ref('')
-const trackMetadata = ref<SpotifyMetadata | null>(null)
+const trackOptions = ref<SpotifyMetadata[]>([])
+const selectedIndex = ref(0)
 const showDetails = ref(false)
 const isPushing = ref(false)
 const uploadSuccess = ref('')
+const selectedMetadata = computed(() => trackOptions.value[selectedIndex.value] || null)
 
 // idk why but vue cli and plasmo have conflicting import env resolutions so just keep em here.
 
@@ -240,7 +280,8 @@ const EdenGateway = ref(
 )
 function resetMetadataState() {
   metadataError.value = ''
-  trackMetadata.value = null
+  trackOptions.value = []
+  selectedIndex.value = 0
   uploadSuccess.value = ''
 }
 
@@ -312,8 +353,14 @@ function handleUpload() {
       }
       return res.json()
     })
-    .then((data: SpotifyMetadata) => {
-      trackMetadata.value = data
+    .then((data: SpotifyMetadata[]) => {
+      if (!Array.isArray(data) || data.length === 0) {
+        metadataError.value = 'No results returned from Spotify.'
+        return
+      }
+      trackOptions.value = data
+      selectedIndex.value = 0
+      showDetails.value = true
     })
     .catch((err) => {
       console.error('[Eden Popup] Metadata fetch failed:', err)
@@ -333,12 +380,18 @@ function handlePush() {
     return
   }
 
-  if (!trackMetadata.value) {
+  if (!trackOptions.value.length) {
     metadataError.value = 'No track metadata available. Fetch metadata first.'
     return
   }
 
-  const { track, artist, source } = trackMetadata.value
+  const selected = selectedMetadata.value
+  if (!selected) {
+    metadataError.value = 'Select a track before pushing.'
+    return
+  }
+
+  const { track, artist, source } = selected
 
   if (!track.image) {
     metadataError.value = 'Artwork is required before pushing to Eden.'
