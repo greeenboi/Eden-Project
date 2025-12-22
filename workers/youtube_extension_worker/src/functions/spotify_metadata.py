@@ -10,7 +10,7 @@ __all__ = [
     "SpotifyTrackMetadata",
     "SpotifyMetadataResponse",
     "get_spotify_token",
-    "search_spotify_track",
+    "search_spotify_tracks",
     "get_spotify_artist",
     "search_spotify_api",
 ]
@@ -71,45 +71,46 @@ async def get_spotify_token(client_id: str, client_secret: str) -> str:
         raise HTTPException(status_code=500, detail=detail)
 
 
-async def search_spotify_track(query: str, token: str) -> Dict[str, Any] | None:
-    """Search Spotify for track information and return minimal metadata."""
+async def search_spotify_tracks(query: str, token: str, limit: int = 3) -> List[Dict[str, Any]]:
+    """Search Spotify for top tracks and return minimal metadata list."""
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(
                 "https://api.spotify.com/v1/search",
-                params={"q": query, "type": "track", "limit": 1},
+                params={"q": query, "type": "track", "limit": limit},
                 headers={"Authorization": f"Bearer {token}"},
             )
 
             if response.status_code == 200:
                 data = response.json()
-                if data.get("tracks") and data["tracks"].get("items"):
-                    track = data["tracks"]["items"][0]
+                items = data.get("tracks", {}).get("items", []) or []
+                results: List[Dict[str, Any]] = []
 
-                    # Extract track info
-                    artist = track["artists"][0] if track.get("artists") else {}
+                for track in items:
+                    artist = track.get("artists", [{}])[0] or {}
                     album = track.get("album", {})
                     external_ids = track.get("external_ids", {})
 
                     images = album.get("images") or []
                     primary_image = images[0]["url"] if images else None
 
-                    return {
-                        "title": track.get("name"),
-                        "artist_name": artist.get("name"),
-                        "artist_id": artist.get("id"),
-                        "album_name": album.get("name"),
-                        "album_image_url": primary_image,
-                        "duration_ms": track.get("duration_ms"),
-                        "isrc": external_ids.get("isrc"),
-                        "explicit": track.get("explicit", False),
-                        "spotify_track_id": track.get("id"),
-                        "spotify_uri": track.get("uri"),
-                        "popularity": track.get("popularity"),
-                    }
+                    results.append(
+                        {
+                            "title": track.get("name"),
+                            "artist_name": artist.get("name"),
+                            "artist_id": artist.get("id"),
+                            "album_name": album.get("name"),
+                            "album_image_url": primary_image,
+                            "duration_ms": track.get("duration_ms"),
+                            "isrc": external_ids.get("isrc"),
+                            "explicit": track.get("explicit", False),
+                            "spotify_track_id": track.get("id"),
+                            "spotify_uri": track.get("uri"),
+                            "popularity": track.get("popularity"),
+                        }
+                    )
 
-                # No items found
-                return None
+                return results
 
             # Surface Spotify API errors for easier debugging
             detail = f"Spotify search failed (status {response.status_code}): {response.text}"
@@ -156,11 +157,11 @@ async def get_spotify_artist(artist_id: str, token: str) -> Dict[str, Any] | Non
         )
 
 
-async def search_spotify_api(query: str, env) -> Tuple[Dict[str, Any] | None, Dict[str, Any] | None]:
+async def search_spotify_api(query: str, env, *, limit: int = 3) -> List[Tuple[Dict[str, Any], Dict[str, Any] | None]]:
     """
-    Search Spotify and return track and artist metadata.
+    Search Spotify and return up to `limit` track + artist metadata pairs.
 
-    Returns (track_data, artist_data) or (None, None) if not found.
+    Returns list of tuples: (track_data, artist_data). Empty list if none found.
     """
     client_id = env.SPOTIFY_CLIENT_ID
     client_secret = env.SPOTIFY_CLIENT_SECRET
@@ -172,12 +173,15 @@ async def search_spotify_api(query: str, env) -> Tuple[Dict[str, Any] | None, Di
 
     token = await get_spotify_token(client_id, client_secret)
 
-    track_data = await search_spotify_track(query, token)
-    if not track_data:
-        return None, None
+    tracks = await search_spotify_tracks(query, token, limit)
+    if not tracks:
+        return []
 
-    artist_data = None
-    if track_data.get("artist_id"):
-        artist_data = await get_spotify_artist(track_data["artist_id"], token)
+    results: List[Tuple[Dict[str, Any], Dict[str, Any] | None]] = []
+    for track_data in tracks:
+        artist_data = None
+        if track_data.get("artist_id"):
+            artist_data = await get_spotify_artist(track_data["artist_id"], token)
+        results.append((track_data, artist_data))
 
-    return track_data, artist_data
+    return results
