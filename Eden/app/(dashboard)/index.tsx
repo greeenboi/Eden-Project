@@ -400,6 +400,7 @@ export default function AllSongsScreen() {
 			index={2}
 			enablePanDownToClose={false}
 			// onDismiss={handleSheetDismiss}
+			// handleComponent={null}
 			onChange={(index) => setSheetIndex(index)}
 			backgroundStyle={{ backgroundColor: useIsDark() ? THEME.dark.background : THEME.light.background }}
 			handleIndicatorStyle={{ backgroundColor: useIsDark() ? THEME.dark.primary : THEME.light.primary }}

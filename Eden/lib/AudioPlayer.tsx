@@ -1,9 +1,9 @@
 import type { AudioMode } from "expo-audio";
 import {
-    setAudioModeAsync,
-    setIsAudioActiveAsync,
-    useAudioPlayer,
-    useAudioPlayerStatus,
+	setAudioModeAsync,
+	setIsAudioActiveAsync,
+	useAudioPlayer,
+	useAudioPlayerStatus,
 } from "expo-audio";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -63,6 +63,15 @@ export function useTrackAudioPlayer({
 	const rawStatus = useAudioPlayerStatus(player) as AudioStatusSnapshot | null;
 	const status = rawStatus ?? fallbackStatus;
 
+	const safePause = useCallback(() => {
+		try {
+			player.pause();
+		} catch (err) {
+			// `useAudioPlayer` releases the native object on unmount; ignore pauses after release
+			console.warn("[useTrackAudioPlayer] pause failed", err);
+		}
+	}, [player]);
+
 	const [streamUrl, setStreamUrl] = useState<string | null>(null);
 	const [loadingStream, setLoadingStream] = useState(false);
 	const [streamError, setStreamError] = useState<unknown>(null);
@@ -95,7 +104,7 @@ export function useTrackAudioPlayer({
 			setStreamUrl(null);
 			setStreamError(null);
 			setLoadingStream(false);
-			player.pause();
+			safePause();
 			return;
 		}
 
@@ -118,9 +127,9 @@ export function useTrackAudioPlayer({
 
 		return () => {
 			cancelled = true;
-			player.pause();
+			safePause();
 		};
-	}, [trackId, enabled, fetchStream, onError, player]);
+	}, [trackId, enabled, fetchStream, onError, safePause]);
 
 	useEffect(() => {
 		if (!enabled) return;
