@@ -12,25 +12,26 @@ import { useTrackStore } from "@/lib/actions/tracks";
 import Slider from "@react-native-community/slider";
 import { router } from "expo-router";
 import {
-	AlertCircle,
-	ArrowLeft,
-	Music,
-	Pause,
-	Play,
-	Repeat,
-	SkipBack,
-	SkipForward,
-	User,
-	Volume2
+    AlertCircle,
+    ArrowLeft,
+    Music,
+    Pause,
+    Play,
+    Repeat,
+    SkipBack,
+    SkipForward,
+    User,
+    Volume2
 } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, StyleSheet } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type PlayingSongContentProps = {
 	trackId?: string;
 	showHeader?: boolean;
 	onClose?: () => void;
-	variant?: "full" | "compact" | "mini";
+	variant?: "full" | "mini";
 };
 
 export function PlayingSongContent({
@@ -39,7 +40,7 @@ export function PlayingSongContent({
 	onClose,
 	variant = "full",
 }: PlayingSongContentProps) {
-	const log = (...args: unknown[]) => console.log("[Player]", ...args);
+	const log = useCallback((...args: unknown[]) => console.log("[Player]", ...args), []);
 	const {
 		currentTrack,
 		isLoading,
@@ -48,6 +49,9 @@ export function PlayingSongContent({
 		getStreamingUrl,
 		clearCurrentTrack,
 	} = useTrackStore();
+
+	const fetchTrackByIdRef = useRef(fetchTrackById);
+	const clearCurrentTrackRef = useRef(clearCurrentTrack);
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
@@ -71,6 +75,7 @@ export function PlayingSongContent({
 
 	const [scrubValue, setScrubValue] = useState(0);
 	const [isScrubbing, setIsScrubbing] = useState(false);
+	const insets = useSafeAreaInsets();
 
 	useEffect(() => {
 		if (!isScrubbing) {
@@ -124,20 +129,24 @@ export function PlayingSongContent({
 		}
 	};
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+	useEffect(() => {
+		fetchTrackByIdRef.current = fetchTrackById;
+		clearCurrentTrackRef.current = clearCurrentTrack;
+	}, [fetchTrackById, clearCurrentTrack]);
+
 	useEffect(() => {
 		log("track effect", { trackId });
 		if (trackId) {
-			fetchTrackById(trackId);
+			fetchTrackByIdRef.current(trackId).catch((err) => log("fetchTrackById failed", err));
 		} else {
-			clearCurrentTrack();
+			clearCurrentTrackRef.current();
 		}
 
 		return () => {
 			log("cleanup track effect", { trackId });
-			clearCurrentTrack();
+			clearCurrentTrackRef.current();
 		};
-	}, [trackId, fetchTrackById, clearCurrentTrack]);
+	}, [log, trackId]);
 
 	if (!trackId) {
 		return (
@@ -189,7 +198,12 @@ export function PlayingSongContent({
 			{!isTrackLoading && currentTrack && (
 				<>
 					{variant === "full" && (
-						<>
+						<ScrollView
+							style={{ flex: 1 }}
+							contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+							className="px-4 py-4 gap-4"
+							showsVerticalScrollIndicator={false}
+						>
 							<View
 								className="items-center justify-center flex-1 px-8 py-2"
 							>
@@ -420,83 +434,9 @@ export function PlayingSongContent({
                                     </Text>
                                 </View>
                             )}
-						</>
+						</ScrollView>
 					)}
 
-					{variant === "compact" && (
-						<View style={{ flex: 1 }} className="px-4 py-4 gap-4">
-							<View
-								style={{ backgroundColor: "transparent" }}
-								className="items-center"
-							>
-								<Card className="w-11/12 aspect-square max-w-sm overflow-hidden">
-									<CardContent className="flex-1 items-center justify-center bg-primary/10 p-0">
-										{currentTrack.artworkUrl ? (
-											<Image
-												source={{ uri: currentTrack.artworkUrl }}
-												style={{ width: "100%", height: "100%" }}
-												resizeMode="cover"
-											/>
-										) : (
-											<Music size={96} className="text-primary opacity-50" />
-										)}
-									</CardContent>
-								</Card>
-								<Text className="mt-3 text-lg font-semibold" numberOfLines={1}>
-									{currentTrack.title}
-								</Text>
-								<Text className="text-sm opacity-70" numberOfLines={1}>
-									{currentTrack.artist.name}
-								</Text>
-							</View>
-
-							<View className="px-2">
-								<Slider
-									key={`slider-compact-${trackId ?? "none"}`}
-									style={{ width: "100%", height: 36 }}
-									minimumValue={0}
-									maximumValue={safeSliderMax}
-									value={safeSliderValue}
-									minimumTrackTintColor={themeColors.primary}
-									maximumTrackTintColor={themeColors.muted}
-									thumbTintColor={themeColors.primary}
-									onSlidingStart={handleSlidingStart}
-									onValueChange={handleValueChange}
-									onSlidingComplete={handleSlidingComplete}
-									disabled={!status.isLoaded || loadingStream}
-								/>
-								<View className="flex-row justify-between">
-									<Text className="text-xs opacity-50">
-										{formatDuration(sliderValue)}
-									</Text>
-									<Text className="text-xs opacity-50">
-										{formatDuration(status.duration)}
-									</Text>
-								</View>
-							</View>
-
-							<View className="flex-row items-center justify-center gap-6">
-								<Pressable onPress={() => seekBackward()}>
-									<SkipBack size={28} />
-								</Pressable>
-								<Pressable
-									onPress={togglePlayback}
-									disabled={!status.isLoaded || loadingStream}
-								>
-									<View className="w-14 h-14 rounded-full bg-primary items-center justify-center">
-										{status.playing ? (
-											<Pause size={30} className="text-primary-foreground" />
-										) : (
-											<Play size={30} className="text-primary-foreground" />
-										)}
-									</View>
-								</Pressable>
-								<Pressable onPress={() => seekForward()}>
-									<SkipForward size={28} />
-								</Pressable>
-							</View>
-						</View>
-					)}
 
 					{variant === "mini" && (
 						<View

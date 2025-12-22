@@ -1,11 +1,11 @@
 import type { AudioMode } from "expo-audio";
 import {
-	setAudioModeAsync,
-	setIsAudioActiveAsync,
-	useAudioPlayer,
-	useAudioPlayerStatus,
+    setAudioModeAsync,
+    setIsAudioActiveAsync,
+    useAudioPlayer,
+    useAudioPlayerStatus,
 } from "expo-audio";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type FetchStream = (trackId: string) => Promise<{ streamUrl: string }>;
 
@@ -59,9 +59,20 @@ export function useTrackAudioPlayer({
 	onError,
 	audioMode,
 }: UseTrackAudioPlayerOptions) {
-	const player = useAudioPlayer(null, { updateInterval });
+	const playerOptions = useMemo(() => ({ updateInterval }), [updateInterval]);
+	const player = useAudioPlayer(null, playerOptions);
 	const rawStatus = useAudioPlayerStatus(player) as AudioStatusSnapshot | null;
 	const status = rawStatus ?? fallbackStatus;
+	const fetchStreamRef = useRef(fetchStream);
+	const onErrorRef = useRef(onError);
+
+	useEffect(() => {
+		fetchStreamRef.current = fetchStream;
+	}, [fetchStream]);
+
+	useEffect(() => {
+		onErrorRef.current = onError;
+	}, [onError]);
 
 	const safePause = useCallback(() => {
 		try {
@@ -71,6 +82,12 @@ export function useTrackAudioPlayer({
 			console.warn("[useTrackAudioPlayer] pause failed", err);
 		}
 	}, [player]);
+
+	const safePauseRef = useRef(safePause);
+
+	useEffect(() => {
+		safePauseRef.current = safePause;
+	}, [safePause]);
 
 	const [streamUrl, setStreamUrl] = useState<string | null>(null);
 	const [loadingStream, setLoadingStream] = useState(false);
@@ -90,21 +107,21 @@ export function useTrackAudioPlayer({
 			} catch (err) {
 				if (cancelled) return;
 				setStreamError(err);
-				onError?.(err);
+				onErrorRef.current?.(err);
 			}
 		})();
 
 		return () => {
 			cancelled = true;
 		};
-	}, [audioMode, audioSessionReady, enabled, onError]);
+	}, [audioMode, audioSessionReady, enabled]);
 
 	useEffect(() => {
 		if (!trackId || !enabled) {
 			setStreamUrl(null);
 			setStreamError(null);
 			setLoadingStream(false);
-			safePause();
+			safePauseRef.current();
 			return;
 		}
 
@@ -112,14 +129,14 @@ export function useTrackAudioPlayer({
 		setLoadingStream(true);
 		setStreamError(null);
 
-		fetchStream(trackId)
+		fetchStreamRef.current(trackId)
 			.then((response) => {
 				if (!cancelled) setStreamUrl(response.streamUrl);
 			})
 			.catch((err) => {
 				if (cancelled) return;
 				setStreamError(err);
-				onError?.(err);
+				onErrorRef.current?.(err);
 			})
 			.finally(() => {
 				if (!cancelled) setLoadingStream(false);
@@ -127,9 +144,9 @@ export function useTrackAudioPlayer({
 
 		return () => {
 			cancelled = true;
-			safePause();
+			safePauseRef.current();
 		};
-	}, [trackId, enabled, fetchStream, onError, safePause]);
+	}, [trackId, enabled]);
 
 	useEffect(() => {
 		if (!enabled) return;

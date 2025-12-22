@@ -107,7 +107,7 @@ export default function AllSongsScreen() {
 		});
 	}, [tracks]);
 
-	const snapPoints = useMemo(() => ["20%", "50%", "100%"], []);
+	const snapPoints = useMemo(() => ["20%", "100%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 
 	const navHeight = navAnim.interpolate({ inputRange: [0, 1], outputRange: [92, 64] });
@@ -413,7 +413,7 @@ export default function AllSongsScreen() {
 				<PlayingSongContent
 					trackId={selectedTrackId ?? undefined}
 					onClose={() => bottomSheetRef.current?.dismiss()}
-					variant={sheetIndex === 0 ? "mini" : sheetIndex === 1 ? "compact" : "full"}
+					variant={sheetIndex === 0 ? "mini" : "full"}
 				/>
 			</BottomSheetView>
 		</BottomSheetModal>
