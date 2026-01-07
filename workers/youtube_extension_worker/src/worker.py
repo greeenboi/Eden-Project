@@ -55,6 +55,7 @@ async def spotify_metadata(req: Request, payload: dict):
                     "genre": genres[0] if genres else None,
                     "isrc": track_data.get("isrc"),
                     "image": track_image,
+                    "albumImageUrl": track_image,
                     "album": track_data.get("album_name"),
                     "spotifyTrackId": track_data.get("spotify_track_id"),
                     "spotifyUri": track_data.get("spotify_uri"),
