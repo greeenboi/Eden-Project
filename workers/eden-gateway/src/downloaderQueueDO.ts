@@ -15,6 +15,8 @@ type JobRecord = {
 
 const QUEUE_KEY = "queue";
 
+const DOWNLOADER_PATH = "/youtube-to-ogg";
+
 export class DownloaderQueueDO {
 	private queue: string[] = [];
 
@@ -87,11 +89,6 @@ export class DownloaderQueueDO {
 	}
 
 	private async processLoop(): Promise<void> {
-		if (!this.env.DOWNLOADER_SERVICE_URL) {
-			console.error("[do] DOWNLOADER_SERVICE_URL missing");
-			return;
-		}
-
 		let processed = 0;
 		while (this.queue.length > 0 && processed < 10) {
 			const jobId = this.queue.shift();
@@ -130,15 +127,38 @@ export class DownloaderQueueDO {
 		}
 	}
 
+	private resolveDownloaderUrl(): string {
+		const base = this.env.DOWNLOADER_SERVICE_URL;
+		if (!base) {
+			throw new Error("DOWNLOADER_SERVICE_URL missing");
+		}
+
+		const trimmed = base.replace(/\/+$/, "");
+		if (trimmed.endsWith(DOWNLOADER_PATH)) {
+			return trimmed;
+		}
+
+		return `${trimmed}${DOWNLOADER_PATH}`;
+	}
+
 	private async forwardToDownloader(payload: DownloaderJobPayloadType) {
-		const response = await fetch(`${this.env.DOWNLOADER_SERVICE_URL}/youtube-to-ogg`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(payload),
-		});
+		const targetUrl = this.resolveDownloaderUrl();
+		let response: Response;
+
+		try {
+			response = await fetch(targetUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new Error(`Downloader fetch failed (${targetUrl}): ${message}`);
+		}
+
 		if (!response.ok) {
 			const text = await response.text();
-			throw new Error(`Downloader service returned ${response.status}: ${text}`);
+			throw new Error(`Downloader service returned ${response.status} from ${targetUrl}: ${text}`);
 		}
 	}
 }
