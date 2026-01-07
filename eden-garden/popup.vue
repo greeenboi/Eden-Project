@@ -137,24 +137,27 @@
                   :class="{ 'border-primary': selectedIndex === idx }"
                   @click="selectedIndex = idx"
                 >
-                  <input
+                  <RadioButton
                     class="mt-1"
-                    type="radio"
                     name="track-option"
+                    :inputId="'track-option-' + idx"
                     :value="idx"
-                    v-model.number="selectedIndex"
+                    v-model="selectedIndex"
                   />
-                  <img
+                  <Image
                     v-if="option.track?.image"
                     :src="option.track.image"
                     alt="Album art"
-                    class="h-16 w-16 rounded object-cover"
+                    imageClass="h-16 w-16 rounded object-cover"
+                    preview
                   />
                   <div class="flex flex-col gap-1">
-                    <div class="font-semibold text-base">{{ option.track?.title || 'Unknown title' }}</div>
+                    <label class="font-semibold text-base" :for="'track-option-' + idx">
+                      {{ option.track?.title || 'Unknown title' }}
+                    </label>
                     <div class="text-muted">Artist: {{ option.artist?.name || 'Unknown artist' }}</div>
                     <div>Album: {{ option.track?.album || 'Unknown album' }}</div>
-                    <div>Album image URL: <span class="break-all">{{ option.track?.image || 'N/A' }}</span></div>
+                    <div>Album image URL: <span class="break-all">{{ option.track?.albumImageUrl || option.track?.image || 'N/A' }}</span></div>
                     <div>Genre: {{ option.track?.genre || 'Unknown' }}</div>
                     <div>
                       Duration:
@@ -202,8 +205,8 @@ import Aura from '@primeuix/themes/dist/aura';
 import 'primeicons/primeicons.css';
 import Button from 'primevue/button';
 import Card from 'primevue/card';
-import Image from 'primevue/image';
 import PrimeVue from 'primevue/config';
+import Image from 'primevue/image';
 import ProgressSpinner from 'primevue/progressspinner';
 import RadioButton from 'primevue/radiobutton';
 import Ripple from 'primevue/ripple';
@@ -220,34 +223,31 @@ interface YouTubeVideo {
   id: string
   title: string
   url: string
-                  class="flex gap-3 rounded border border-slate-800 bg-slate-900/40 p-3 cursor-pointer hover:border-primary"
+  timestamp: number
+}
+
+interface TrackMetadata {
+  title: string
+  duration?: number | null
+  explicit?: boolean
+  genre?: string | null
+  isrc?: string | null
+  image?: string | null
+  album?: string | null
+  albumImageUrl?: string | null
+  spotifyTrackId?: string | null
+  spotifyUri?: string | null
 }
 
 interface ArtistMetadata {
-                  <RadioButton
-                    class="mt-1"
-                    name="track-option"
-                    :inputId="'track-option-' + idx"
-                    :value="idx"
-                    v-model="selectedIndex"
-                  />
-                  <Image
-                    v-if="option.track?.image"
-                    :src="option.track.image"
-                    alt="Album art"
-                    imageClass="h-16 w-16 rounded object-cover"
-                    preview
-                  />
-  duration?: number | null
-                    <label class="font-semibold text-base" :for="'track-option-' + idx">
-                      {{ option.track?.title || 'Unknown title' }}
-                    </label>
-                    <div class="text-muted">Artist: {{ option.artist?.name || 'Unknown artist' }}</div>
-                    <div>Album: {{ option.track?.album || 'Unknown album' }}</div>
-                    <div>Album image URL: <span class="break-all">{{ option.track?.image || 'N/A' }}</span></div>
-                    <div>Genre: {{ option.track?.genre || 'Unknown' }}</div>
-  spotifyTrackId?: string | null
+  name: string
+  bio?: string | null
+  avatarUrl?: string | null
+  profile?: string | null
+  genres?: string[]
   spotifyUri?: string | null
+  followers?: number | null
+  popularity?: number | null
 }
 
 interface SpotifyMetadata {
@@ -271,12 +271,14 @@ const selectedMetadata = computed(() => trackOptions.value[selectedIndex.value] 
 // idk why but vue cli and plasmo have conflicting import env resolutions so just keep em here.
 
 const YtMetadataWorker = ref(
+  // @ts-expect-error fk plasmo for not supporting vite properly
   (typeof import.meta !== 'undefined' && import.meta.env?.PLASMO_PUBLIC_YT_METADATA_WORKER) || 
   'https://youtube-extension-worker.suvan-gowrishanker-204.workers.dev'
 )
 const EdenGateway = ref(
+  // @ts-expect-error fk plasmo for not supporting vite properly
   (typeof import.meta !== 'undefined' && import.meta.env?.PLASMO_PUBLIC_EDEN_GATEWAY) ||
-    'https://eden-gateway.suvan-gowrishanker-204.workers.dev'
+    'http://localhost:8787'
 )
 function resetMetadataState() {
   metadataError.value = ''
@@ -423,6 +425,7 @@ function handlePush() {
       genre: track.genre ?? undefined,
       explicit: track.explicit ?? false,
       image: track.image,
+      // albumImageUrl: track.albumImageUrl ?? track.image,
       album: track.album ?? undefined,
       spotifyTrackId: track.spotifyTrackId ?? undefined,
       spotifyUri: track.spotifyUri ?? undefined,
