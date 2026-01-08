@@ -278,7 +278,7 @@ const YtMetadataWorker = ref(
 const EdenGateway = ref(
   // @ts-expect-error fk plasmo for not supporting vite properly
   (typeof import.meta !== 'undefined' && import.meta.env?.PLASMO_PUBLIC_EDEN_GATEWAY) ||
-    'http://localhost:8787'
+    'https://eden-gateway.suvan-gowrishanker-204.workers.dev'
 )
 function resetMetadataState() {
   metadataError.value = ''
