@@ -1,5 +1,4 @@
 import { View } from "@/components/Themed";
-import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
 import {
 	DashboardHeader,
 	EmptyTrackList,
@@ -7,17 +6,9 @@ import {
 	LoadingSkeleton,
 	TrackCard,
 } from "@/components/pages/dashboard";
-import Handle from "@/components/ui/BottomSheetHandle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
-import {
-	BottomSheetModal,
-	BottomSheetModalProvider,
-	BottomSheetScrollView,
-	useBottomSheet,
-} from "@gorhom/bottom-sheet";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -40,25 +31,12 @@ interface MasonryTrack extends Track {
 	estimatedHeight: number;
 }
 
-// Auto-expand the sheet to the target snap point when the content mounts
-function AutoExpandOnMount({ targetIndex }: { targetIndex: number }) {
-	const { snapToIndex } = useBottomSheet();
-
-	useEffect(() => {
-		snapToIndex(targetIndex);
-	}, [snapToIndex, targetIndex]);
-
-	return null;
-}
-
 export default function AllSongsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [menuButtonState, setMenuButtonState] = useState(false);
 	const [navCollapsed, setNavCollapsed] = useState(false);
-	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
-	const [sheetIndex, setSheetIndex] = useState(0);
 	const navAnim = useRef(new Animated.Value(0)).current;
-	const bottomSheetRef = useRef<BottomSheetModal>(null);
+	const { playTrack } = useGlobalPlayer();
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 
@@ -104,9 +82,6 @@ export default function AllSongsScreen() {
 		});
 	}, [tracks]);
 
-	const snapPoints = useMemo(() => ["20%", "98%"], []);
-	const FULL_SNAP_INDEX = snapPoints.length - 1;
-
 	const navHeight = navAnim.interpolate({ inputRange: [0, 1], outputRange: [92, 64] });
 	const navPaddingTop = navAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
 	const navPaddingBottom = navAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 6] });
@@ -135,15 +110,8 @@ export default function AllSongsScreen() {
 	}, [navCollapsed, navAnim]);
 
 	const handleSongPress = useCallback((songId: string) => {
-		setSelectedTrackId(songId);
-		bottomSheetRef.current?.present();
-		requestAnimationFrame(() => bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX));
-	}, [FULL_SNAP_INDEX]);
-
-	const handleSheetDismiss = useCallback(() => {
-		setSelectedTrackId(null);
-		setSheetIndex(0);
-	}, []);
+		playTrack(songId);
+	}, [playTrack]);
 
 	const handleLoadMore = useCallback(() => {
 		if (
@@ -174,8 +142,7 @@ export default function AllSongsScreen() {
 	);
 
 	return (
-		<BottomSheetModalProvider>
-			<SafeAreaView style={{ flex: 1 }}>
+		<SafeAreaView style={{ flex: 1 }}>
 				{/* Header with Navigation */}
 				<DashboardHeader
 					navPaddingTop={navPaddingTop}
@@ -241,35 +208,6 @@ export default function AllSongsScreen() {
 					/>
 					</View>
 				)}
-			</SafeAreaView>
-			<BottomSheetModal
-				ref={bottomSheetRef}
-				snapPoints={snapPoints}
-				handleComponent={Handle}
-				index={2}
-				enablePanDownToClose={false}
-				onChange={(index) => setSheetIndex(index)}
-				backgroundStyle={{
-					backgroundColor: useIsDark()
-						? THEME.dark.background
-						: THEME.light.background,
-				}}
-				handleIndicatorStyle={{
-					backgroundColor: useIsDark()
-						? THEME.dark.primary
-						: THEME.light.primary,
-				}}
-				animateOnMount
-			>
-				<BottomSheetScrollView contentContainerStyle={{ flexGrow: 1 }}>
-					<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
-					<PlayingSongContent
-						trackId={selectedTrackId ?? undefined}
-						onClose={() => bottomSheetRef.current?.dismiss()}
-						variant={sheetIndex === 0 ? "mini" : "full"}
-					/>
-				</BottomSheetScrollView>
-			</BottomSheetModal>
-		</BottomSheetModalProvider>
+		</SafeAreaView>
 	);
 }

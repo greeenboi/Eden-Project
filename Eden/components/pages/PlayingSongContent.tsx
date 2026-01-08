@@ -7,6 +7,7 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import { useTrackStore } from "@/lib/actions/tracks";
+import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -63,6 +64,33 @@ export function PlayingSongContent({
 		enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
 		updateInterval: 100,
 	});
+
+	// Sync playback state to shared store for handle slider
+	const { updatePlayback, registerSeekCallback, unregisterSeekCallback, reset: resetPlayback } = usePlaybackStore();
+	
+	useEffect(() => {
+		updatePlayback({
+			currentTime: status.currentTime ?? 0,
+			duration: status.duration ?? 0,
+			isLoaded: status.isLoaded,
+			isPlaying: status.playing,
+			isLoading: loadingStream,
+		});
+	}, [status.currentTime, status.duration, status.isLoaded, status.playing, loadingStream, updatePlayback]);
+
+	// Register seek callback so handle slider can control playback
+	useEffect(() => {
+		const seekCallback = (time: number) => {
+			if (status.isLoaded) {
+				player.seekTo(time);
+			}
+		};
+		registerSeekCallback(seekCallback);
+		return () => {
+			unregisterSeekCallback();
+			resetPlayback();
+		};
+	}, [player, status.isLoaded, registerSeekCallback, unregisterSeekCallback, resetPlayback]);
 
 	const [scrubValue, setScrubValue] = useState(0);
 	const [isScrubbing, setIsScrubbing] = useState(false);
