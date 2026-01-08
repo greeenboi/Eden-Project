@@ -3,7 +3,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import { Music, Pause, Play, SkipBack, SkipForward } from "lucide-react-native";
 import { ActivityIndicator, Image, Pressable } from "react-native";
-import { PlayerSlider } from "./PlayerSlider";
 
 interface MiniPlayerProps {
 	trackId?: string;
@@ -71,7 +70,7 @@ export function MiniPlayer({
 				<Text className="text-xs opacity-70" numberOfLines={1}>
 					{artistName}
 				</Text>
-				<PlayerSlider
+				{/* <PlayerSlider
 					trackId={trackId}
 					sliderValue={sliderValue}
 					sliderMax={sliderMax}
@@ -82,7 +81,7 @@ export function MiniPlayer({
 					onValueChange={onValueChange}
 					onSlidingComplete={onSlidingComplete}
 					variant="mini"
-				/>
+				/> */}
 			</View>
 			<View className="flex-row items-center gap-3">
 				<Pressable onPress={onSeekBackward}>
