@@ -1,3 +1,4 @@
+import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
 import { useSession } from "@/lib/ctx";
 import { Redirect, Stack } from "expo-router";
 
@@ -11,11 +12,14 @@ export default function AppLayout() {
 	}
 
 	return (
-		<Stack screenOptions={{ headerShown: false }}>
-			<Stack.Screen name="index" />
-			<Stack.Screen name="search-songs" />
-			<Stack.Screen name="artists" />
-			<Stack.Screen name="artist-detail" />
-		</Stack>
+		<GlobalPlayerProvider>
+			<Stack screenOptions={{ headerShown: false }}>
+				<Stack.Screen name="index" />
+				<Stack.Screen name="search-songs" />
+				<Stack.Screen name="artists" />
+				<Stack.Screen name="artist-detail" />
+				<Stack.Screen name="album-detail" />
+			</Stack>
+		</GlobalPlayerProvider>
 	);
 }
