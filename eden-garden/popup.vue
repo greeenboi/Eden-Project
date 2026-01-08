@@ -339,9 +339,9 @@ function handleUpload() {
     return
   }
 
-  const body = { query: youtubeVideo.value.title }
+  const body = { query: youtubeVideo.value.title, limit: 5 }
 
-  fetch(`${YtMetadataWorker.value}/metadata/spotify`, {
+  fetch(`${YtMetadataWorker.value}/metadata`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -355,12 +355,16 @@ function handleUpload() {
       }
       return res.json()
     })
-    .then((data: SpotifyMetadata[]) => {
-      if (!Array.isArray(data) || data.length === 0) {
-        metadataError.value = 'No results returned from Spotify.'
+    .then((data: { spotify: SpotifyMetadata[]; soundcloud: SpotifyMetadata[] }) => {
+      const allResults: SpotifyMetadata[] = [
+        ...(data.spotify || []),
+        ...(data.soundcloud || []),
+      ]
+      if (allResults.length === 0) {
+        metadataError.value = 'No results found from any source.'
         return
       }
-      trackOptions.value = data
+      trackOptions.value = allResults
       selectedIndex.value = 0
       showDetails.value = true
     })
