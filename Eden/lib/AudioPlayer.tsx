@@ -1,9 +1,9 @@
 import type { AudioMode } from "expo-audio";
 import {
-    setAudioModeAsync,
-    setIsAudioActiveAsync,
-    useAudioPlayer,
-    useAudioPlayerStatus,
+	setAudioModeAsync,
+	setIsAudioActiveAsync,
+	useAudioPlayer,
+	useAudioPlayerStatus,
 } from "expo-audio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -93,6 +93,8 @@ export function useTrackAudioPlayer({
 	const [loadingStream, setLoadingStream] = useState(false);
 	const [streamError, setStreamError] = useState<unknown>(null);
 	const [audioSessionReady, setAudioSessionReady] = useState(false);
+	// Track whether we've actually loaded audio to avoid pausing an unused player
+	const hasLoadedAudio = useRef(false);
 
 	useEffect(() => {
 		if (!enabled || audioSessionReady) return;
@@ -121,9 +123,16 @@ export function useTrackAudioPlayer({
 			setStreamUrl(null);
 			setStreamError(null);
 			setLoadingStream(false);
-			safePauseRef.current();
+			// Only pause if we've actually loaded audio before
+			if (hasLoadedAudio.current) {
+				safePauseRef.current();
+				hasLoadedAudio.current = false;
+			}
 			return;
 		}
+
+		// Reset the flag when starting to load a new track
+		hasLoadedAudio.current = false;
 
 		let cancelled = false;
 		setLoadingStream(true);
@@ -144,7 +153,10 @@ export function useTrackAudioPlayer({
 
 		return () => {
 			cancelled = true;
-			safePauseRef.current();
+			// Only pause on cleanup if we've loaded audio
+			if (hasLoadedAudio.current) {
+				safePauseRef.current();
+			}
 		};
 	}, [trackId, enabled]);
 
@@ -152,6 +164,8 @@ export function useTrackAudioPlayer({
 		if (!enabled) return;
 		if (!streamUrl) return;
 		player.replace(streamUrl);
+		// Mark that we've loaded audio so cleanup knows to pause
+		hasLoadedAudio.current = true;
 	}, [enabled, streamUrl, player]);
 
 	const progress = useMemo(() => {
