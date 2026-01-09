@@ -10,9 +10,9 @@ import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
-import { AlertCircle, ArrowLeft } from "lucide-react-native";
+import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 import { MiniPlayer } from "./player/MiniPlayer";
 import { PlayerArtwork } from "./player/PlayerArtwork";
 import { PlayerControls } from "./player/PlayerControls";
@@ -34,6 +34,8 @@ type PlayingSongContentProps = {
 	onToggleShuffle?: () => void;
 	/** Expand player to full view (for mini variant) */
 	onExpand?: () => void;
+	/** Collapse player to mini view */
+	onCollapse?: () => void;
 	/** Whether there's a next track available */
 	hasNext?: boolean;
 	/** Whether there's a previous track available */
@@ -56,6 +58,7 @@ export function PlayingSongContent({
 	onSkipPrevious,
 	onToggleShuffle,
 	onExpand,
+	onCollapse,
 	hasNext = false,
 	hasPrevious = false,
 	isShuffled = false,
@@ -230,7 +233,7 @@ export function PlayingSongContent({
 				</View>
 			)}
 
-			{isTrackLoading && (
+			{isTrackLoading && variant === "full" && (
 				<View
 					style={{ backgroundColor: "transparent" }}
 					className="flex-1 px-8"
@@ -240,6 +243,20 @@ export function PlayingSongContent({
 					<Skeleton className="h-6 w-1/2 mb-4" />
 					<Skeleton className="h-4 w-full mb-2" />
 					<Skeleton className="h-16 w-full" />
+				</View>
+			)}
+
+			{isTrackLoading && variant === "mini" && (
+				<View
+					style={{ backgroundColor: "transparent" }}
+					className="flex-row items-center px-4 py-3 gap-3"
+				>
+					<Skeleton className="w-12 h-12 rounded-lg" />
+					<View className="flex-1 gap-2 bg-transparent">
+						<Skeleton className="h-4 w-3/4" />
+						<Skeleton className="h-3 w-1/2" />
+					</View>
+					<Skeleton className="w-10 h-10 rounded-full" />
 				</View>
 			)}
 
@@ -308,6 +325,23 @@ export function PlayingSongContent({
 								onValueChange={handleValueChange}
 								onSlidingComplete={handleSlidingComplete}
 							/>
+
+							{/* Secondary Actions */}
+							<View
+								style={{ backgroundColor: "transparent" }}
+								className="flex-row items-center justify-end px-4"
+							>
+								<Pressable
+									onPress={() => {
+										onCollapse?.();
+										router.push("/queue");
+									}}
+									android_ripple={{ borderless: true, foreground: true }}
+									style={{ padding: 8 }}
+								>
+									<ListMusic size={24} color={themeColors.tint} />
+								</Pressable>
+							</View>
 
 							{/* Album Info
 							{currentTrack.album ? (

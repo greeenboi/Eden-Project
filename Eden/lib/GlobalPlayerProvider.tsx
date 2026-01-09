@@ -229,8 +229,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [queueStore]);
 
 	const expandPlayer = useCallback(() => {
-		bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
-	}, [FULL_SNAP_INDEX]);
+		bottomSheetRef.current?.expand();
+	}, []);
 
 	const collapsePlayer = useCallback(() => {
 		bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
@@ -352,8 +352,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 									onSkipNext={skipToNext}
 									onSkipPrevious={skipToPrevious}
 									onToggleShuffle={toggleShuffle}
-									onExpand={expandPlayer}
-									hasNext={hasNext}
+									onExpand={expandPlayer}								onCollapse={collapsePlayer}									hasNext={hasNext}
 									hasPrevious={hasPrevious}
 									isShuffled={shuffleMode === "on"}
 									nextArtworkUrl={nextTrackArtwork}
