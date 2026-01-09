@@ -16,6 +16,7 @@ type UseTrackAudioPlayerOptions = {
 	skipSeconds?: number;
 	updateInterval?: number;
 	onError?: (error: unknown) => void;
+	onTrackEnd?: () => void;
 	audioMode?: Partial<AudioMode>;
 };
 
@@ -57,6 +58,7 @@ export function useTrackAudioPlayer({
 	skipSeconds = 10,
 	updateInterval = 100,
 	onError,
+	onTrackEnd,
 	audioMode,
 }: UseTrackAudioPlayerOptions) {
 	const playerOptions = useMemo(() => ({ updateInterval }), [updateInterval]);
@@ -65,6 +67,7 @@ export function useTrackAudioPlayer({
 	const status = rawStatus ?? fallbackStatus;
 	const fetchStreamRef = useRef(fetchStream);
 	const onErrorRef = useRef(onError);
+	const onTrackEndRef = useRef(onTrackEnd);
 
 	useEffect(() => {
 		fetchStreamRef.current = fetchStream;
@@ -73,6 +76,10 @@ export function useTrackAudioPlayer({
 	useEffect(() => {
 		onErrorRef.current = onError;
 	}, [onError]);
+
+	useEffect(() => {
+		onTrackEndRef.current = onTrackEnd;
+	}, [onTrackEnd]);
 
 	const safePause = useCallback(() => {
 		try {
@@ -160,13 +167,54 @@ export function useTrackAudioPlayer({
 		};
 	}, [trackId, enabled]);
 
+	// Track if autoplay is pending (should play when loaded)
+	const autoplayPendingRef = useRef(false);
+
 	useEffect(() => {
 		if (!enabled) return;
 		if (!streamUrl) return;
+		// Mark autoplay as pending when we replace with a new stream
+		autoplayPendingRef.current = true;
 		player.replace(streamUrl);
 		// Mark that we've loaded audio so cleanup knows to pause
 		hasLoadedAudio.current = true;
 	}, [enabled, streamUrl, player]);
+
+	// Autoplay after buffering completes
+	useEffect(() => {
+		if (!autoplayPendingRef.current) return;
+		if (!status.isLoaded) return;
+		if (loadingStream) return;
+		
+		// Audio is loaded and we have pending autoplay - start playback
+		autoplayPendingRef.current = false;
+		player.play();
+	}, [status.isLoaded, loadingStream, player]);
+
+	// Track end detection - fire onTrackEnd when track finishes naturally
+	const hasTriggeredEndRef = useRef(false);
+	const prevTrackIdRef = useRef(trackId);
+	
+	// Reset the end trigger when track changes
+	if (prevTrackIdRef.current !== trackId) {
+		hasTriggeredEndRef.current = false;
+		prevTrackIdRef.current = trackId;
+	}
+
+	useEffect(() => {
+		if (!status.isLoaded || !status.duration || status.duration <= 0) return;
+		if (hasTriggeredEndRef.current) return;
+		if (player.loop) return; // Don't trigger if looping
+		
+		// Check if we're at the end (within 0.5s of duration) and not playing
+		const isAtEnd = status.currentTime >= status.duration - 0.5;
+		const hasFinished = isAtEnd && !status.playing && !status.isBuffering;
+		
+		if (hasFinished) {
+			hasTriggeredEndRef.current = true;
+			onTrackEndRef.current?.();
+		}
+	}, [status.isLoaded, status.duration, status.currentTime, status.playing, status.isBuffering, player.loop]);
 
 	const progress = useMemo(() => {
 		if (!status.duration || status.duration <= 0) return 0;

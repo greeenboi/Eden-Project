@@ -1,22 +1,23 @@
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
 import PlayerHandle from "@/components/ui/PlayerHandle";
+import { type QueueSource, type QueueTrack, type RepeatMode, type ShuffleMode, useQueueStore } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
 import {
-    BottomSheetModal,
-    BottomSheetModalProvider,
-    BottomSheetScrollView,
-    useBottomSheet,
+	BottomSheetModal,
+	BottomSheetModalProvider,
+	BottomSheetScrollView,
+	useBottomSheet,
 } from "@gorhom/bottom-sheet";
 import {
-    type ReactNode,
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+	type ReactNode,
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
 } from "react";
 
 interface GlobalPlayerContextValue {
@@ -26,8 +27,24 @@ interface GlobalPlayerContextValue {
 	sheetIndex: number;
 	/** Whether the player is visible */
 	isPlayerVisible: boolean;
-	/** Play a track by ID - opens the player sheet */
+	/** Play a track by ID - opens the player sheet (single track, no queue) */
 	playTrack: (trackId: string) => void;
+	/** Play a track with queue context */
+	playTrackWithQueue: (track: QueueTrack, queue: QueueTrack[], startIndex?: number, source?: QueueSource) => void;
+	/** Skip to next track in queue */
+	skipToNext: () => void;
+	/** Skip to previous track in queue */
+	skipToPrevious: () => void;
+	/** Add a track to end of queue */
+	addToQueue: (track: QueueTrack) => void;
+	/** Add a track to play next */
+	addNext: (track: QueueTrack) => void;
+	/** Remove a track from queue by ID */
+	removeFromQueue: (trackId: string) => void;
+	/** Toggle shuffle mode */
+	toggleShuffle: () => void;
+	/** Toggle repeat mode */
+	toggleRepeat: () => void;
 	/** Dismiss the player sheet */
 	dismissPlayer: () => void;
 	/** Expand the player to full view */
@@ -36,6 +53,24 @@ interface GlobalPlayerContextValue {
 	collapsePlayer: () => void;
 	/** Toggle between mini and full view */
 	togglePlayerExpand: () => void;
+	/** Check if there's a next track */
+	hasNext: boolean;
+	/** Check if there's a previous track */
+	hasPrevious: boolean;
+	/** Handle track end - for auto-advancement */
+	onTrackEnd: () => void;
+	/** Current queue of tracks */
+	queue: QueueTrack[];
+	/** Current index in queue */
+	currentIndex: number;
+	/** Upcoming tracks in queue */
+	upcomingTracks: QueueTrack[];
+	/** Current repeat mode */
+	repeatMode: RepeatMode;
+	/** Current shuffle mode */
+	shuffleMode: ShuffleMode;
+	/** Queue source context */
+	queueSource: QueueSource | null;
 }
 
 const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(null);
@@ -83,31 +118,107 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 	const [sheetIndex, setSheetIndex] = useState(0);
 	const [isPlayerVisible, setIsPlayerVisible] = useState(false);
+	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
+
+	// Queue store integration
+	const queueStore = useQueueStore();
 
 	const snapPoints = useMemo(() => ["20%", "98%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 	const MINI_SNAP_INDEX = 0;
 
+	// Mount the sheet on first render so it's ready when needed
+	useEffect(() => {
+		if (!isSheetMounted) {
+			bottomSheetRef.current?.present();
+			setIsSheetMounted(true);
+		}
+	}, [isSheetMounted]);
+
 	const playTrack = useCallback(
 		(trackId: string) => {
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
-			bottomSheetRef.current?.present();
-			requestAnimationFrame(() =>
-				bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX)
-			);
+			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
 		[FULL_SNAP_INDEX]
 	);
+
+	const playTrackWithQueue = useCallback(
+		(track: QueueTrack, queue: QueueTrack[], startIndex = 0, source?: QueueSource) => {
+			// Set the queue first with source context
+			queueStore.setQueue(queue, startIndex, source);
+			// Then play the track
+			setSelectedTrackId(track.id);
+			setIsPlayerVisible(true);
+			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
+		},
+		[FULL_SNAP_INDEX, queueStore]
+	);
+
+	const skipToNext = useCallback(() => {
+		const nextTrack = queueStore.skipToNext();
+		if (nextTrack) {
+			setSelectedTrackId(nextTrack.id);
+		}
+	}, [queueStore]);
+
+	const skipToPrevious = useCallback(() => {
+		const prevTrack = queueStore.skipToPrevious();
+		if (prevTrack) {
+			setSelectedTrackId(prevTrack.id);
+		}
+	}, [queueStore]);
+
+	const addToQueue = useCallback((track: QueueTrack) => {
+		queueStore.addToQueue(track);
+	}, [queueStore]);
+
+	const addNext = useCallback((track: QueueTrack) => {
+		queueStore.addNext(track);
+	}, [queueStore]);
+
+	const removeFromQueue = useCallback((trackId: string) => {
+		queueStore.removeFromQueueById(trackId);
+	}, [queueStore]);
+
+	const toggleShuffle = useCallback(() => {
+		queueStore.toggleShuffle();
+	}, [queueStore]);
+
+	const toggleRepeat = useCallback(() => {
+		queueStore.toggleRepeatMode();
+	}, [queueStore]);
+
+	const onTrackEnd = useCallback(() => {
+		// Auto-advance to next track when current track ends
+		const nextTrack = queueStore.skipToNext();
+		if (nextTrack) {
+			setSelectedTrackId(nextTrack.id);
+		} else {
+			// Queue finished, collapse to mini player
+			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+		}
+	}, [queueStore]);
+
+	const hasNext = queueStore.hasNext();
+	const hasPrevious = queueStore.hasPrevious();
+	const queue = queueStore.queue;
+	const currentIndex = queueStore.currentIndex;
+	const upcomingTracks = queueStore.getUpcoming();
+	const repeatMode = queueStore.repeatMode;
+	const shuffleMode = queueStore.shuffleMode;
+	const queueSource = queueStore.queueSource;
 
 	const dismissPlayer = useCallback(() => {
 		bottomSheetRef.current?.dismiss();
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
-	}, []);
+		queueStore.clearQueue();
+	}, [queueStore]);
 
 	const expandPlayer = useCallback(() => {
 		bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
@@ -144,20 +255,54 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			sheetIndex,
 			isPlayerVisible,
 			playTrack,
+			playTrackWithQueue,
+			skipToNext,
+			skipToPrevious,
+			addToQueue,
+			addNext,
+			removeFromQueue,
+			toggleShuffle,
+			toggleRepeat,
 			dismissPlayer,
 			expandPlayer,
 			collapsePlayer,
 			togglePlayerExpand,
+			hasNext,
+			hasPrevious,
+			onTrackEnd,
+			queue,
+			currentIndex,
+			upcomingTracks,
+			repeatMode,
+			shuffleMode,
+			queueSource,
 		}),
 		[
 			selectedTrackId,
 			sheetIndex,
 			isPlayerVisible,
 			playTrack,
+			playTrackWithQueue,
+			skipToNext,
+			skipToPrevious,
+			addToQueue,
+			addNext,
+			removeFromQueue,
+			toggleShuffle,
+			toggleRepeat,
 			dismissPlayer,
 			expandPlayer,
 			collapsePlayer,
 			togglePlayerExpand,
+			hasNext,
+			hasPrevious,
+			onTrackEnd,
+			queue,
+			currentIndex,
+			upcomingTracks,
+			repeatMode,
+			shuffleMode,
+			queueSource,
 		]
 	);
 
@@ -192,7 +337,14 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 								<PlayingSongContent
 									trackId={selectedTrackId ?? undefined}
 									onClose={dismissPlayer}
+									onTrackEnd={onTrackEnd}
 									variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
+									onSkipNext={skipToNext}
+									onSkipPrevious={skipToPrevious}
+									onToggleShuffle={toggleShuffle}
+									hasNext={hasNext}
+									hasPrevious={hasPrevious}
+									isShuffled={shuffleMode === "on"}
 								/>
 							</>
 						)}

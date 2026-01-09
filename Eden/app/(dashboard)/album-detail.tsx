@@ -5,21 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    AlertCircle,
-    ArrowLeft,
-    Clock,
-    Music,
-    Play
+	AlertCircle,
+	ArrowLeft,
+	Clock,
+	Music,
+	Play
 } from "lucide-react-native";
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();
 	const { tracks, currentTrack, isLoading, error, fetchTracks, fetchTrackById, clearTracks } = useTrackStore();
+	const { playTrackWithQueue } = useGlobalPlayer();
 
 	useEffect(() => {
 		if (id) {
@@ -59,6 +62,40 @@ export default function AlbumDetailScreen() {
 
 	const albumInfo = currentTrack?.album;
 	const artistInfo = currentTrack?.artist;
+
+	// Convert tracks to queue format for album playback
+	const queueTracks: QueueTrack[] = useMemo(() => {
+		return tracks.map((track) => ({
+			id: track.id,
+			title: track.title,
+			artistName: artistInfo?.name ?? "Loading...",
+			artworkUrl: track.artworkUrl,
+			duration: track.duration,
+		}));
+	}, [tracks, artistInfo?.name]);
+
+	// Queue source locked to this album
+	const albumQueueSource: QueueSource | null = useMemo(() => {
+		if (!id || !albumInfo?.title) return null;
+		return {
+			type: "album",
+			albumId: id as string,
+			albumName: albumInfo.title,
+		};
+	}, [id, albumInfo?.title]);
+
+	const handlePlayTrack = useCallback((trackId: string, index: number) => {
+		const selectedTrack = queueTracks[index];
+		if (selectedTrack && albumQueueSource) {
+			playTrackWithQueue(selectedTrack, queueTracks, index, albumQueueSource);
+		}
+	}, [queueTracks, albumQueueSource, playTrackWithQueue]);
+
+	const handlePlayAlbum = useCallback(() => {
+		if (queueTracks.length > 0 && albumQueueSource) {
+			playTrackWithQueue(queueTracks[0], queueTracks, 0, albumQueueSource);
+		}
+	}, [queueTracks, albumQueueSource, playTrackWithQueue]);
 
 	return (
 		<View style={styles.container}>
@@ -166,9 +203,7 @@ export default function AlbumDetailScreen() {
 						>
 							<Button
 								size="lg"
-								onPress={() =>
-									tracks[0] && router.push(`/playing-song?id=${tracks[0].id}`)
-								}
+								onPress={handlePlayAlbum}
 							>
 								<View
 									style={{ backgroundColor: "transparent" }}
@@ -191,7 +226,7 @@ export default function AlbumDetailScreen() {
 							{tracks.map((track, index) => (
 								<Pressable
 									key={track.id}
-									onPress={() => router.push(`/playing-song?id=${track.id}`)}
+									onPress={() => handlePlayTrack(track.id, index)}
 								>
 									<Card className="mb-2 overflow-hidden">
 										<CardContent className="p-4">

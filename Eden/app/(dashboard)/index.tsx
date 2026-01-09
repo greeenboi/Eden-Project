@@ -8,6 +8,7 @@ import {
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
@@ -36,7 +37,7 @@ export default function AllSongsScreen() {
 	const [menuButtonState, setMenuButtonState] = useState(false);
 	const [navCollapsed, setNavCollapsed] = useState(false);
 	const navAnim = useRef(new Animated.Value(0)).current;
-	const { playTrack } = useGlobalPlayer();
+	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 
@@ -109,9 +110,36 @@ export default function AllSongsScreen() {
 		}).start();
 	}, [navCollapsed, navAnim]);
 
+	// Convert tracks to queue format
+	// Note: Track list doesn't include artist details, so we use a placeholder
+	// The full artist name will be loaded when the track is played
+	const queueTracks: QueueTrack[] = useMemo(() => {
+		return tracks.map((track) => ({
+			id: track.id,
+			title: track.title,
+			artistName: "Loading...", // Will be populated when track is fetched with details
+			artworkUrl: track.artworkUrl,
+			duration: track.duration,
+		}));
+	}, [tracks]);
+
+	// Queue source for "All Songs" page
+	const allSongsSource: QueueSource = useMemo(() => ({ type: "all-songs" }), []);
+
 	const handleSongPress = useCallback((songId: string) => {
-		playTrack(songId);
-	}, [playTrack]);
+		// Find the index of the selected track
+		const trackIndex = queueTracks.findIndex((t) => t.id === songId);
+		const selectedTrack = queueTracks[trackIndex];
+		
+		if (selectedTrack && queueTracks.length > 0) {
+			// Play with queue context - all visible tracks become the queue
+			// Source is "all-songs" so queue contains all songs from this page
+			playTrackWithQueue(selectedTrack, queueTracks, trackIndex, allSongsSource);
+		} else {
+			// Fallback to single track play
+			playTrack(songId);
+		}
+	}, [queueTracks, playTrackWithQueue, playTrack, allSongsSource]);
 
 	const handleLoadMore = useCallback(() => {
 		if (

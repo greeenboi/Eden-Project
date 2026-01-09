@@ -1,16 +1,3 @@
-import { router, useLocalSearchParams } from "expo-router";
-import {
-	AlertCircle,
-	ArrowLeft,
-	BarChart3,
-	Heart,
-	Mail,
-	Music,
-	Play,
-	Share2,
-} from "lucide-react-native";
-import { useEffect } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +13,22 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { useArtistStore } from "@/lib/actions/artists";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+	AlertCircle,
+	ArrowLeft,
+	BarChart3,
+	Heart,
+	Mail,
+	Music,
+	Play,
+	Share2,
+} from "lucide-react-native";
+import { useCallback, useEffect, useMemo } from "react";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
 
 export default function ArtistDetailScreen() {
 	const { id } = useLocalSearchParams();
@@ -44,6 +46,7 @@ export default function ArtistDetailScreen() {
 		fetchArtistTracks,
 		clearCurrentArtist,
 	} = useArtistStore();
+	const { playTrackWithQueue } = useGlobalPlayer();
 
 	useEffect(() => {
 		if (id) {
@@ -55,7 +58,7 @@ export default function ArtistDetailScreen() {
 		return () => {
 			clearCurrentArtist();
 		};
-	}, [id]);
+	}, [id, fetchArtistById, fetchArtistStats, fetchArtistTracks, clearCurrentArtist]);
 
 	const getInitials = (name: string) => {
 		return name
@@ -65,6 +68,40 @@ export default function ArtistDetailScreen() {
 			.toUpperCase()
 			.slice(0, 2);
 	};
+
+	// Convert tracks to queue format for artist playback
+	const queueTracks: QueueTrack[] = useMemo(() => {
+		return currentArtistTracks.map((track) => ({
+			id: track.id,
+			title: track.title,
+			artistName: currentArtist?.name ?? "Loading...",
+			artworkUrl: track.coverUrl,
+			duration: track.duration,
+		}));
+	}, [currentArtistTracks, currentArtist?.name]);
+
+	// Queue source locked to this artist
+	const artistQueueSource: QueueSource | null = useMemo(() => {
+		if (!id || !currentArtist?.name) return null;
+		return {
+			type: "artist",
+			artistId: id as string,
+			artistName: currentArtist.name,
+		};
+	}, [id, currentArtist?.name]);
+
+	const handlePlayTrack = useCallback((trackId: string, index: number) => {
+		const selectedTrack = queueTracks[index];
+		if (selectedTrack && artistQueueSource) {
+			playTrackWithQueue(selectedTrack, queueTracks, index, artistQueueSource);
+		}
+	}, [queueTracks, artistQueueSource, playTrackWithQueue]);
+
+	const handlePlayArtist = useCallback(() => {
+		if (queueTracks.length > 0 && artistQueueSource) {
+			playTrackWithQueue(queueTracks[0], queueTracks, 0, artistQueueSource);
+		}
+	}, [queueTracks, artistQueueSource, playTrackWithQueue]);
 
 	return (
 		<View style={styles.container}>
@@ -157,7 +194,7 @@ export default function ArtistDetailScreen() {
 									style={{ backgroundColor: "transparent" }}
 									className="flex-row gap-2 w-full"
 								>
-									<Button className="flex-1">
+									<Button className="flex-1" onPress={handlePlayArtist}>
 										<Play size={20} />
 										<Text className="ml-2">Play</Text>
 									</Button>
@@ -325,9 +362,7 @@ export default function ArtistDetailScreen() {
 										{currentArtistTracks.map((track, index) => (
 											<Pressable
 												key={track.id}
-												onPress={() =>
-													router.push(`/playing-song?id=${track.id}`)
-												}
+												onPress={() => handlePlayTrack(track.id, index)}
 												className="active:opacity-70"
 											>
 												<Card className="mb-2">

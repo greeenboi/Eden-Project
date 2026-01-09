@@ -40,7 +40,12 @@ export function TrackCard({ item, index, onPress }: TrackCardProps) {
 	const imageColor = IMAGE_COLORS[index % IMAGE_COLORS.length];
 
 	return (
-		<Pressable onPress={() => onPress(item.id)} style={{ padding: 4 }}>
+		//add long press for action sheet
+		<Pressable 
+			android_ripple={{ borderless: false, foreground: true }} 
+			onPress={() => onPress(item.id)} 
+			style={{ padding: 4 }}
+		>
 			<Card className="bg-transparent border-0 p-0">
 				<View
 					style={{ backgroundColor: "transparent" }}

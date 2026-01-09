@@ -19,9 +19,15 @@ interface MiniPlayerProps {
 		muted: string;
 		tint: string;
 	};
+	/** Whether there's a next track available in the queue */
+	hasNext?: boolean;
+	/** Whether there's a previous track available in the queue */
+	hasPrevious?: boolean;
 	onTogglePlayback: () => void;
-	onSeekForward: () => void;
-	onSeekBackward: () => void;
+	/** Skip to next track in queue */
+	onSkipNext?: () => void;
+	/** Skip to previous track in queue */
+	onSkipPrevious?: () => void;
 	onSlidingStart: (value: number) => void;
 	onValueChange: (value: number) => void;
 	onSlidingComplete: (value: number) => void;
@@ -38,9 +44,11 @@ export function MiniPlayer({
 	sliderValue,
 	sliderMax,
 	themeColors,
+	hasNext = false,
+	hasPrevious = false,
 	onTogglePlayback,
-	onSeekForward,
-	onSeekBackward,
+	onSkipNext,
+	onSkipPrevious,
 	onSlidingStart,
 	onValueChange,
 	onSlidingComplete,
@@ -84,10 +92,15 @@ export function MiniPlayer({
 				/> */}
 			</View>
 			<View className="flex-row items-center gap-3">
-				<Pressable onPress={onSeekBackward}>
+				<Pressable
+					android_ripple={{ borderless: false, foreground: true }} 
+					onPress={onSkipPrevious} 
+					disabled={!hasPrevious}
+					style={{ opacity: hasPrevious ? 1 : 0.4 }}
+				>
 					<SkipBack color={themeColors.tint} size={22} />
 				</Pressable>
-				<Pressable onPress={onTogglePlayback} disabled={!isLoaded || loadingStream}>
+				<Pressable android_ripple={{ borderless: false, foreground: true }}   onPress={onTogglePlayback} disabled={!isLoaded || loadingStream}>
 					<View className="w-12 h-12 rounded-full bg-primary items-center justify-center">
 						{isLoaded ? (
 							isPlaying ? (
@@ -99,7 +112,12 @@ export function MiniPlayer({
 						)}
 					</View>
 				</Pressable>
-				<Pressable onPress={onSeekForward}>
+				<Pressable
+					android_ripple={{ borderless: false, foreground: true }}  
+					onPress={onSkipNext} 
+					disabled={!hasNext}
+					style={{ opacity: hasNext ? 1 : 0.4 }}
+				>
 					<SkipForward color={themeColors.tint} size={22} />
 				</Pressable>
 			</View>

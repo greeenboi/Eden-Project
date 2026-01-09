@@ -1,4 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -12,6 +13,14 @@ export interface QueueTrack {
 
 export type RepeatMode = "off" | "all" | "one";
 export type ShuffleMode = "off" | "on";
+
+/** Source context for the queue - determines what tracks are available */
+export type QueueSource = 
+	| { type: "all-songs" }
+	| { type: "playlist"; playlistId: string; playlistName: string }
+	| { type: "album"; albumId: string; albumName: string }
+	| { type: "artist"; artistId: string; artistName: string }
+	| { type: "custom"; name: string };
 
 interface QueueState {
 	/** The main queue of tracks */
@@ -30,10 +39,12 @@ interface QueueState {
 	shuffleMode: ShuffleMode;
 	/** Whether the queue is currently active/playing */
 	isQueueActive: boolean;
+	/** Source context for the current queue */
+	queueSource: QueueSource | null;
 
 	// Actions
 	/** Set the queue with a new list of tracks, optionally starting at a specific index */
-	setQueue: (tracks: QueueTrack[], startIndex?: number) => void;
+	setQueue: (tracks: QueueTrack[], startIndex?: number, source?: QueueSource) => void;
 	/** Add a track to the end of the queue */
 	addToQueue: (track: QueueTrack) => void;
 	/** Add a track to play next (after current track) */
@@ -42,6 +53,8 @@ interface QueueState {
 	addMultipleToQueue: (tracks: QueueTrack[]) => void;
 	/** Remove a track from the queue by index */
 	removeFromQueue: (index: number) => void;
+	/** Remove a track from the queue by track ID */
+	removeFromQueueById: (trackId: string) => void;
 	/** Move a track within the queue */
 	moveInQueue: (fromIndex: number, toIndex: number) => void;
 	/** Clear the entire queue */
@@ -58,6 +71,8 @@ interface QueueState {
 	setRepeatMode: (mode: RepeatMode) => void;
 	/** Toggle shuffle mode on/off */
 	toggleShuffle: () => void;
+	/** Set shuffle mode directly */
+	setShuffleMode: (mode: ShuffleMode) => void;
 	/** Get the current track */
 	getCurrentTrack: () => QueueTrack | null;
 	/** Check if there's a next track available */
@@ -66,6 +81,8 @@ interface QueueState {
 	hasPrevious: () => boolean;
 	/** Get upcoming tracks (after current) */
 	getUpcoming: () => QueueTrack[];
+	/** Get the queue source */
+	getQueueSource: () => QueueSource | null;
 }
 
 /**
@@ -91,14 +108,18 @@ export const useQueueStore = create<QueueState>()(
 			repeatMode: "off",
 			shuffleMode: "off",
 			isQueueActive: false,
+			queueSource: null,
 
-			setQueue: (tracks, startIndex = 0) => {
-				const current = tracks[startIndex];
+			setQueue: (tracks, startIndex, source) => {
+				const index = startIndex ?? 0;
+				const current = tracks[index];
 				set({
 					queue: tracks,
 					originalQueue: tracks,
-					currentIndex: startIndex,
+					currentIndex: index,
 					isQueueActive: tracks.length > 0,
+					queueSource: source ?? { type: "custom", name: "Queue" },
+					shuffleMode: "off", // Reset shuffle when setting new queue
 					// Add current track to history if there was one
 					history: current
 						? [...get().history, current].slice(-get().maxHistorySize)
@@ -135,6 +156,7 @@ export const useQueueStore = create<QueueState>()(
 			removeFromQueue: (index) => {
 				set((state) => {
 					const newQueue = state.queue.filter((_, i) => i !== index);
+					const newOriginalQueue = state.originalQueue.filter((_, i) => i !== index);
 					let newIndex = state.currentIndex;
 
 					// Adjust current index if necessary
@@ -147,10 +169,19 @@ export const useQueueStore = create<QueueState>()(
 
 					return {
 						queue: newQueue,
+						originalQueue: newOriginalQueue,
 						currentIndex: newIndex,
 						isQueueActive: newQueue.length > 0,
 					};
 				});
+			},
+
+			removeFromQueueById: (trackId) => {
+				const state = get();
+				const index = state.queue.findIndex((t) => t.id === trackId);
+				if (index !== -1) {
+					get().removeFromQueue(index);
+				}
 			},
 
 			moveInQueue: (fromIndex, toIndex) => {
@@ -188,6 +219,8 @@ export const useQueueStore = create<QueueState>()(
 					originalQueue: [],
 					currentIndex: -1,
 					isQueueActive: false,
+					queueSource: null,
+					shuffleMode: "off",
 				});
 			},
 
@@ -308,6 +341,14 @@ export const useQueueStore = create<QueueState>()(
 				});
 			},
 
+			setShuffleMode: (mode) => {
+				if (mode === "on" && get().shuffleMode === "off") {
+					get().toggleShuffle();
+				} else if (mode === "off" && get().shuffleMode === "on") {
+					get().toggleShuffle();
+				}
+			},
+
 			getCurrentTrack: () => {
 				const { queue, currentIndex } = get();
 				if (currentIndex < 0 || currentIndex >= queue.length) return null;
@@ -329,6 +370,10 @@ export const useQueueStore = create<QueueState>()(
 			getUpcoming: () => {
 				const { queue, currentIndex } = get();
 				return queue.slice(currentIndex + 1);
+			},
+
+			getQueueSource: () => {
+				return get().queueSource;
 			},
 		}),
 		{

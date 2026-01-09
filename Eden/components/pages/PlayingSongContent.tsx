@@ -24,14 +24,34 @@ type PlayingSongContentProps = {
 	trackId?: string;
 	showHeader?: boolean;
 	onClose?: () => void;
+	onTrackEnd?: () => void;
 	variant?: "full" | "mini";
+	/** Skip to next track in queue */
+	onSkipNext?: () => void;
+	/** Skip to previous track in queue */
+	onSkipPrevious?: () => void;
+	/** Toggle shuffle mode */
+	onToggleShuffle?: () => void;
+	/** Whether there's a next track available */
+	hasNext?: boolean;
+	/** Whether there's a previous track available */
+	hasPrevious?: boolean;
+	/** Whether shuffle is enabled */
+	isShuffled?: boolean;
 };
 
 export function PlayingSongContent({
 	trackId,
 	showHeader = false,
 	onClose,
+	onTrackEnd,
 	variant = "full",
+	onSkipNext,
+	onSkipPrevious,
+	onToggleShuffle,
+	hasNext = false,
+	hasPrevious = false,
+	isShuffled = false,
 }: PlayingSongContentProps) {
 	const log = useCallback((...args: unknown[]) => console.log("[Player]", ...args), []);
 	const {
@@ -63,6 +83,7 @@ export function PlayingSongContent({
 		fetchStream: getStreamingUrl,
 		enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
 		updateInterval: 100,
+		onTrackEnd,
 	});
 
 	// Sync playback state to shared store for handle slider
@@ -245,11 +266,15 @@ export function PlayingSongContent({
 									isMuted={isMuted}
 									loadingStream={loadingStream}
 									themeColors={themeColors}
-									onTogglePlayback={togglePlayback}
-									onToggleLoop={toggleLoop}
-									onToggleMute={toggleMute}
-									onSeekForward={seekForward}
-									onSeekBackward={seekBackward}
+									hasNext={hasNext}
+									hasPrevious={hasPrevious}
+								isShuffled={isShuffled}
+								onTogglePlayback={togglePlayback}
+								onToggleLoop={toggleLoop}
+								onToggleMute={toggleMute}
+								onToggleShuffle={onToggleShuffle}
+									onSkipNext={onSkipNext}
+									onSkipPrevious={onSkipPrevious}
 								/>
 							</View>
 
@@ -303,9 +328,11 @@ export function PlayingSongContent({
 							sliderValue={safeSliderValue}
 							sliderMax={safeSliderMax}
 							themeColors={themeColors}
+							hasNext={hasNext}
+							hasPrevious={hasPrevious}
 							onTogglePlayback={togglePlayback}
-							onSeekForward={seekForward}
-							onSeekBackward={seekBackward}
+							onSkipNext={onSkipNext}
+							onSkipPrevious={onSkipPrevious}
 							onSlidingStart={handleSlidingStart}
 							onValueChange={handleValueChange}
 							onSlidingComplete={handleSlidingComplete}
