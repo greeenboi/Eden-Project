@@ -6,10 +6,10 @@ import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { type StyleProp, StyleSheet, type ViewStyle, useColorScheme } from "react-native";
 import Animated, {
-    Extrapolation,
-    interpolate,
-    useAnimatedStyle,
-    useDerivedValue,
+	Extrapolation,
+	interpolate,
+	useAnimatedStyle,
+	useDerivedValue,
 } from "react-native-reanimated";
 
 const toRad = (deg: number) => {
@@ -183,22 +183,6 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 
 			{/* Regular handle indicators - visible in expanded mode */}
 			<Animated.View style={[styles.indicatorContainer, indicatorOpacityStyle]}>
-				<Animated.View
-					style={[
-						styles.indicator,
-						styles.leftIndicator,
-						{ backgroundColor: themeColors.mutedForeground },
-						leftIndicatorAnimatedStyle,
-					]}
-				/>
-				<Animated.View
-					style={[
-						styles.indicator,
-						styles.rightIndicator,
-						{ backgroundColor: themeColors.mutedForeground },
-						rightIndicatorAnimatedStyle,
-					]}
-				/>
 			</Animated.View>
 		</Animated.View>
 	);
@@ -228,6 +212,7 @@ const styles = StyleSheet.create({
 		height: 40,
 	},
 	indicatorContainer: {
+		height: 1,
 		flexDirection: "row",
 		alignItems: "center",
 		justifyContent: "center",
