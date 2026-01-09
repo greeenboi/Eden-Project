@@ -79,7 +79,7 @@ export function MiniPlayer({
 				<View className="flex-1">
 					<MarqueeText
 						text={title}
-						className="font-semibold text-foreground"
+						className="font-semibold text-foreground text-2xl"
 						speed={40}
 						delay={2500}
 					/>
