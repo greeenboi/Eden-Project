@@ -19,6 +19,13 @@ export default function AppLayout() {
 				<Stack.Screen name="artists" />
 				<Stack.Screen name="artist-detail" />
 				<Stack.Screen name="album-detail" />
+				<Stack.Screen
+					name="queue"
+					options={{
+						presentation: "modal",
+						animation: "slide_from_bottom",
+					}}
+				/>
 			</Stack>
 		</GlobalPlayerProvider>
 	);

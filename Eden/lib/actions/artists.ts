@@ -185,12 +185,15 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 
 			const data = await response.json();
 
-			set({
-				artists: data.artists,
+			set((state) => ({
+				// Append artists for subsequent pages, replace for page 1
+				artists: page === 1 
+					? data.artists 
+					: [...state.artists, ...data.artists],
 				pagination: data.pagination,
 				isLoading: false,
 				error: null,
-			});
+			}));
 		} catch (error) {
 			const errorMessage =
 				error instanceof Error
