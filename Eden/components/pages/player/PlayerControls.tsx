@@ -5,9 +5,7 @@ import {
 	Repeat,
 	Shuffle,
 	SkipBack,
-	SkipForward,
-	Volume2,
-	VolumeX,
+	SkipForward
 } from "lucide-react-native";
 import { ActivityIndicator, Pressable } from "react-native";
 
@@ -59,19 +57,12 @@ export function PlayerControls({
 			style={{ backgroundColor: "transparent" }}
 			className="flex-row items-center justify-center gap-6 mb-4"
 		>
-			<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onToggleShuffle}>
-				<Shuffle
-					size={24}
-					color={isShuffled ? themeColors.primary : themeColors.tint}
-					style={{ opacity: isShuffled ? 1 : 0.5 }}
-				/>
-			</Pressable>
 
 			<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onToggleLoop}>
 				<Repeat
 					size={24}
 					color={isLooping ? themeColors.primary : themeColors.tint}
-					style={{ opacity: isLooping ? 1 : 0.5 }}
+					style={{ opacity: isLooping ? 1 : 0.8 }}
 				/>
 			</Pressable>
 
@@ -79,7 +70,7 @@ export function PlayerControls({
 				android_ripple={{ borderless: false, foreground: true }}  
 				onPress={onSkipPrevious} 
 				disabled={!hasPrevious}
-				style={{ opacity: hasPrevious ? 1 : 0.4 }}
+				style={{ opacity: hasPrevious ? 1 : 0.5 }}
 			>
 				<SkipBack color={themeColors.tint} size={32} />
 			</Pressable>
@@ -118,7 +109,15 @@ export function PlayerControls({
 				<SkipForward color={themeColors.tint} size={32} />
 			</Pressable>
 
-			<Pressable android_ripple={{ borderless: false, foreground: true }}   onPress={onToggleMute}>
+			<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onToggleShuffle}>
+				<Shuffle
+					size={24}
+					color={isShuffled ? themeColors.primary : themeColors.tint}
+					style={{ opacity: isShuffled ? 1 : 0.8 }}
+				/>
+			</Pressable>
+
+			{/* <Pressable android_ripple={{ borderless: false, foreground: true }}   onPress={onToggleMute}>
 				{
 					isMuted ?
 						<VolumeX
@@ -132,7 +131,7 @@ export function PlayerControls({
 							size={24}
 						/>
 				}
-			</Pressable>
+			</Pressable> */}
 		</View>
 	);
 }

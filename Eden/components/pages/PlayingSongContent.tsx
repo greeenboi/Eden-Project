@@ -11,8 +11,7 @@ import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
-import { ArtistCard } from "./player/ArtistCard";
+import { StyleSheet } from "react-native";
 import { MiniPlayer } from "./player/MiniPlayer";
 import { PlayerArtwork } from "./player/PlayerArtwork";
 import { PlayerControls } from "./player/PlayerControls";
@@ -292,7 +291,7 @@ export function PlayingSongContent({
 								onSlidingComplete={handleSlidingComplete}
 							/>
 
-							{/* Album Info */}
+							{/* Album Info
 							{currentTrack.album ? (
 								<Pressable
 									onPress={() =>
@@ -306,13 +305,13 @@ export function PlayingSongContent({
 								</Pressable>
 							) : (
 								<Text className="text-sm opacity-50">Single</Text>
-							)}
+							)} */}
 
-							{/* Artist Card */}
+							{/* Artist Card
 							<ArtistCard
 								artistName={currentTrack.artist.name}
 								verified={currentTrack.artist.verified}
-							/>
+							/> */}
 						</View>
 					)}
 
