@@ -212,6 +212,14 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const shuffleMode = queueStore.shuffleMode;
 	const queueSource = queueStore.queueSource;
 
+	// Get next/previous track artwork for swipe preview
+	const nextTrackArtwork = hasNext && currentIndex < queue.length - 1 
+		? queue[currentIndex + 1]?.artworkUrl 
+		: null;
+	const previousTrackArtwork = hasPrevious && currentIndex > 0 
+		? queue[currentIndex - 1]?.artworkUrl 
+		: null;
+
 	const dismissPlayer = useCallback(() => {
 		bottomSheetRef.current?.dismiss();
 		setIsPlayerVisible(false);
@@ -315,9 +323,11 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 					snapPoints={snapPoints}
 					handleComponent={PlayerHandle}
 					index={-1}
+					overDragResistanceFactor={3}
 					enablePanDownToClose={false}
 					onChange={handleSheetChange}
 					onDismiss={handleSheetDismiss}
+					enableOverDrag={false}
 					backgroundStyle={{
 						backgroundColor: isDark
 							? THEME.dark.background
@@ -342,9 +352,12 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 									onSkipNext={skipToNext}
 									onSkipPrevious={skipToPrevious}
 									onToggleShuffle={toggleShuffle}
+									onExpand={expandPlayer}
 									hasNext={hasNext}
 									hasPrevious={hasPrevious}
 									isShuffled={shuffleMode === "on"}
+									nextArtworkUrl={nextTrackArtwork}
+									previousArtworkUrl={previousTrackArtwork}
 								/>
 							</>
 						)}

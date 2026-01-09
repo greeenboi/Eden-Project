@@ -1,4 +1,5 @@
 import { View } from "@/components/Themed";
+import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,12 +32,18 @@ type PlayingSongContentProps = {
 	onSkipPrevious?: () => void;
 	/** Toggle shuffle mode */
 	onToggleShuffle?: () => void;
+	/** Expand player to full view (for mini variant) */
+	onExpand?: () => void;
 	/** Whether there's a next track available */
 	hasNext?: boolean;
 	/** Whether there's a previous track available */
 	hasPrevious?: boolean;
 	/** Whether shuffle is enabled */
 	isShuffled?: boolean;
+	/** Next track artwork URL for swipe preview */
+	nextArtworkUrl?: string | null;
+	/** Previous track artwork URL for swipe preview */
+	previousArtworkUrl?: string | null;
 };
 
 export function PlayingSongContent({
@@ -48,9 +55,12 @@ export function PlayingSongContent({
 	onSkipNext,
 	onSkipPrevious,
 	onToggleShuffle,
+	onExpand,
 	hasNext = false,
 	hasPrevious = false,
 	isShuffled = false,
+	nextArtworkUrl,
+	previousArtworkUrl,
 }: PlayingSongContentProps) {
 	const log = useCallback((...args: unknown[]) => console.log("[Player]", ...args), []);
 	const {
@@ -234,7 +244,15 @@ export function PlayingSongContent({
 			)}
 
 			{!isTrackLoading && currentTrack && (
-				<>
+				<SwipeablePlayer
+					onSwipeRight={onSkipPrevious}
+					onSwipeLeft={onSkipNext}
+					hasPrevious={hasPrevious}
+					hasNext={hasNext}
+					iconColor={themeColors.tint}
+					nextArtworkUrl={nextArtworkUrl}
+					previousArtworkUrl={previousArtworkUrl}
+				>
 					{variant === "full" && (
 						<View style={{ flex: 1 }} className="px-4 py-4 gap-4">
 							{/* Artwork Section */}
@@ -329,6 +347,7 @@ export function PlayingSongContent({
 							themeColors={themeColors}
 							hasNext={hasNext}
 							hasPrevious={hasPrevious}
+							onExpand={onExpand}
 							onTogglePlayback={togglePlayback}
 							onSkipNext={onSkipNext}
 							onSkipPrevious={onSkipPrevious}
@@ -337,7 +356,7 @@ export function PlayingSongContent({
 							onSlidingComplete={handleSlidingComplete}
 						/>
 					)}
-				</>
+				</SwipeablePlayer>
 			)}
 
 			{!isTrackLoading && !currentTrack && !error && (
