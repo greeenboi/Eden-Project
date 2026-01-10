@@ -115,6 +115,10 @@ export const getArtistRoute = createRoute({
       },
       description: 'Artist retrieved successfully',
     },
+    400: {
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+      description: 'Invalid request parameters (e.g., invalid UUID format)',
+    },
     404: {
       content: { 'application/json': { schema: ErrorResponseSchema } },
       description: 'Artist not found',
@@ -362,6 +366,10 @@ export const getArtistStatsRoute = createRoute({
       },
       description: 'Statistics retrieved successfully',
     },
+    400: {
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+      description: 'Invalid request parameters (e.g., invalid UUID format)',
+    },
     404: {
       content: { 'application/json': { schema: ErrorResponseSchema } },
       description: 'Artist not found',
@@ -426,6 +434,10 @@ export const getArtistTracksRoute = createRoute({
         },
       },
       description: 'Tracks retrieved successfully',
+    },
+    400: {
+      content: { 'application/json': { schema: ErrorResponseSchema } },
+      description: 'Invalid request parameters (e.g., invalid UUID format)',
     },
     404: {
       content: { 'application/json': { schema: ErrorResponseSchema } },

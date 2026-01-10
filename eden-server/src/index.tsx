@@ -23,8 +23,22 @@ import { registerHomeRoutes } from './routes/home.routes.tsx'
 import { registerTrackRoutes } from './routes/track.routes'
 import { registerUploadRoutes } from './routes/upload.routes'
 
-// Initialize Hono app with Cloudflare bindings
-const app = new OpenAPIHono<{ Bindings: Env }>()
+// Initialize Hono app with Cloudflare bindings and validation error handling
+const app = new OpenAPIHono<{ Bindings: Env }>({
+  defaultHook: (result, c) => {
+    if (!result.success) {
+      return c.json(
+        {
+          error: 'ValidationError',
+          message: 'Request validation failed',
+          code: 'VALIDATION_ERROR',
+          details: result.error.flatten(),
+        },
+        400
+      )
+    }
+  },
+})
 
 // Middleware
 app.use(renderer)
