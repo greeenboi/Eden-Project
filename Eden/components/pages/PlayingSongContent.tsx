@@ -283,6 +283,7 @@ export function PlayingSongContent({
 							{/* Track Info */}
 							<PlayerTrackInfo
 								title={currentTrack.title}
+								collapseOnClick={onCollapse}
 								artistId={currentTrack.artistId}
 								artistName={currentTrack.artist.name}
 								genre={currentTrack.genre}

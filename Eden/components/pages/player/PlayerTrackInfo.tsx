@@ -6,6 +6,7 @@ import { Pressable } from "react-native";
 
 interface PlayerTrackInfoProps {
 	title: string;
+	collapseOnClick: (() => void) | undefined;
 	artistId: string;
 	artistName: string;
 	genre?: string | null;
@@ -14,6 +15,7 @@ interface PlayerTrackInfoProps {
 export function PlayerTrackInfo({
 	title,
 	artistId,
+	collapseOnClick,
 	artistName,
 	genre,
 }: PlayerTrackInfoProps) {
@@ -29,7 +31,10 @@ export function PlayerTrackInfo({
 				>
 					<Text className="text-2xl font-bold mb-1">{title}</Text>
 					<Pressable
-						onPress={() => router.push(`/artist-detail?id=${artistId}`)}
+						onPress={() => {
+							collapseOnClick?.();
+							router.push(`/artist-detail?id=${artistId}`);
+						}}
 					>
 						<Text className="text-lg opacity-70 mb-1 underline">
 							{artistName}
