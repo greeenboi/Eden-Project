@@ -10,8 +10,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Toggle, ToggleIcon } from "@/components/ui/toggle";
 import { type Artist, useArtistStore } from "@/lib/actions/artists";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
@@ -32,8 +30,6 @@ export default function ArtistsScreen() {
 		searchArtists,
 		clearSearchResults,
 	} = useArtistStore();
-	const isDark = useIsDark();
-	const foregroundColor = isDark ? THEME.dark.foreground : THEME.light.foreground;
 
 	useEffect(() => {
 		fetchArtists();
