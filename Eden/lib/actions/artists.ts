@@ -57,7 +57,7 @@ export interface Track {
 	trackNumber: number | null;
 	discNumber: number | null;
 	audioUrl: string | null;
-	coverUrl: string | null;
+	coverUrl: string;
 	status: "initiated" | "uploaded" | "processing" | "published" | "failed";
 	createdAt: string;
 	updatedAt: string;
@@ -126,19 +126,24 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 	 * Clears any error messages from the store
 	 * @returns {void}
 	 */
-	clearError: () => set({ error: null }),
+	clearError: () => {
+		console.log("[ArtistStore] clearError called");
+		set({ error: null });
+	},
 
 	/**
 	 * Clears the current artist and all related data (stats, tracks)
 	 * @returns {void}
 	 */
-	clearCurrentArtist: () =>
+	clearCurrentArtist: () => {
+		console.log("[ArtistStore] clearCurrentArtist called");
 		set({
 			currentArtist: null,
 			currentArtistStats: null,
 			currentArtistTracks: [],
 			tracksPagination: null,
-		}),
+		});
+	},
 
 	/**
 	 * Clears search results from the store
@@ -187,9 +192,8 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 
 			set((state) => ({
 				// Append artists for subsequent pages, replace for page 1
-				artists: page === 1 
-					? data.artists 
-					: [...state.artists, ...data.artists],
+				artists:
+					page === 1 ? data.artists : [...state.artists, ...data.artists],
 				pagination: data.pagination,
 				isLoading: false,
 				error: null,
@@ -221,24 +225,42 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 	 * ```
 	 */
 	fetchArtistById: async (id: string) => {
+		console.log(`[ArtistStore] fetchArtistById called with id: ${id}`);
+		console.log("[ArtistStore] Current state before fetch:", {
+			currentArtist: get().currentArtist?.id,
+			isLoading: get().isLoading,
+			error: get().error,
+		});
 		set({ isLoading: true, error: null });
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/api/artists/${id}`, {
+			const url = `${API_BASE_URL}/api/artists/${id}`;
+			console.log(`[ArtistStore] Fetching from URL: ${url}`);
+
+			const response = await fetch(url, {
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
+					"Cache-Control": "no-cache",
 				},
 			});
+
+			console.log(`[ArtistStore] Response status: ${response.status}`);
 
 			if (!response.ok) {
 				if (response.status === 404) {
 					throw new Error("Artist not found");
 				}
+				const errorText = await response.text();
+				console.error(`[ArtistStore] Error response body: ${errorText}`);
 				throw new Error("Failed to fetch artist");
 			}
 
 			const data = await response.json();
+			console.log(
+				"[ArtistStore] Successfully fetched artist:",
+				data?.name || data?.id,
+			);
 
 			set({
 				currentArtist: data,
@@ -246,6 +268,7 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 				error: null,
 			});
 		} catch (error) {
+			console.error("[ArtistStore] fetchArtistById error:", error);
 			const errorMessage =
 				error instanceof Error
 					? error.message
@@ -271,15 +294,22 @@ export const useArtistStore = create<ArtistState>((set, get) => ({
 	 * ```
 	 */
 	fetchArtistStats: async (id: string) => {
+		console.log(`[ArtistStore] fetchArtistStats called with id: ${id}`);
 		set({ isLoadingStats: true, error: null });
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/api/artists/${id}/stats`, {
+			const url = `${API_BASE_URL}/api/artists/${id}/stats`;
+			console.log(`[ArtistStore] Fetching stats from URL: ${url}`);
+
+			const response = await fetch(url, {
 				method: "GET",
 				headers: {
 					"Content-Type": "application/json",
+					"Cache-Control": "no-cache",
 				},
 			});
+
+			console.log(`[ArtistStore] Stats response status: ${response.status}`);
 
 			if (!response.ok) {
 				if (response.status === 404) {

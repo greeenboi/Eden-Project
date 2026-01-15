@@ -145,7 +145,8 @@ export function useTrackAudioPlayer({
 		setLoadingStream(true);
 		setStreamError(null);
 
-		fetchStreamRef.current(trackId)
+		fetchStreamRef
+			.current(trackId)
 			.then((response) => {
 				if (!cancelled) setStreamUrl(response.streamUrl);
 			})
@@ -185,7 +186,7 @@ export function useTrackAudioPlayer({
 		if (!autoplayPendingRef.current) return;
 		if (!status.isLoaded) return;
 		if (loadingStream) return;
-		
+
 		// Audio is loaded and we have pending autoplay - start playback
 		autoplayPendingRef.current = false;
 		player.play();
@@ -194,7 +195,7 @@ export function useTrackAudioPlayer({
 	// Track end detection - fire onTrackEnd when track finishes naturally
 	const hasTriggeredEndRef = useRef(false);
 	const prevTrackIdRef = useRef(trackId);
-	
+
 	// Reset the end trigger when track changes
 	if (prevTrackIdRef.current !== trackId) {
 		hasTriggeredEndRef.current = false;
@@ -205,16 +206,23 @@ export function useTrackAudioPlayer({
 		if (!status.isLoaded || !status.duration || status.duration <= 0) return;
 		if (hasTriggeredEndRef.current) return;
 		if (player.loop) return; // Don't trigger if looping
-		
+
 		// Check if we're at the end (within 0.5s of duration) and not playing
 		const isAtEnd = status.currentTime >= status.duration - 0.5;
 		const hasFinished = isAtEnd && !status.playing && !status.isBuffering;
-		
+
 		if (hasFinished) {
 			hasTriggeredEndRef.current = true;
 			onTrackEndRef.current?.();
 		}
-	}, [status.isLoaded, status.duration, status.currentTime, status.playing, status.isBuffering, player.loop]);
+	}, [
+		status.isLoaded,
+		status.duration,
+		status.currentTime,
+		status.playing,
+		status.isBuffering,
+		player.loop,
+	]);
 
 	const progress = useMemo(() => {
 		if (!status.duration || status.duration <= 0) return 0;
@@ -281,4 +289,3 @@ export function useTrackAudioPlayer({
 		isMuted: player.volume === 0,
 	};
 }
-

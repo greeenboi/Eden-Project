@@ -1,30 +1,20 @@
 import { Platform } from "react-native";
 import "../global.css";
+import { THEME } from "./theme";
 
-// Custom theme based on global.css color variables
+// Custom theme based on global.css color variables via theme.ts (single source of truth)
 const WEB_FONT_STACK =
 	'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"';
-
-// HSL to RGB conversion helper
-const hslToRgb = (h: number, s: number, l: number): string => {
-	const sNorm = s / 100;
-	const lNorm = l / 100;
-	const k = (n: number) => (n + h / 30) % 12;
-	const a = sNorm * Math.min(lNorm, 1 - lNorm);
-	const f = (n: number) =>
-		lNorm - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
-	return `rgb(${Math.round(255 * f(0))}, ${Math.round(255 * f(8))}, ${Math.round(255 * f(4))})`;
-};
 
 export const LightTheme = {
 	dark: false,
 	colors: {
-		primary: hslToRgb(72.3077, 33.0508, 46.2745), // --primary
-		background: hslToRgb(44.5161, 48.4375, 74.902), // --secondary
-		card: hslToRgb(42.0, 45.4545, 82.7451), // --card
-		text: hslToRgb(26.0, 19.4805, 30.1961), // --foreground
-		border: hslToRgb(26.25, 23.5294, 60), // --border
-		notification: hslToRgb(8.5714, 54.491, 67.2549), // --destructive
+		primary: THEME.light.primary,
+		background: THEME.light.background,
+		card: THEME.light.card,
+		text: THEME.light.foreground,
+		border: THEME.light.border,
+		notification: THEME.light.destructive,
 	},
 	fonts: Platform.select({
 		web: {
@@ -87,12 +77,12 @@ export const LightTheme = {
 export const DarkThemeCustom = {
 	dark: true,
 	colors: {
-		primary: hslToRgb(95.0, 15.7895, 55.2941), // --primary (dark)
-		background: hslToRgb(40, 13.2075, 31.1765), // --secondary (dark)
-		card: hslToRgb(38.5714, 12.069, 22.7451), // --card (dark)
-		text: hslToRgb(38.4, 40.9836, 88.0392), // --foreground (dark)
-		border: hslToRgb(40, 13.2075, 31.1765), // --border (dark)
-		notification: hslToRgb(9.6, 33.6323, 56.2745), // --destructive (dark)
+		primary: THEME.dark.primary,
+		background: THEME.dark.background,
+		card: THEME.dark.card,
+		text: THEME.dark.foreground,
+		border: THEME.dark.border,
+		notification: THEME.dark.destructive,
 	},
 	fonts: LightTheme.fonts,
 };

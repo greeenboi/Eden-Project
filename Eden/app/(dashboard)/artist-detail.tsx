@@ -1,38 +1,37 @@
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useAlbumStore } from "@/lib/actions/albums";
 import { useArtistStore } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { router, useLocalSearchParams } from "expo-router";
+import { FlashList } from "@shopify/flash-list";
+import { useLocalSearchParams } from "expo-router";
 import {
 	AlertCircle,
-	ArrowLeft,
-	BarChart3,
-	Heart,
-	Mail,
+	BadgeCheck,
+	Disc3,
 	Music,
 	Play,
-	Share2,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo } from "react";
-import { Pressable, ScrollView, StyleSheet } from "react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Image, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {
 	const { id } = useLocalSearchParams();
+	const artistId = Array.isArray(id) ? id[0] : id;
+	const [hasInitialized, setHasInitialized] = useState(false);
+	const colorScheme = useColorScheme();
+	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
+
 	const {
 		currentArtist,
 		currentArtistStats,
@@ -46,20 +45,97 @@ export default function ArtistDetailScreen() {
 		fetchArtistStats,
 		fetchArtistTracks,
 		clearCurrentArtist,
+		clearError,
 	} = useArtistStore();
+	const {
+		albums: artistAlbums,
+		isLoading: isLoadingAlbums,
+		fetchAlbums,
+	} = useAlbumStore();
 	const { playTrackWithQueue } = useGlobalPlayer();
 
 	useEffect(() => {
-		if (id) {
-			fetchArtistById(id as string);
-			fetchArtistStats(id as string);
-			fetchArtistTracks(id as string, 1, 20, "published");
-		}
+		let isMounted = true;
+		console.log(`[ArtistDetail] useEffect triggered, artistId: ${artistId}`);
+		setHasInitialized(false);
+
+		const loadArtistData = async () => {
+			if (!artistId) {
+				console.log("[ArtistDetail] No artistId, skipping fetch");
+				return;
+			}
+
+			console.log(
+				`[ArtistDetail] Starting to load data for artistId: ${artistId}`,
+			);
+
+			try {
+				// Fetch all data in parallel, but handle errors gracefully
+				const results = await Promise.allSettled([
+					fetchArtistById(artistId),
+					fetchArtistStats(artistId),
+					fetchArtistTracks(artistId, 1, 20, "published"),
+					fetchAlbums(1, 20, artistId),
+				]);
+
+				console.log(
+					`[ArtistDetail] All fetches completed, isMounted: ${isMounted}`,
+				);
+				console.log(
+					"[ArtistDetail] Results:",
+					results.map((r, i) => ({
+						index: i,
+						status: r.status,
+						reason: r.status === "rejected" ? r.reason?.message : undefined,
+					})),
+				);
+
+				// Log any rejected promises only if still mounted
+				if (isMounted) {
+					setHasInitialized(true);
+					results.forEach((result, index) => {
+						if (result.status === "rejected") {
+							const names = ["artist", "stats", "tracks", "albums"];
+							console.warn(
+								`[ArtistDetail] Failed to load ${names[index]}:`,
+								result.reason,
+							);
+						}
+					});
+				}
+			} catch (err) {
+				// This shouldn't happen with allSettled, but just in case
+				if (isMounted) {
+					setHasInitialized(true);
+					console.error(
+						"[ArtistDetail] Unexpected error loading artist data:",
+						err,
+					);
+				}
+			}
+		};
+
+		// Clear any previous errors before fetching
+		console.log("[ArtistDetail] Clearing error and starting fetch");
+		clearError();
+		loadArtistData();
 
 		return () => {
+			console.log(
+				"[ArtistDetail] Cleanup called, setting isMounted=false and clearing artist",
+			);
+			isMounted = false;
 			clearCurrentArtist();
 		};
-	}, [id, fetchArtistById, fetchArtistStats, fetchArtistTracks, clearCurrentArtist]);
+	}, [
+		artistId,
+		fetchArtistById,
+		fetchArtistStats,
+		fetchArtistTracks,
+		fetchAlbums,
+		clearCurrentArtist,
+		clearError,
+	]);
 
 	const getInitials = (name: string) => {
 		return name
@@ -83,20 +159,28 @@ export default function ArtistDetailScreen() {
 
 	// Queue source locked to this artist
 	const artistQueueSource: QueueSource | null = useMemo(() => {
-		if (!id || !currentArtist?.name) return null;
+		if (!artistId || !currentArtist?.name) return null;
 		return {
 			type: "artist",
-			artistId: id as string,
+			artistId: artistId,
 			artistName: currentArtist.name,
 		};
-	}, [id, currentArtist?.name]);
+	}, [artistId, currentArtist?.name]);
 
-	const handlePlayTrack = useCallback((trackId: string, index: number) => {
-		const selectedTrack = queueTracks[index];
-		if (selectedTrack && artistQueueSource) {
-			playTrackWithQueue(selectedTrack, queueTracks, index, artistQueueSource);
-		}
-	}, [queueTracks, artistQueueSource, playTrackWithQueue]);
+	const handlePlayTrack = useCallback(
+		(trackId: string, index: number) => {
+			const selectedTrack = queueTracks[index];
+			if (selectedTrack && artistQueueSource) {
+				playTrackWithQueue(
+					selectedTrack,
+					queueTracks,
+					index,
+					artistQueueSource,
+				);
+			}
+		},
+		[queueTracks, artistQueueSource, playTrackWithQueue],
+	);
 
 	const handlePlayArtist = useCallback(() => {
 		if (queueTracks.length > 0 && artistQueueSource) {
@@ -106,25 +190,8 @@ export default function ArtistDetailScreen() {
 
 	return (
 		<SafeAreaView className="flex-1">
-			<View style={styles.container}>
-				{/* Header */}
-				<View
-					style={{ backgroundColor: "transparent" }}
-					className="flex-row items-center justify-between p-4"
-				>
-					<Button variant="ghost" size="sm" onPress={() => router.back()}>
-						<ArrowLeft size={24} />
-					</Button>
-					<Text className="text-lg font-semibold">Artist Details</Text>
-					<Button variant="ghost" size="sm">
-						<Share2 size={20} />
-					</Button>
-				</View>
-
-				<ScrollView
-					style={styles.content}
-					contentContainerStyle={styles.contentContainer}
-				>
+			<View className="flex-1">
+				<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
 					{/* Error Alert */}
 					{error && (
 						<Alert icon={AlertCircle} variant="destructive" className="mb-4">
@@ -135,7 +202,7 @@ export default function ArtistDetailScreen() {
 					)}
 
 					{/* Loading State */}
-					{isLoading && (
+					{(isLoading || !hasInitialized) && (
 						<View style={{ backgroundColor: "transparent" }} className="gap-4">
 							<Card>
 								<CardContent className="items-center py-6">
@@ -151,12 +218,16 @@ export default function ArtistDetailScreen() {
 					)}
 
 					{/* Artist Content */}
-					{!isLoading && currentArtist && (
+					{hasInitialized && !isLoading && currentArtist && (
 						<>
 							{/* Artist Header */}
 							<Card className="mb-4">
 								<CardContent className="items-center py-6">
-									<Avatar alt={currentArtist.name} className="w-32 h-32 mb-4">
+									{/* <View className="relative"> */}
+									<Avatar
+										alt={currentArtist.name}
+										className="w-32 h-32 mb-4 relative"
+									>
 										{currentArtist.avatarUrl ? (
 											<AvatarImage source={{ uri: currentArtist.avatarUrl }} />
 										) : null}
@@ -165,16 +236,20 @@ export default function ArtistDetailScreen() {
 												{getInitials(currentArtist.name)}
 											</Text>
 										</AvatarFallback>
+										{currentArtist.verified && (
+											<View
+												style={{ backgroundColor: themeColors.success }}
+												className="rounded-full w-5 h-5 items-center justify-center absolute bottom-0 right-1"
+											>
+												<BadgeCheck size={14} color={themeColors.successForeground} />
+											</View>
+										)}
 									</Avatar>
+									{/* </View> */}
 
 									<Text className="text-3xl font-bold mb-2">
 										{currentArtist.name}
 									</Text>
-									{currentArtist.verified && (
-										<Badge variant="default" className="mb-3">
-											<Text>✓ Verified Artist</Text>
-										</Badge>
-									)}
 
 									{currentArtist.bio && (
 										<Text className="text-center opacity-70 mb-4 px-4">
@@ -184,37 +259,185 @@ export default function ArtistDetailScreen() {
 
 									<View
 										style={{ backgroundColor: "transparent" }}
-										className="flex-row items-center gap-2 mb-4"
-									>
-										<Mail size={16} className="opacity-70" />
-										<Text className="text-sm opacity-70">
-											{currentArtist.email}
-										</Text>
-									</View>
-
-									<View
-										style={{ backgroundColor: "transparent" }}
-										className="flex-row gap-2 w-full"
+										className="w-full"
 									>
 										<Button className="flex-1" onPress={handlePlayArtist}>
 											<Play size={20} />
 											<Text className="ml-2">Play</Text>
 										</Button>
-										<Button variant="outline">
-											<Heart size={20} />
-										</Button>
 									</View>
 								</CardContent>
 							</Card>
 
+							{/* Tracks - Horizontal FlashList */}
+							<View className="mb-6 bg-transparent">
+								<View className="flex-row items-center justify-between px-2 mb-3 bg-transparent">
+									<Text className="text-xl font-bold">Tracks</Text>
+									{tracksPagination && (
+										<Text className="text-sm opacity-60">
+											{tracksPagination.total} tracks
+										</Text>
+									)}
+								</View>
+
+								{isLoadingTracks && currentArtistTracks.length === 0 ? (
+									<View className="flex-row gap-3 px-2 bg-transparent">
+										<Skeleton className="w-32 h-44 rounded-xl" />
+										<Skeleton className="w-32 h-44 rounded-xl" />
+										<Skeleton className="w-32 h-44 rounded-xl" />
+									</View>
+								) : currentArtistTracks.length > 0 ? (
+									<View className="h-48 bg-transparent">
+										<FlashList
+											data={currentArtistTracks}
+											horizontal
+											showsHorizontalScrollIndicator={false}
+											contentContainerStyle={{ paddingHorizontal: 8 }}
+											renderItem={({ item: track, index }) => (
+												<Pressable
+													onPress={() => handlePlayTrack(track.id, index)}
+													className="mr-3 active:opacity-70"
+												>
+													<View className="w-32 bg-transparent">
+														{track.coverUrl ? (
+															<Image
+																source={{ uri: track.coverUrl }}
+																style={{
+																	width: 128,
+																	height: 128,
+																	borderRadius: 12,
+																}}
+																resizeMode="cover"
+															/>
+														) : (
+															<View className="w-32 h-32 rounded-xl bg-primary/10 items-center justify-center">
+																<Music size={32} className="opacity-40" />
+															</View>
+														)}
+														<Text
+															className="font-semibold text-sm mt-2"
+															numberOfLines={1}
+														>
+															{track.title}
+														</Text>
+														<Text
+															className="text-xs opacity-60"
+															numberOfLines={1}
+														>
+															{Math.floor(track.duration / 60)}:
+															{(track.duration % 60)
+																.toString()
+																.padStart(2, "0")}
+														</Text>
+													</View>
+												</Pressable>
+											)}
+											keyExtractor={(item) => item.id}
+										/>
+									</View>
+								) : (
+									<Text className="text-sm opacity-70 text-center py-4">
+										No published tracks yet
+									</Text>
+								)}
+
+								{tracksPagination &&
+									currentArtistTracks.length < tracksPagination.total && (
+										<Button
+											variant="ghost"
+											className="mt-2 self-center"
+											onPress={() => {
+												if (artistId && tracksPagination) {
+													fetchArtistTracks(
+														artistId,
+														tracksPagination.page + 1,
+														20,
+														"published",
+													);
+												}
+											}}
+											disabled={isLoadingTracks}
+										>
+											<Text className="text-primary">
+												{isLoadingTracks ? "Loading..." : "Load More"}
+											</Text>
+										</Button>
+									)}
+							</View>
+
+							{/* Albums - Horizontal FlashList */}
+							<View className="mb-6 bg-transparent">
+								<View className="flex-row items-center justify-between px-2 mb-3 bg-transparent">
+									<Text className="text-xl font-bold">Albums</Text>
+									{artistAlbums.length > 0 && (
+										<Text className="text-sm opacity-60">
+											{artistAlbums.length} albums
+										</Text>
+									)}
+								</View>
+
+								{isLoadingAlbums && artistAlbums.length === 0 ? (
+									<View className="flex-row gap-3 px-2 bg-transparent">
+										<Skeleton className="w-36 h-48 rounded-xl" />
+										<Skeleton className="w-36 h-48 rounded-xl" />
+									</View>
+								) : artistAlbums.length > 0 ? (
+									<View className="h-48 bg-transparent">
+										<FlashList
+											data={artistAlbums}
+											horizontal
+											showsHorizontalScrollIndicator={false}
+											contentContainerStyle={{ paddingHorizontal: 8 }}
+											renderItem={({ item: album }) => (
+												<Pressable className="mr-3 active:opacity-70">
+													<View className="w-32 bg-transparent">
+														{album.artworkUrl ? (
+															<Image
+																source={{ uri: album.artworkUrl }}
+																style={{
+																	width: 128,
+																	height: 128,
+																	borderRadius: 12,
+																}}
+																resizeMode="cover"
+															/>
+														) : (
+															<View className="w-32 h-32 rounded-xl bg-primary/10 items-center justify-center">
+																<Disc3 size={32} className="opacity-40" />
+															</View>
+														)}
+														<Text
+															className="font-semibold text-sm mt-2"
+															numberOfLines={1}
+														>
+															{album.title}
+														</Text>
+														{album.releaseDate && (
+															<Text
+																className="text-xs opacity-60"
+																numberOfLines={1}
+															>
+																{new Date(album.releaseDate).getFullYear()}
+															</Text>
+														)}
+													</View>
+												</Pressable>
+											)}
+											keyExtractor={(item) => item.id}
+										/>
+									</View>
+								) : (
+									<View className="h-32 items-center justify-center bg-transparent">
+										<Disc3 size={32} className="opacity-30 mb-2" />
+										<Text className="text-sm opacity-70 text-center">
+											No albums yet
+										</Text>
+									</View>
+								)}
+							</View>
+
 							{/* Profile Details */}
 							<Card className="mb-4">
-								<CardHeader>
-									<CardTitle className="flex-row items-center gap-2">
-										<BarChart3 size={20} />
-										<Text>Profile Information</Text>
-									</CardTitle>
-								</CardHeader>
 								<CardContent className="gap-3">
 									{currentArtist.profile && (
 										<>
@@ -252,18 +475,9 @@ export default function ArtistDetailScreen() {
 											{new Date(currentArtist.updatedAt).toLocaleDateString()}
 										</Text>
 									</View>
-								</CardContent>
-							</Card>
 
-							{/* Placeholder for future stats */}
-							<Card className="mb-8">
-								<CardHeader>
-									<CardTitle className="flex-row items-center gap-2">
-										<BarChart3 size={20} />
-										<Text>Statistics</Text>
-									</CardTitle>
-								</CardHeader>
-								<CardContent className="gap-3">
+									<Separator />
+
 									{isLoadingStats ? (
 										<>
 											<Skeleton className="h-8 w-full mb-2" />
@@ -272,17 +486,6 @@ export default function ArtistDetailScreen() {
 										</>
 									) : currentArtistStats ? (
 										<>
-											<View
-												style={{ backgroundColor: "transparent" }}
-												className="flex-row justify-between"
-											>
-												<Text className="text-sm opacity-70">Total Tracks</Text>
-												<Text className="text-lg font-bold">
-													{currentArtistStats.totalTracks}
-												</Text>
-											</View>
-											<Separator />
-
 											<View
 												style={{ backgroundColor: "transparent" }}
 												className="flex-row justify-between"
@@ -305,30 +508,6 @@ export default function ArtistDetailScreen() {
 													{currentArtistStats.totalAlbums}
 												</Text>
 											</View>
-											<Separator />
-
-											<View
-												style={{ backgroundColor: "transparent" }}
-												className="flex-row justify-between"
-											>
-												<Text className="text-sm opacity-70">Total Uploads</Text>
-												<Text className="text-lg font-bold">
-													{currentArtistStats.totalUploads}
-												</Text>
-											</View>
-											<Separator />
-
-											<View
-												style={{ backgroundColor: "transparent" }}
-												className="flex-row justify-between"
-											>
-												<Text className="text-sm opacity-70">
-													Pending Uploads
-												</Text>
-												<Text className="text-lg font-bold">
-													{currentArtistStats.pendingUploads}
-												</Text>
-											</View>
 										</>
 									) : (
 										<Text className="text-sm opacity-70 text-center py-4">
@@ -337,126 +516,11 @@ export default function ArtistDetailScreen() {
 									)}
 								</CardContent>
 							</Card>
-
-							{/* Tracks */}
-							<Card className="mb-8">
-								<CardHeader>
-									<CardTitle className="flex-row items-center gap-2">
-										<Music size={20} />
-										<Text>Published Tracks</Text>
-									</CardTitle>
-									{tracksPagination && (
-										<CardDescription>
-											Showing {currentArtistTracks.length} of{" "}
-											{tracksPagination.total} tracks
-										</CardDescription>
-									)}
-								</CardHeader>
-								<CardContent className="gap-2">
-									{isLoadingTracks && currentArtistTracks.length === 0 ? (
-										<>
-											<Skeleton className="h-16 w-full mb-2" />
-											<Skeleton className="h-16 w-full mb-2" />
-											<Skeleton className="h-16 w-full" />
-										</>
-									) : currentArtistTracks.length > 0 ? (
-										<>
-											{currentArtistTracks.map((track, index) => (
-												<Pressable
-													key={track.id}
-													onPress={() => handlePlayTrack(track.id, index)}
-													className="active:opacity-70"
-												>
-													<Card className="mb-2">
-														<CardContent className="flex-row items-center py-3">
-															<View
-																style={{ backgroundColor: "transparent" }}
-																className="w-12 h-12 rounded-md bg-primary/10 items-center justify-center mr-3"
-															>
-																{track.coverUrl ? (
-																	<Avatar
-																		alt={track.title}
-																		className="w-12 h-12 rounded-md"
-																	>
-																		<AvatarImage
-																			source={{ uri: track.coverUrl }}
-																		/>
-																	</Avatar>
-																) : (
-																	<Music size={24} className="opacity-50" />
-																)}
-															</View>
-
-															<View
-																style={{ backgroundColor: "transparent" }}
-																className="flex-1"
-															>
-																<Text className="font-semibold mb-1">
-																	{track.title}
-																</Text>
-																<Text className="text-xs opacity-70">
-																	{Math.floor(track.duration / 60)}:
-																	{(track.duration % 60)
-																		.toString()
-																		.padStart(2, "0")}
-																	{track.trackNumber &&
-																		` • Track ${track.trackNumber}`}
-																</Text>
-															</View>
-
-															<Badge
-																variant={
-																	track.status === "published"
-																		? "default"
-																		: "secondary"
-																}
-															>
-																<Text className="text-xs capitalize">
-																	{track.status}
-																</Text>
-															</Badge>
-														</CardContent>
-													</Card>
-												</Pressable>
-											))}
-
-											{tracksPagination &&
-												currentArtistTracks.length < tracksPagination.total && (
-													<Button
-														variant="outline"
-														className="mt-4"
-														onPress={() => {
-															if (id && tracksPagination) {
-																fetchArtistTracks(
-																	id as string,
-																	tracksPagination.page + 1,
-																	20,
-																	"published",
-																);
-															}
-														}}
-														disabled={isLoadingTracks}
-													>
-														<Text>
-															{isLoadingTracks
-																? "Loading..."
-																: "Load More Tracks"}
-														</Text>
-													</Button>
-												)}
-										</>
-									) : (
-										<Text className="text-sm opacity-70 text-center py-4">
-											No published tracks yet
-										</Text>
-									)}
-								</CardContent>
-							</Card>
 						</>
 					)}
 
 					{/* Not Found State */}
-					{!isLoading && !currentArtist && !error && (
+					{hasInitialized && !isLoading && !currentArtist && !error && (
 						<Card>
 							<CardContent className="py-8 items-center">
 								<AlertCircle size={48} className="opacity-50 mb-4" />
@@ -469,15 +533,3 @@ export default function ArtistDetailScreen() {
 		</SafeAreaView>
 	);
 }
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	content: {
-		flex: 1,
-	},
-	contentContainer: {
-		padding: 16,
-	},
-});

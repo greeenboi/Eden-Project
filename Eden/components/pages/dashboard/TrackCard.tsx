@@ -17,15 +17,19 @@ interface TrackCardProps {
 	onPress: (id: string) => void;
 }
 
+/**
+ * Color variants for track cards - uses CSS variable-based colors
+ * These classes are defined in tailwind.config.ts and reference global.css variables
+ */
 const IMAGE_COLORS = [
-	"bg-purple-500/20",
-	"bg-blue-500/20",
-	"bg-green-500/20",
-	"bg-yellow-500/20",
-	"bg-red-500/20",
-	"bg-pink-500/20",
-	"bg-indigo-500/20",
-	"bg-teal-500/20",
+	"bg-primary/20",
+	"bg-secondary/40",
+	"bg-accent/30",
+	"bg-muted/50",
+	"bg-chart-1/20",
+	"bg-chart-2/20",
+	"bg-chart-3/20",
+	"bg-chart-4/20",
 ];
 
 function formatDuration(seconds: number | null) {
@@ -41,9 +45,9 @@ export function TrackCard({ item, index, onPress }: TrackCardProps) {
 
 	return (
 		//add long press for action sheet
-		<Pressable 
-			android_ripple={{ borderless: false, foreground: true }} 
-			onPress={() => onPress(item.id)} 
+		<Pressable
+			android_ripple={{ borderless: false, foreground: true }}
+			onPress={() => onPress(item.id)}
 			style={{ padding: 4 }}
 		>
 			<Card className="bg-transparent border-0 p-0">

@@ -29,13 +29,7 @@ export function PlayerArtwork({ artworkUrl, explicit }: PlayerArtworkProps) {
 				/>
 			) : (
 				<View
-					style={{
-						width: "100%",
-						height: "100%",
-						alignItems: "center",
-						justifyContent: "center",
-						backgroundColor: "rgba(139, 92, 246, 0.1)",
-					}}
+					className="w-full h-full items-center justify-center bg-primary/10"
 				>
 					<Music size={120} className="text-primary opacity-50" />
 				</View>

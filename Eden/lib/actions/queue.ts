@@ -1,5 +1,4 @@
-
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
@@ -15,7 +14,7 @@ export type RepeatMode = "off" | "all" | "one";
 export type ShuffleMode = "off" | "on";
 
 /** Source context for the queue - determines what tracks are available */
-export type QueueSource = 
+export type QueueSource =
 	| { type: "all-songs" }
 	| { type: "playlist"; playlistId: string; playlistName: string }
 	| { type: "album"; albumId: string; albumName: string }
@@ -44,7 +43,11 @@ interface QueueState {
 
 	// Actions
 	/** Set the queue with a new list of tracks, optionally starting at a specific index */
-	setQueue: (tracks: QueueTrack[], startIndex?: number, source?: QueueSource) => void;
+	setQueue: (
+		tracks: QueueTrack[],
+		startIndex?: number,
+		source?: QueueSource,
+	) => void;
 	/** Add a track to the end of the queue */
 	addToQueue: (track: QueueTrack) => void;
 	/** Add a track to play next (after current track) */
@@ -156,7 +159,9 @@ export const useQueueStore = create<QueueState>()(
 			removeFromQueue: (index) => {
 				set((state) => {
 					const newQueue = state.queue.filter((_, i) => i !== index);
-					const newOriginalQueue = state.originalQueue.filter((_, i) => i !== index);
+					const newOriginalQueue = state.originalQueue.filter(
+						(_, i) => i !== index,
+					);
 					let newIndex = state.currentIndex;
 
 					// Adjust current index if necessary
@@ -326,11 +331,11 @@ export const useQueueStore = create<QueueState>()(
 							queue: [...beforeCurrent, ...shuffledAfter],
 						};
 					}
-					
+
 					// Turn off shuffle - restore original order
 					const currentTrack = state.queue[state.currentIndex];
 					const originalIndex = state.originalQueue.findIndex(
-						(t) => t.id === currentTrack?.id
+						(t) => t.id === currentTrack?.id,
 					);
 
 					return {
@@ -385,6 +390,6 @@ export const useQueueStore = create<QueueState>()(
 				shuffleMode: state.shuffleMode,
 				maxHistorySize: state.maxHistorySize,
 			}),
-		}
-	)
+		},
+	),
 );

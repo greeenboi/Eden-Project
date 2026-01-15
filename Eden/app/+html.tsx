@@ -30,12 +30,17 @@ export default function Root({ children }: { children: React.ReactNode }) {
 	);
 }
 
+/**
+ * Responsive background colors that match global.css
+ * Light: --background (#fff0f8)
+ * Dark: --background (#1a0922)
+ */
 const responsiveBackground = `
 body {
-  background-color: #fff;
+  background-color: #fff0f8;
 }
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: #000;
+    background-color: #1a0922;
   }
 }`;

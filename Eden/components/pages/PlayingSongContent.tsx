@@ -1,7 +1,11 @@
+import { router } from "expo-router";
+import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
-import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -9,16 +13,11 @@ import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
-import { router } from "expo-router";
-import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
 import { MiniPlayer } from "./player/MiniPlayer";
 import { PlayerArtwork } from "./player/PlayerArtwork";
 import { PlayerControls } from "./player/PlayerControls";
 import { PlayerSlider } from "./player/PlayerSlider";
 import { PlayerTrackInfo } from "./player/PlayerTrackInfo";
-
 
 type PlayingSongContentProps = {
 	trackId?: string;
@@ -65,7 +64,10 @@ export function PlayingSongContent({
 	nextArtworkUrl,
 	previousArtworkUrl,
 }: PlayingSongContentProps) {
-	const log = useCallback((...args: unknown[]) => console.log("[Player]", ...args), []);
+	const log = useCallback(
+		(...args: unknown[]) => console.log("[Player]", ...args),
+		[],
+	);
 	const {
 		currentTrack,
 		isLoading,
@@ -99,8 +101,13 @@ export function PlayingSongContent({
 	});
 
 	// Sync playback state to shared store for handle slider
-	const { updatePlayback, registerSeekCallback, unregisterSeekCallback, reset: resetPlayback } = usePlaybackStore();
-	
+	const {
+		updatePlayback,
+		registerSeekCallback,
+		unregisterSeekCallback,
+		reset: resetPlayback,
+	} = usePlaybackStore();
+
 	useEffect(() => {
 		updatePlayback({
 			currentTime: status.currentTime ?? 0,
@@ -109,7 +116,14 @@ export function PlayingSongContent({
 			isPlaying: status.playing,
 			isLoading: loadingStream,
 		});
-	}, [status.currentTime, status.duration, status.isLoaded, status.playing, loadingStream, updatePlayback]);
+	}, [
+		status.currentTime,
+		status.duration,
+		status.isLoaded,
+		status.playing,
+		loadingStream,
+		updatePlayback,
+	]);
 
 	// Register seek callback so handle slider can control playback
 	useEffect(() => {
@@ -123,7 +137,13 @@ export function PlayingSongContent({
 			unregisterSeekCallback();
 			resetPlayback();
 		};
-	}, [player, status.isLoaded, registerSeekCallback, unregisterSeekCallback, resetPlayback]);
+	}, [
+		player,
+		status.isLoaded,
+		registerSeekCallback,
+		unregisterSeekCallback,
+		resetPlayback,
+	]);
 
 	const [scrubValue, setScrubValue] = useState(0);
 	const [isScrubbing, setIsScrubbing] = useState(false);
@@ -135,7 +155,7 @@ export function PlayingSongContent({
 	}, [status.currentTime, isScrubbing]);
 
 	const sliderValue = useMemo(() => {
-		return isScrubbing ? scrubValue : status.currentTime ?? 0;
+		return isScrubbing ? scrubValue : (status.currentTime ?? 0);
 	}, [isScrubbing, scrubValue, status.currentTime]);
 
 	const sliderMax = useMemo(() => {
@@ -169,7 +189,8 @@ export function PlayingSongContent({
 	};
 
 	// Localize loading to this track so list fetches elsewhere don't block the player UI
-	const isTrackLoading = isLoading && (!currentTrack || currentTrack.id !== trackId);
+	const isTrackLoading =
+		isLoading && (!currentTrack || currentTrack.id !== trackId);
 
 	const handleClose = () => {
 		log("handleClose");
@@ -188,7 +209,9 @@ export function PlayingSongContent({
 	useEffect(() => {
 		log("track effect", { trackId });
 		if (trackId) {
-			fetchTrackByIdRef.current(trackId).catch((err) => log("fetchTrackById failed", err));
+			fetchTrackByIdRef
+				.current(trackId)
+				.catch((err) => log("fetchTrackById failed", err));
 		} else {
 			clearCurrentTrackRef.current();
 		}
@@ -201,7 +224,10 @@ export function PlayingSongContent({
 
 	if (!trackId) {
 		return (
-			<View style={styles.container} className="items-center justify-center px-8 bg-background">
+			<View
+				style={styles.container}
+				className="items-center justify-center px-8 bg-background"
+			>
 				<Text className="text-center opacity-70">
 					Select a track to start playing.
 				</Text>
@@ -303,11 +329,11 @@ export function PlayingSongContent({
 									themeColors={themeColors}
 									hasNext={hasNext}
 									hasPrevious={hasPrevious}
-								isShuffled={isShuffled}
-								onTogglePlayback={togglePlayback}
-								onToggleLoop={toggleLoop}
-								onToggleMute={toggleMute}
-								onToggleShuffle={onToggleShuffle}
+									isShuffled={isShuffled}
+									onTogglePlayback={togglePlayback}
+									onToggleLoop={toggleLoop}
+									onToggleMute={toggleMute}
+									onToggleShuffle={onToggleShuffle}
 									onSkipNext={onSkipNext}
 									onSkipPrevious={onSkipPrevious}
 								/>

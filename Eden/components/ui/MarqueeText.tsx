@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { type LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Animated, {
-    Easing,
-    cancelAnimation,
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withRepeat,
-    withSequence,
-    withTiming,
+	cancelAnimation,
+	Easing,
+	useAnimatedStyle,
+	useSharedValue,
+	withDelay,
+	withRepeat,
+	withSequence,
+	withTiming,
 } from "react-native-reanimated";
 
 interface MarqueeTextProps {
@@ -79,14 +79,14 @@ export function MarqueeText({
 						withTiming(0, {
 							duration: scrollDuration,
 							easing: Easing.linear,
-						})
+						}),
 					),
 					// Small delay before repeating
-					withDelay(delay / 2, withTiming(0, { duration: 0 }))
+					withDelay(delay / 2, withTiming(0, { duration: 0 })),
 				),
 				-1, // Infinite repeat
-				false // Don't reverse
-			)
+				false, // Don't reverse
+			),
 		);
 
 		return () => {

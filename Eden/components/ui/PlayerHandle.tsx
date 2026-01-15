@@ -1,16 +1,21 @@
-import Colors from "@/constants/Colors";
-import { usePlaybackStore } from "@/lib/stores/playback";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
 import Slider from "@react-native-community/slider";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";
-import { type StyleProp, StyleSheet, type ViewStyle, useColorScheme } from "react-native";
+import {
+	type StyleProp,
+	StyleSheet,
+	useColorScheme,
+	type ViewStyle,
+} from "react-native";
 import Animated, {
 	Extrapolation,
 	interpolate,
 	useAnimatedStyle,
 	useDerivedValue,
 } from "react-native-reanimated";
+import Colors from "@/constants/Colors";
+import { usePlaybackStore } from "@/lib/stores/playback";
 
 const toRad = (deg: number) => {
 	"worklet";
@@ -19,7 +24,12 @@ const toRad = (deg: number) => {
 
 const transformOrigin = (
 	{ x, y }: { x: number; y: number },
-	...transformations: { rotate?: string; translateX?: number; translateY?: number; scale?: number }[]
+	...transformations: {
+		rotate?: string;
+		translateX?: number;
+		translateY?: number;
+		scale?: number;
+	}[]
 ): ViewStyle["transform"] => {
 	"worklet";
 	return [
@@ -40,13 +50,17 @@ interface PlayerHandleProps extends BottomSheetHandleProps {
  * - Regular animated handle when in full/expanded mode
  * - Progress slider when in mini mode (index 0)
  */
-const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => {
+const PlayerHandle: React.FC<PlayerHandleProps> = ({
+	style,
+	animatedIndex,
+}) => {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
-	
+
 	// Playback state from shared store
-	const { currentTime, duration, isLoaded, isLoading, seekTo } = usePlaybackStore();
-	
+	const { currentTime, duration, isLoaded, isLoading, seekTo } =
+		usePlaybackStore();
+
 	// Local scrub state for smooth slider interaction
 	const [isScrubbing, setIsScrubbing] = useState(false);
 	const [scrubValue, setScrubValue] = useState(0);
@@ -73,15 +87,23 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 		setScrubValue(value);
 	}, []);
 
-	const handleSlidingComplete = useCallback((value: number) => {
-		setIsScrubbing(false);
-		if (!isLoaded || !Number.isFinite(value) || !seekTo) return;
-		seekTo(Math.min(sliderMax, Math.max(0, value)));
-	}, [isLoaded, sliderMax, seekTo]);
+	const handleSlidingComplete = useCallback(
+		(value: number) => {
+			setIsScrubbing(false);
+			if (!isLoaded || !Number.isFinite(value) || !seekTo) return;
+			seekTo(Math.min(sliderMax, Math.max(0, value)));
+		},
+		[isLoaded, sliderMax, seekTo],
+	);
 
 	// Animated styles for the regular handle
 	const indicatorTransformOriginY = useDerivedValue(() =>
-		interpolate(animatedIndex.value, [0, 1, 2], [-1, 0, 1], Extrapolation.CLAMP)
+		interpolate(
+			animatedIndex.value,
+			[0, 1, 2],
+			[-1, 0, 1],
+			Extrapolation.CLAMP,
+		),
 	);
 
 	const containerAnimatedStyle = useAnimatedStyle(() => {
@@ -89,7 +111,7 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			animatedIndex.value,
 			[0, 1, 2],
 			[12, 20, 0],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return {
 			borderTopLeftRadius: borderTopRadius,
@@ -103,7 +125,7 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			animatedIndex.value,
 			[0, 0.3],
 			[1, 0],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return { opacity };
 	});
@@ -113,7 +135,7 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			animatedIndex.value,
 			[0, 0.3],
 			[0, 1],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return { opacity };
 	});
@@ -123,13 +145,13 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			animatedIndex.value,
 			[0, 1, 2],
 			[toRad(-30), 0, toRad(30)],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return {
 			transform: transformOrigin(
 				{ x: 0, y: indicatorTransformOriginY.value },
 				{ rotate: `${leftIndicatorRotate}rad` },
-				{ translateX: -5 }
+				{ translateX: -5 },
 			),
 		};
 	});
@@ -139,13 +161,13 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			animatedIndex.value,
 			[0, 1, 2],
 			[toRad(30), 0, toRad(-30)],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return {
 			transform: transformOrigin(
 				{ x: 0, y: indicatorTransformOriginY.value },
 				{ rotate: `${rightIndicatorRotate}rad` },
-				{ translateX: 5 }
+				{ translateX: 5 },
 			),
 		};
 	});
@@ -153,10 +175,13 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 	const containerStyle = useMemo(
 		() => [
 			styles.header,
-			{ backgroundColor: themeColors.card, borderBottomColor: themeColors.border },
+			{
+				backgroundColor: themeColors.card,
+				borderBottomColor: themeColors.border,
+			},
 			style,
 		],
-		[style, themeColors.card, themeColors.border]
+		[style, themeColors.card, themeColors.border],
 	);
 
 	return (
@@ -182,8 +207,9 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({ style, animatedIndex }) => 
 			</Animated.View>
 
 			{/* Regular handle indicators - visible in expanded mode */}
-			<Animated.View style={[styles.indicatorContainer, indicatorOpacityStyle]}>
-			</Animated.View>
+			<Animated.View
+				style={[styles.indicatorContainer, indicatorOpacityStyle]}
+			></Animated.View>
 		</Animated.View>
 	);
 };

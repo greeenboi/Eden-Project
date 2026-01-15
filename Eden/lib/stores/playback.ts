@@ -14,7 +14,9 @@ interface PlaybackState {
 
 	// Actions
 	/** Update playback state */
-	updatePlayback: (state: Partial<Omit<PlaybackState, "updatePlayback" | "seekTo" | "reset">>) => void;
+	updatePlayback: (
+		state: Partial<Omit<PlaybackState, "updatePlayback" | "seekTo" | "reset">>,
+	) => void;
 	/** Seek callback - set by the player component */
 	seekTo: ((time: number) => void) | null;
 	/** Register seek callback */

@@ -1,38 +1,65 @@
+/**
+ * Color palette that matches the CSS variables in global.css
+ * This is the single source of truth for colors throughout the app
+ * All values here must stay in sync with global.css
+ */
 const palette = {
 	light: {
-		text: "hsl(26, 19.4805%, 30.1961%)",
-		background: "hsl(45, 49.0566%, 79.2157%)",
-		tint: "hsl(72.3077, 33.0508%, 46.2745%)",
-		tabIconDefault: "hsl(26.6667, 11.2971%, 46.8627%)",
-		tabIconSelected: "hsl(72.3077, 33.0508%, 46.2745%)",
-		primary: "hsl(72.3077, 33.0508%, 46.2745%)",
-		primaryForeground: "hsl(42.8571, 63.6364%, 97.8431%)",
-		secondary: "hsl(44.5161, 48.4375%, 74.902%)",
-		secondaryForeground: "hsl(26, 19.4805%, 30.1961%)",
-		accent: "hsl(43.9437, 49.6503%, 71.9608%)",
-		muted: "hsl(44.5161, 48.4375%, 74.902%)",
-		mutedForeground: "hsl(26.6667, 11.2971%, 46.8627%)",
-		border: "hsl(26.25, 23.5294%, 60%)",
-		card: "hsl(42, 45.4545%, 82.7451%)",
-		cardForeground: "hsl(26, 19.4805%, 30.1961%)",
+		text: "#91185c",
+		background: "#fff0f8",
+		tint: "#e6067a",
+		tabIconDefault: "#c04283",
+		tabIconSelected: "#e6067a",
+		primary: "#e6067a",
+		primaryForeground: "#ffffff",
+		secondary: "#ffd6ff",
+		secondaryForeground: "#91185c",
+		accent: "#ffc1e3",
+		muted: "#ffe3f2",
+		mutedForeground: "#c04283",
+		border: "#ffc7e6",
+		card: "#fff7fc",
+		cardForeground: "#91185c",
+		destructive: "#d13869",
+		destructiveForeground: "#ffffff",
+		success: "#22c55e",
+		successForeground: "#ffffff",
 	},
 	dark: {
-		text: "hsl(38.4, 40.9836%, 88.0392%)",
-		background: "hsl(42.3529, 17.1717%, 19.4118%)",
-		tint: "hsl(95, 15.7895%, 55.2941%)",
-		tabIconDefault: "hsl(33.3333, 9.375%, 62.3529%)",
-		tabIconSelected: "hsl(95, 15.7895%, 55.2941%)",
-		primary: "hsl(95, 15.7895%, 55.2941%)",
-		primaryForeground: "hsl(26.6667, 12%, 14.7059%)",
-		secondary: "hsl(40, 13.2075%, 31.1765%)",
-		secondaryForeground: "hsl(38.4, 40.9836%, 88.0392%)",
-		accent: "hsl(44.3478, 27.2727%, 49.6078%)",
-		muted: "hsl(38.8235, 12.9771%, 25.6863%)",
-		mutedForeground: "hsl(33.3333, 9.375%, 62.3529%)",
-		border: "hsl(40, 13.2075%, 31.1765%)",
-		card: "hsl(38.5714, 12.069%, 22.7451%)",
-		cardForeground: "hsl(38.4, 40.9836%, 88.0392%)",
+		text: "#ffb3ff",
+		background: "#1a0922",
+		tint: "#ff6bef",
+		tabIconDefault: "#d67ad6",
+		tabIconSelected: "#ff6bef",
+		primary: "#ff6bef",
+		primaryForeground: "#180518",
+		secondary: "#46204f",
+		secondaryForeground: "#ffb3ff",
+		accent: "#5a1f5d",
+		muted: "#331941",
+		mutedForeground: "#d67ad6",
+		border: "#4a1b5f",
+		card: "#2a1435",
+		cardForeground: "#ffb3ff",
+		destructive: "#ff2876",
+		destructiveForeground: "#f9f9f9",
+		success: "#22c55e",
+		successForeground: "#ffffff",
 	},
 } as const;
 
 export default palette;
+
+/**
+ * Helper type for accessing color keys
+ */
+export type ColorKey = keyof typeof palette.light;
+
+/**
+ * Helper to get theme-aware colors based on color scheme
+ * @param isDark - Whether dark mode is enabled
+ * @returns The appropriate color palette
+ */
+export function getColors(isDark: boolean) {
+	return isDark ? palette.dark : palette.light;
+}

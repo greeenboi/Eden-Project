@@ -1,8 +1,3 @@
-import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
-import PlayerHandle from "@/components/ui/PlayerHandle";
-import { type QueueSource, type QueueTrack, type RepeatMode, type ShuffleMode, useQueueStore } from "@/lib/actions/queue";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 import {
 	BottomSheetModal,
 	BottomSheetModalProvider,
@@ -10,8 +5,8 @@ import {
 	useBottomSheet,
 } from "@gorhom/bottom-sheet";
 import {
-	type ReactNode,
 	createContext,
+	type ReactNode,
 	useCallback,
 	useContext,
 	useEffect,
@@ -19,6 +14,17 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
+import PlayerHandle from "@/components/ui/PlayerHandle";
+import {
+	type QueueSource,
+	type QueueTrack,
+	type RepeatMode,
+	type ShuffleMode,
+	useQueueStore,
+} from "@/lib/actions/queue";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
@@ -30,7 +36,12 @@ interface GlobalPlayerContextValue {
 	/** Play a track by ID - opens the player sheet (single track, no queue) */
 	playTrack: (trackId: string) => void;
 	/** Play a track with queue context */
-	playTrackWithQueue: (track: QueueTrack, queue: QueueTrack[], startIndex?: number, source?: QueueSource) => void;
+	playTrackWithQueue: (
+		track: QueueTrack,
+		queue: QueueTrack[],
+		startIndex?: number,
+		source?: QueueSource,
+	) => void;
 	/** Skip to next track in queue */
 	skipToNext: () => void;
 	/** Skip to previous track in queue */
@@ -73,7 +84,9 @@ interface GlobalPlayerContextValue {
 	queueSource: QueueSource | null;
 }
 
-const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(null);
+const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(
+	null,
+);
 
 /**
  * Hook to access the global player context
@@ -82,7 +95,9 @@ const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(null)
 export function useGlobalPlayer() {
 	const context = useContext(GlobalPlayerContext);
 	if (!context) {
-		throw new Error("useGlobalPlayer must be used within a GlobalPlayerProvider");
+		throw new Error(
+			"useGlobalPlayer must be used within a GlobalPlayerProvider",
+		);
 	}
 	return context;
 }
@@ -143,11 +158,16 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setIsPlayerVisible(true);
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX]
+		[FULL_SNAP_INDEX],
 	);
 
 	const playTrackWithQueue = useCallback(
-		(track: QueueTrack, queue: QueueTrack[], startIndex = 0, source?: QueueSource) => {
+		(
+			track: QueueTrack,
+			queue: QueueTrack[],
+			startIndex = 0,
+			source?: QueueSource,
+		) => {
 			// Set the queue first with source context
 			queueStore.setQueue(queue, startIndex, source);
 			// Then play the track
@@ -155,7 +175,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setIsPlayerVisible(true);
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX, queueStore]
+		[FULL_SNAP_INDEX, queueStore],
 	);
 
 	const skipToNext = useCallback(() => {
@@ -172,17 +192,26 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		}
 	}, [queueStore]);
 
-	const addToQueue = useCallback((track: QueueTrack) => {
-		queueStore.addToQueue(track);
-	}, [queueStore]);
+	const addToQueue = useCallback(
+		(track: QueueTrack) => {
+			queueStore.addToQueue(track);
+		},
+		[queueStore],
+	);
 
-	const addNext = useCallback((track: QueueTrack) => {
-		queueStore.addNext(track);
-	}, [queueStore]);
+	const addNext = useCallback(
+		(track: QueueTrack) => {
+			queueStore.addNext(track);
+		},
+		[queueStore],
+	);
 
-	const removeFromQueue = useCallback((trackId: string) => {
-		queueStore.removeFromQueueById(trackId);
-	}, [queueStore]);
+	const removeFromQueue = useCallback(
+		(trackId: string) => {
+			queueStore.removeFromQueueById(trackId);
+		},
+		[queueStore],
+	);
 
 	const toggleShuffle = useCallback(() => {
 		queueStore.toggleShuffle();
@@ -213,12 +242,14 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const queueSource = queueStore.queueSource;
 
 	// Get next/previous track artwork for swipe preview
-	const nextTrackArtwork = hasNext && currentIndex < queue.length - 1 
-		? queue[currentIndex + 1]?.artworkUrl 
-		: null;
-	const previousTrackArtwork = hasPrevious && currentIndex > 0 
-		? queue[currentIndex - 1]?.artworkUrl 
-		: null;
+	const nextTrackArtwork =
+		hasNext && currentIndex < queue.length - 1
+			? queue[currentIndex + 1]?.artworkUrl
+			: null;
+	const previousTrackArtwork =
+		hasPrevious && currentIndex > 0
+			? queue[currentIndex - 1]?.artworkUrl
+			: null;
 
 	const dismissPlayer = useCallback(() => {
 		bottomSheetRef.current?.dismiss();
@@ -311,7 +342,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			repeatMode,
 			shuffleMode,
 			queueSource,
-		]
+		],
 	);
 
 	return (
@@ -334,9 +365,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 							: THEME.light.background,
 					}}
 					handleIndicatorStyle={{
-						backgroundColor: isDark
-							? THEME.dark.primary
-							: THEME.light.primary,
+						backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,
 					}}
 					animateOnMount
 				>
@@ -352,7 +381,9 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 									onSkipNext={skipToNext}
 									onSkipPrevious={skipToPrevious}
 									onToggleShuffle={toggleShuffle}
-									onExpand={expandPlayer}								onCollapse={collapsePlayer}									hasNext={hasNext}
+									onExpand={expandPlayer}
+									onCollapse={collapsePlayer}
+									hasNext={hasNext}
 									hasPrevious={hasPrevious}
 									isShuffled={shuffleMode === "on"}
 									nextArtworkUrl={nextTrackArtwork}

@@ -1,6 +1,6 @@
+import Colors from "@/constants/Colors";
 import React from "react";
 import { StyleSheet } from "react-native";
-import Colors from "@/constants/Colors";
 import { ExternalLink } from "./ExternalLink";
 import { MonoText } from "./StyledText";
 import { Text, View } from "./Themed";
@@ -11,24 +11,24 @@ export default function EditScreenInfo({ path }: { path: string }) {
 			<View style={styles.getStartedContainer}>
 				<Text
 					style={styles.getStartedText}
-					lightColor="rgba(0,0,0,0.8)"
-					darkColor="rgba(255,255,255,0.8)"
+					lightColor={Colors.light.text}
+					darkColor={Colors.dark.text}
 				>
 					Open up the code for this screen:
 				</Text>
 
 				<View
 					style={[styles.codeHighlightContainer, styles.homeScreenFilename]}
-					darkColor="rgba(255,255,255,0.05)"
-					lightColor="rgba(0,0,0,0.05)"
+					darkColor={Colors.dark.muted}
+					lightColor={Colors.light.muted}
 				>
 					<MonoText>{path}</MonoText>
 				</View>
 
 				<Text
 					style={styles.getStartedText}
-					lightColor="rgba(0,0,0,0.8)"
-					darkColor="rgba(255,255,255,0.8)"
+					lightColor={Colors.light.text}
+					darkColor={Colors.dark.text}
 				>
 					Change any of the text, save the file, and your app will automatically
 					update.

@@ -1,20 +1,20 @@
-import { View } from "@/components/Themed";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	ArtistCard,
 	ArtistsHeader,
 	ArtistsSearchBar,
 } from "@/components/pages/artists";
+import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Toggle, ToggleIcon } from "@/components/ui/toggle";
 import { type Artist, useArtistStore } from "@/lib/actions/artists";
-import { FlashList } from "@shopify/flash-list";
-import { router } from "expo-router";
-import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -73,9 +73,13 @@ export default function ArtistsScreen() {
 
 	const renderArtist = useCallback(
 		({ item }: { item: Artist }) => (
-			<ArtistCard artist={item} onPress={handleArtistPress} showName={showNames} />
+			<ArtistCard
+				artist={item}
+				onPress={handleArtistPress}
+				showName={showNames}
+			/>
 		),
-		[handleArtistPress, showNames]
+		[handleArtistPress, showNames],
 	);
 
 	const renderHeader = useCallback(
@@ -127,7 +131,7 @@ export default function ArtistsScreen() {
 			displayArtists.length,
 			pagination?.total,
 			showNames,
-		]
+		],
 	);
 
 	const renderFooter = useCallback(() => {
@@ -155,7 +159,13 @@ export default function ArtistsScreen() {
 		}
 
 		return null;
-	}, [isLoading, displayArtists.length, isSearchMode, pagination, handleLoadMore]);
+	}, [
+		isLoading,
+		displayArtists.length,
+		isSearchMode,
+		pagination,
+		handleLoadMore,
+	]);
 
 	const renderEmpty = useCallback(() => {
 		if (isLoading) {

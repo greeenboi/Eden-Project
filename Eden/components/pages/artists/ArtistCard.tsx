@@ -1,6 +1,8 @@
 import { View } from "@/components/Themed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Text } from "@/components/ui/text";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
 import type { Artist } from "@/lib/actions/artists";
 import { BadgeCheck } from "lucide-react-native";
 import { Pressable } from "react-native";
@@ -20,7 +22,14 @@ function getInitials(name: string): string {
 		.slice(0, 2);
 }
 
-export function ArtistCard({ artist, onPress, showName = false }: ArtistCardProps) {
+export function ArtistCard({
+	artist,
+	onPress,
+	showName = false,
+}: ArtistCardProps) {
+	const colorScheme = useColorScheme();
+	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
+
 	if (showName) {
 		return (
 			<Pressable
@@ -32,16 +41,24 @@ export function ArtistCard({ artist, onPress, showName = false }: ArtistCardProp
 						<AvatarImage source={{ uri: artist.avatarUrl }} />
 					) : null}
 					<AvatarFallback>
-						<Text className="text-lg font-semibold">{getInitials(artist.name)}</Text>
+						<Text className="text-lg font-semibold">
+							{getInitials(artist.name)}
+						</Text>
 					</AvatarFallback>
 				</Avatar>
 				<View className="flex-1 flex-row items-center gap-2 bg-transparent">
-					<Text className="text-base font-semibold flex-shrink" numberOfLines={1}>
+					<Text
+						className="text-base font-semibold flex-shrink"
+						numberOfLines={1}
+					>
 						{artist.name}
 					</Text>
 					{artist.verified && (
-						<View className="bg-green-500 rounded-full w-5 h-5 items-center justify-center">
-							<BadgeCheck size={14} color="#fff" />
+						<View
+							style={{ backgroundColor: themeColors.success }}
+							className="rounded-full w-5 h-5 items-center justify-center"
+						>
+							<BadgeCheck size={14} color={themeColors.successForeground} />
 						</View>
 					)}
 				</View>
@@ -59,12 +76,17 @@ export function ArtistCard({ artist, onPress, showName = false }: ArtistCardProp
 					<AvatarImage source={{ uri: artist.avatarUrl }} />
 				) : null}
 				<AvatarFallback>
-					<Text className="text-2xl font-semibold">{getInitials(artist.name)}</Text>
+					<Text className="text-2xl font-semibold">
+						{getInitials(artist.name)}
+					</Text>
 				</AvatarFallback>
 			</Avatar>
 			{artist.verified && (
-				<View className="absolute bottom-2 right-2 bg-green-500 rounded-full w-5 h-5 items-center justify-center">
-					<BadgeCheck size={14} color="#fff" />
+				<View
+					style={{ backgroundColor: themeColors.success }}
+					className="absolute bottom-2 right-2 rounded-full w-5 h-5 items-center justify-center"
+				>
+					<BadgeCheck size={14} color={themeColors.successForeground} />
 				</View>
 			)}
 		</Pressable>

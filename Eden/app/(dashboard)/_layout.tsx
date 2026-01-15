@@ -1,6 +1,6 @@
-import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
-import { useSession } from "@/lib/ctx";
 import { Redirect, Stack } from "expo-router";
+import { useSession } from "@/lib/ctx";
+import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
 
 export default function AppLayout() {
 	const { session, isLoading } = useSession();
@@ -17,8 +17,20 @@ export default function AppLayout() {
 				<Stack.Screen name="index" />
 				<Stack.Screen name="search-songs" />
 				<Stack.Screen name="artists" />
-				<Stack.Screen name="artist-detail" />
-				<Stack.Screen name="album-detail" />
+				<Stack.Screen
+					name="artist-detail"
+					options={{
+						presentation: "modal",
+						animation: "slide_from_right",
+					}}
+				/>
+				<Stack.Screen
+					name="album-detail"
+					options={{
+						presentation: "modal",
+						animation: "slide_from_right",
+					}}
+				/>
 				<Stack.Screen
 					name="queue"
 					options={{

@@ -119,7 +119,7 @@ interface TrackState {
 	updateTrackStatus: (
 		id: string,
 		status: "initiated" | "uploaded" | "processing" | "published" | "failed",
-		additionalData?: Partial<Track>
+		additionalData?: Partial<Track>,
 	) => Promise<void>;
 	getStreamingUrl: (id: string) => Promise<StreamingUrlResponse>;
 	clearError: () => void;
@@ -131,7 +131,9 @@ interface TrackState {
  * Builds URL search parameters from an object, filtering out undefined values
  * @private
  */
-const buildQueryParams = (params: Record<string, string | number | undefined>): string => {
+const buildQueryParams = (
+	params: Record<string, string | number | undefined>,
+): string => {
 	const searchParams = new URLSearchParams();
 	for (const [key, value] of Object.entries(params)) {
 		if (value !== undefined) {
@@ -191,10 +193,17 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 		set({ isLoading: true, error: null });
 
 		try {
-			const queryString = buildQueryParams({ page, limit, artistId, albumId, status });
-			const data = await fetchAPI<{ tracks: Track[]; pagination: TrackPagination }>(
-				`${API_BASE_URL}/api/tracks?${queryString}`
-			);
+			const queryString = buildQueryParams({
+				page,
+				limit,
+				artistId,
+				albumId,
+				status,
+			});
+			const data = await fetchAPI<{
+				tracks: Track[];
+				pagination: TrackPagination;
+			}>(`${API_BASE_URL}/api/tracks?${queryString}`);
 
 			const existingTracks = page > 1 ? get().tracks : [];
 
@@ -205,7 +214,8 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 				error: null,
 			});
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Failed to fetch tracks";
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to fetch tracks";
 			set({ isLoading: false, error: errorMessage });
 			throw error;
 		}
@@ -226,10 +236,13 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 		set({ isLoading: true, error: null });
 
 		try {
-			const data = await fetchAPI<TrackWithDetails>(`${API_BASE_URL}/api/tracks/${id}`);
+			const data = await fetchAPI<TrackWithDetails>(
+				`${API_BASE_URL}/api/tracks/${id}`,
+			);
 			set({ currentTrack: data, isLoading: false, error: null });
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Failed to fetch track";
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to fetch track";
 			set({ isLoading: false, error: errorMessage, currentTrack: null });
 			throw error;
 		}
@@ -258,15 +271,16 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 		set({ isLoading: true, error: null });
 
 		try {
-			const queryString = buildQueryParams({ 
-				page, 
-				limit, 
-				artistId, 
+			const queryString = buildQueryParams({
+				page,
+				limit,
+				artistId,
 				albumId,
 			});
-			const data = await fetchAPI<{ tracks: Track[]; pagination: TrackPagination }>(
-				`${API_BASE_URL}/api/tracks/published?${queryString}`
-			);
+			const data = await fetchAPI<{
+				tracks: Track[];
+				pagination: TrackPagination;
+			}>(`${API_BASE_URL}/api/tracks/published?${queryString}`);
 
 			const existingTracks = page > 1 ? get().tracks : [];
 
@@ -277,7 +291,10 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 				error: null,
 			});
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Failed to fetch published tracks";
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to fetch published tracks";
 			set({ isLoading: false, error: errorMessage });
 			throw error;
 		}
@@ -299,7 +316,7 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 	updateTrackStatus: async (
 		id: string,
 		status: "initiated" | "uploaded" | "processing" | "published" | "failed",
-		additionalData?: Partial<Track>
+		additionalData?: Partial<Track>,
 	) => {
 		set({ isLoading: true, error: null });
 
@@ -312,14 +329,16 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 
 			if (!response.ok) {
 				if (response.status === 404) throw new Error("Track not found");
-				throw new Error(`Failed to update track status: ${response.statusText}`);
+				throw new Error(
+					`Failed to update track status: ${response.statusText}`,
+				);
 			}
 
 			const updatedTrack = await response.json();
 
 			// Update the track in the tracks array if it exists
 			const tracks = get().tracks;
-			const trackIndex = tracks.findIndex(t => t.id === id);
+			const trackIndex = tracks.findIndex((t) => t.id === id);
 			if (trackIndex !== -1) {
 				const newTracks = [...tracks];
 				newTracks[trackIndex] = updatedTrack;
@@ -334,7 +353,10 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 
 			set({ isLoading: false, error: null });
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Failed to update track status";
+			const errorMessage =
+				error instanceof Error
+					? error.message
+					: "Failed to update track status";
 			set({ isLoading: false, error: errorMessage });
 			throw error;
 		}
@@ -364,7 +386,8 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 			const data: StreamingUrlResponse = await response.json();
 			return data;
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : "Failed to get streaming URL";
+			const errorMessage =
+				error instanceof Error ? error.message : "Failed to get streaming URL";
 			set({ error: errorMessage });
 			throw error;
 		}

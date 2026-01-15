@@ -1,6 +1,6 @@
+import { Music } from "lucide-react-native";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
-import { Music } from "lucide-react-native";
 
 export function EmptyTrackList() {
 	return (

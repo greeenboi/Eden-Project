@@ -1,19 +1,19 @@
+import { router } from "expo-router";
+import { Menu, Music, Search, X } from "lucide-react-native";
+import { Animated, Pressable } from "react-native";
 import { View } from "@/components/Themed";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuGroup,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
-import { router } from "expo-router";
-import { Menu, Music, Search, X } from "lucide-react-native";
-import { Animated, Pressable } from "react-native";
 
 interface DashboardHeaderProps {
 	navPaddingTop: Animated.AnimatedInterpolation<number>;
@@ -46,7 +46,9 @@ export function DashboardHeader({
 	contentInsets,
 }: DashboardHeaderProps) {
 	const isDark = useIsDark();
-	const foregroundColor = isDark ? THEME.dark.foreground : THEME.light.foreground;
+	const foregroundColor = isDark
+		? THEME.dark.foreground
+		: THEME.light.foreground;
 
 	return (
 		<Animated.View

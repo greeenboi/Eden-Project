@@ -1,9 +1,9 @@
-import { View } from "@/components/Themed";
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
 import { Music, Pause, Play, SkipBack, SkipForward } from "lucide-react-native";
 import { ActivityIndicator, Image, Pressable } from "react-native";
+import { View } from "@/components/Themed";
+import { Card, CardContent } from "@/components/ui/card";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Text } from "@/components/ui/text";
 
 interface MiniPlayerProps {
 	trackId?: string;
@@ -62,7 +62,10 @@ export function MiniPlayer({
 			style={{ backgroundColor: "transparent" }}
 			className="flex-row items-center gap-3 px-4 py-3"
 		>
-			<Pressable onPress={onExpand} style={{ flexDirection: 'row', flex: 1, alignItems: 'center', gap: 12 }}>
+			<Pressable
+				onPress={onExpand}
+				style={{ flexDirection: "row", flex: 1, alignItems: "center", gap: 12 }}
+			>
 				<Card className="w-14 h-14 p-0 overflow-hidden">
 					<CardContent className="p-0 w-full h-full bg-primary/10">
 						{artworkUrl ? (
@@ -90,20 +93,32 @@ export function MiniPlayer({
 			</Pressable>
 			<View className="flex-row items-center gap-3">
 				<Pressable
-					android_ripple={{ borderless: false, foreground: true }} 
-					onPress={onSkipPrevious} 
+					android_ripple={{ borderless: false, foreground: true }}
+					onPress={onSkipPrevious}
 					disabled={!hasPrevious}
 					style={{ opacity: hasPrevious ? 1 : 0.4 }}
 				>
 					<SkipBack color={themeColors.tint} size={22} />
 				</Pressable>
-				<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onTogglePlayback} disabled={!isLoaded || loadingStream}>
+				<Pressable
+					android_ripple={{ borderless: false, foreground: true }}
+					onPress={onTogglePlayback}
+					disabled={!isLoaded || loadingStream}
+				>
 					<View className="w-12 h-12 rounded-full bg-primary items-center justify-center">
 						{isLoaded ? (
 							isPlaying ? (
-								<Pause color={themeColors.tint} size={24} className="text-primary-foreground" />
+								<Pause
+									color={themeColors.tint}
+									size={24}
+									className="text-primary-foreground"
+								/>
 							) : (
-								<Play color={themeColors.tint} size={24} className="text-primary-foreground" />
+								<Play
+									color={themeColors.tint}
+									size={24}
+									className="text-primary-foreground"
+								/>
 							)
 						) : (
 							<ActivityIndicator size="large" color={themeColors.tint} />
@@ -111,8 +126,8 @@ export function MiniPlayer({
 					</View>
 				</Pressable>
 				<Pressable
-					android_ripple={{ borderless: false, foreground: true }}  
-					onPress={onSkipNext} 
+					android_ripple={{ borderless: false, foreground: true }}
+					onPress={onSkipNext}
 					disabled={!hasNext}
 					style={{ opacity: hasNext ? 1 : 0.4 }}
 				>

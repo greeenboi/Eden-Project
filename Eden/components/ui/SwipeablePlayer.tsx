@@ -3,13 +3,13 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import Swipeable, {
-    type SwipeableMethods,
+	type SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
-    Extrapolation,
-    interpolate,
-    type SharedValue,
-    useAnimatedStyle,
+	Extrapolation,
+	interpolate,
+	type SharedValue,
+	useAnimatedStyle,
 } from "react-native-reanimated";
 
 interface SwipeablePlayerProps {
@@ -38,20 +38,15 @@ interface ActionProps {
 	drag: SharedValue<number>;
 }
 
-function SwipeAction({
-	iconColor,
-	artworkUrl,
-	direction,
-	drag,
-}: ActionProps) {
+function SwipeAction({ iconColor, artworkUrl, direction, drag }: ActionProps) {
 	const isLeft = direction === "left";
 	const Icon = isLeft ? SkipBack : SkipForward;
 
 	const animatedStyle = useAnimatedStyle(() => {
-		const translateX = isLeft 
+		const translateX = isLeft
 			? interpolate(drag.value, [0, 80], [-80, 0], Extrapolation.CLAMP)
 			: interpolate(drag.value, [-80, 0], [0, 80], Extrapolation.CLAMP);
-		
+
 		const opacity = isLeft
 			? interpolate(drag.value, [0, 60], [0, 1], Extrapolation.CLAMP)
 			: interpolate(drag.value, [-60, 0], [1, 0], Extrapolation.CLAMP);
@@ -108,7 +103,7 @@ export function SwipeablePlayer({
 	const handleSwipeOpen = (direction: "left" | "right") => {
 		// Reset the swipeable immediately
 		swipeableRef.current?.close();
-		
+
 		if (direction === "right" && hasPrevious && onSwipeRight) {
 			onSwipeRight();
 		} else if (direction === "left" && hasNext && onSwipeLeft) {

@@ -8,13 +8,7 @@ import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import {
-    GripVertical,
-    Music,
-    Pause,
-    Trash2,
-    X,
-} from "lucide-react-native";
+import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
 import { Image, Pressable } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
@@ -39,20 +33,20 @@ interface QueueItemProps {
 function DeleteAction(
 	themeColors: { tint: string },
 	_progress: SharedValue<number>,
-	drag: SharedValue<number>
+	drag: SharedValue<number>,
 ) {
 	const animatedStyle = useAnimatedStyle(() => {
 		const translateX = interpolate(
 			drag.value,
 			[-80, 0],
 			[0, 80],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		const opacity = interpolate(
 			drag.value,
 			[-60, 0],
 			[1, 0],
-			Extrapolation.CLAMP
+			Extrapolation.CLAMP,
 		);
 		return {
 			transform: [{ translateX }],
@@ -61,9 +55,12 @@ function DeleteAction(
 	});
 
 	return (
-		<Reanimated.View className="w-20 justify-center items-center" style={animatedStyle}>
-			<View className="w-14 h-14 rounded-full bg-red-600 justify-center items-center">
-				<Trash2 size={24} color="#fff" />
+		<Reanimated.View
+			className="w-20 justify-center items-center"
+			style={animatedStyle}
+		>
+			<View className="w-14 h-14 rounded-full bg-destructive justify-center items-center">
+				<Trash2 size={24} className="text-destructive-foreground" />
 			</View>
 		</Reanimated.View>
 	);
@@ -196,14 +193,14 @@ export default function QueueScreen() {
 		(index: number) => {
 			queueStore.skipToIndex(index);
 		},
-		[queueStore]
+		[queueStore],
 	);
 
 	const handleRemoveTrack = useCallback(
 		(trackId: string) => {
 			queueStore.removeFromQueueById(trackId);
 		},
-		[queueStore]
+		[queueStore],
 	);
 
 	const handleClearQueue = useCallback(() => {
@@ -229,14 +226,14 @@ export default function QueueScreen() {
 				/>
 			);
 		},
-		[currentIndex, themeColors, handlePlayTrack, handleRemoveTrack]
+		[currentIndex, themeColors, handlePlayTrack, handleRemoveTrack],
 	);
 
 	return (
 		<SafeAreaView className="flex-1">
 			<View className="flex-1">
 				{/* Header */}
-				<View className="flex-row items-center justify-between px-2 py-3 border-b border-gray-500/30">
+				<View className="flex-row items-center justify-between px-2 py-3 border-b border-border">
 					<Button variant="ghost" size="sm" onPress={() => router.back()}>
 						<X size={24} color={themeColors.tint} />
 					</Button>

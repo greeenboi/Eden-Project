@@ -1,3 +1,14 @@
+import { Image } from "expo-image";
+import { router } from "expo-router";
+import { AlertTriangle } from "lucide-react-native";
+import { useState } from "react";
+import {
+	KeyboardAvoidingView,
+	Platform,
+	View as RNView,
+	ScrollView,
+	StyleSheet,
+} from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -13,17 +24,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { useSession } from "@/lib/ctx";
-import { Image } from "expo-image";
-import { router } from "expo-router";
-import { AlertTriangle } from "lucide-react-native";
-import { useState } from "react";
-import {
-	KeyboardAvoidingView,
-	Platform,
-	View as RNView,
-	ScrollView,
-	StyleSheet,
-} from "react-native";
 
 export default function SignIn() {
 	const { signIn, signUp, error, clearError } = useSession();

@@ -1,7 +1,7 @@
+import Slider from "@react-native-community/slider";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/AudioPlayer";
-import Slider from "@react-native-community/slider";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -72,8 +72,12 @@ export function PlayerSlider({
 				style={{ backgroundColor: "transparent" }}
 				className="flex-row justify-between"
 			>
-				<Text className="text-sm opacity-50">{formatDuration(sliderValue)}</Text>
-				<Text className="text-sm opacity-50">{formatDuration(duration ?? undefined)}</Text>
+				<Text className="text-sm opacity-50">
+					{formatDuration(sliderValue)}
+				</Text>
+				<Text className="text-sm opacity-50">
+					{formatDuration(duration ?? undefined)}
+				</Text>
 			</View>
 		</View>
 	);

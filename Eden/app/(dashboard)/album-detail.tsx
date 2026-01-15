@@ -10,18 +10,26 @@ import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-	AlertCircle,
-	ArrowLeft,
-	Clock,
-	Music,
-	Play
+    AlertCircle,
+    ArrowLeft,
+    Clock,
+    Music,
+    Play,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();
-	const { tracks, currentTrack, isLoading, error, fetchTracks, fetchTrackById, clearTracks } = useTrackStore();
+	const {
+		tracks,
+		currentTrack,
+		isLoading,
+		error,
+		fetchTracks,
+		fetchTrackById,
+		clearTracks,
+	} = useTrackStore();
 	const { playTrackWithQueue } = useGlobalPlayer();
 
 	useEffect(() => {
@@ -84,12 +92,15 @@ export default function AlbumDetailScreen() {
 		};
 	}, [id, albumInfo?.title]);
 
-	const handlePlayTrack = useCallback((trackId: string, index: number) => {
-		const selectedTrack = queueTracks[index];
-		if (selectedTrack && albumQueueSource) {
-			playTrackWithQueue(selectedTrack, queueTracks, index, albumQueueSource);
-		}
-	}, [queueTracks, albumQueueSource, playTrackWithQueue]);
+	const handlePlayTrack = useCallback(
+		(trackId: string, index: number) => {
+			const selectedTrack = queueTracks[index];
+			if (selectedTrack && albumQueueSource) {
+				playTrackWithQueue(selectedTrack, queueTracks, index, albumQueueSource);
+			}
+		},
+		[queueTracks, albumQueueSource, playTrackWithQueue],
+	);
 
 	const handlePlayAlbum = useCallback(() => {
 		if (queueTracks.length > 0 && albumQueueSource) {
@@ -114,7 +125,10 @@ export default function AlbumDetailScreen() {
 
 				{/* Error Alert */}
 				{error && (
-					<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
+					<View
+						style={{ backgroundColor: "transparent" }}
+						className="px-4 pb-2"
+					>
 						<Alert variant="destructive" icon={AlertCircle}>
 							<AlertTitle>Error</AlertTitle>
 							<AlertDescription>{error}</AlertDescription>
@@ -124,10 +138,7 @@ export default function AlbumDetailScreen() {
 
 				{/* Loading State */}
 				{isLoading && (
-					<View
-						style={{ backgroundColor: "transparent" }}
-						className="px-4"
-					>
+					<View style={{ backgroundColor: "transparent" }} className="px-4">
 						<Skeleton className="w-full aspect-square max-w-sm mx-auto mb-4" />
 						<Skeleton className="h-8 w-3/4 mb-2" />
 						<Skeleton className="h-6 w-1/2 mb-4" />
@@ -201,15 +212,12 @@ export default function AlbumDetailScreen() {
 							style={{ backgroundColor: "transparent" }}
 							className="px-8 mb-6"
 						>
-							<Button
-								size="lg"
-								onPress={handlePlayAlbum}
-							>
+							<Button size="lg" onPress={handlePlayAlbum}>
 								<View
 									style={{ backgroundColor: "transparent" }}
 									className="flex-row items-center gap-2"
 								>
-									<Play size={20} fill="white" color="white" />
+									<Play size={20} className="text-primary-foreground fill-primary-foreground" />
 									<Text className="text-primary-foreground font-semibold">
 										Play Album
 									</Text>
@@ -218,10 +226,7 @@ export default function AlbumDetailScreen() {
 						</View>
 
 						{/* Track List */}
-						<View
-							style={{ backgroundColor: "transparent" }}
-							className="px-4"
-						>
+						<View style={{ backgroundColor: "transparent" }} className="px-4">
 							<Text className="text-xl font-bold mb-4 px-4">Tracks</Text>
 							{tracks.map((track, index) => (
 								<Pressable
@@ -305,7 +310,7 @@ export default function AlbumDetailScreen() {
 													style={{ backgroundColor: "transparent" }}
 													className="w-8 h-8 rounded-full bg-primary items-center justify-center"
 												>
-													<Play size={14} fill="white" color="white" />
+													<Play size={14} className="text-primary-foreground fill-primary-foreground" />
 												</View>
 											</View>
 										</CardContent>

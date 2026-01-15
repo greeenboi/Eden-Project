@@ -1,13 +1,13 @@
-import { View } from "@/components/Themed";
 import {
 	Pause,
 	Play,
 	Repeat,
 	Shuffle,
 	SkipBack,
-	SkipForward
+	SkipForward,
 } from "lucide-react-native";
 import { ActivityIndicator, Pressable } from "react-native";
+import { View } from "@/components/Themed";
 
 interface PlayerControlsProps {
 	isLoaded: boolean;
@@ -57,8 +57,10 @@ export function PlayerControls({
 			style={{ backgroundColor: "transparent" }}
 			className="flex-row items-center justify-center gap-6 mb-4"
 		>
-
-			<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onToggleLoop}>
+			<Pressable
+				android_ripple={{ borderless: false, foreground: true }}
+				onPress={onToggleLoop}
+			>
 				<Repeat
 					size={24}
 					color={isLooping ? themeColors.primary : themeColors.tint}
@@ -66,16 +68,20 @@ export function PlayerControls({
 				/>
 			</Pressable>
 
-			<Pressable 
-				android_ripple={{ borderless: false, foreground: true }}  
-				onPress={onSkipPrevious} 
+			<Pressable
+				android_ripple={{ borderless: false, foreground: true }}
+				onPress={onSkipPrevious}
 				disabled={!hasPrevious}
 				style={{ opacity: hasPrevious ? 1 : 0.5 }}
 			>
 				<SkipBack color={themeColors.tint} size={32} />
 			</Pressable>
 
-			<Pressable android_ripple={{ borderless: false, foreground: true }}   onPress={onTogglePlayback} disabled={!isLoaded || loadingStream}>
+			<Pressable
+				android_ripple={{ borderless: false, foreground: true }}
+				onPress={onTogglePlayback}
+				disabled={!isLoaded || loadingStream}
+			>
 				<View
 					style={{ backgroundColor: "transparent" }}
 					className="w-16 h-16 rounded-full bg-primary items-center justify-center"
@@ -100,16 +106,19 @@ export function PlayerControls({
 				</View>
 			</Pressable>
 
-			<Pressable 
-				onPress={onSkipNext} 
-				android_ripple={{ borderless: false, foreground: true }} 
+			<Pressable
+				onPress={onSkipNext}
+				android_ripple={{ borderless: false, foreground: true }}
 				disabled={!hasNext}
 				style={{ opacity: hasNext ? 1 : 0.4 }}
 			>
 				<SkipForward color={themeColors.tint} size={32} />
 			</Pressable>
 
-			<Pressable android_ripple={{ borderless: false, foreground: true }} onPress={onToggleShuffle}>
+			<Pressable
+				android_ripple={{ borderless: false, foreground: true }}
+				onPress={onToggleShuffle}
+			>
 				<Shuffle
 					size={24}
 					color={isShuffled ? themeColors.primary : themeColors.tint}

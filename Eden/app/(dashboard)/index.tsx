@@ -1,12 +1,14 @@
 import { View } from "@/components/Themed";
 import {
-	DashboardHeader,
-	EmptyTrackList,
-	LoadingMoreTracks,
-	LoadingSkeleton,
-	TrackCard,
+    DashboardHeader,
+    EmptyTrackList,
+    LoadingMoreTracks,
+    LoadingSkeleton,
+    TrackCard,
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useColorScheme } from "@/components/useColorScheme";
+import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
@@ -14,14 +16,16 @@ import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	Animated,
-	Easing,
-	type NativeScrollEvent,
-	type NativeSyntheticEvent,
-	RefreshControl,
+    Animated,
+    Easing,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    RefreshControl,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-
+import {
+    SafeAreaView,
+    useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
@@ -40,6 +44,8 @@ export default function AllSongsScreen() {
 	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
+	const colorScheme = useColorScheme();
+	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	useEffect(() => {
 		// Fetch published tracks on mount
@@ -49,7 +55,7 @@ export default function AllSongsScreen() {
 			clearTracks();
 		};
 	}, [fetchTracks, clearTracks]);
-	
+
 	const insets = useSafeAreaInsets();
 	const contentInsets = {
 		top: insets.top,
@@ -83,11 +89,26 @@ export default function AllSongsScreen() {
 		});
 	}, [tracks]);
 
-	const navHeight = navAnim.interpolate({ inputRange: [0, 1], outputRange: [92, 64] });
-	const navPaddingTop = navAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 6] });
-	const navPaddingBottom = navAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 6] });
-	const navTextScale = navAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.9] });
-	const navIconScale = navAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0.82] });
+	const navHeight = navAnim.interpolate({
+		inputRange: [0, 1],
+		outputRange: [92, 64],
+	});
+	const navPaddingTop = navAnim.interpolate({
+		inputRange: [0, 1],
+		outputRange: [16, 6],
+	});
+	const navPaddingBottom = navAnim.interpolate({
+		inputRange: [0, 1],
+		outputRange: [12, 6],
+	});
+	const navTextScale = navAnim.interpolate({
+		inputRange: [0, 1],
+		outputRange: [1, 0.9],
+	});
+	const navIconScale = navAnim.interpolate({
+		inputRange: [0, 1],
+		outputRange: [1, 0.82],
+	});
 
 	const handleListScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -124,22 +145,33 @@ export default function AllSongsScreen() {
 	}, [tracks]);
 
 	// Queue source for "All Songs" page
-	const allSongsSource: QueueSource = useMemo(() => ({ type: "all-songs" }), []);
+	const allSongsSource: QueueSource = useMemo(
+		() => ({ type: "all-songs" }),
+		[],
+	);
 
-	const handleSongPress = useCallback((songId: string) => {
-		// Find the index of the selected track
-		const trackIndex = queueTracks.findIndex((t) => t.id === songId);
-		const selectedTrack = queueTracks[trackIndex];
-		
-		if (selectedTrack && queueTracks.length > 0) {
-			// Play with queue context - all visible tracks become the queue
-			// Source is "all-songs" so queue contains all songs from this page
-			playTrackWithQueue(selectedTrack, queueTracks, trackIndex, allSongsSource);
-		} else {
-			// Fallback to single track play
-			playTrack(songId);
-		}
-	}, [queueTracks, playTrackWithQueue, playTrack, allSongsSource]);
+	const handleSongPress = useCallback(
+		(songId: string) => {
+			// Find the index of the selected track
+			const trackIndex = queueTracks.findIndex((t) => t.id === songId);
+			const selectedTrack = queueTracks[trackIndex];
+
+			if (selectedTrack && queueTracks.length > 0) {
+				// Play with queue context - all visible tracks become the queue
+				// Source is "all-songs" so queue contains all songs from this page
+				playTrackWithQueue(
+					selectedTrack,
+					queueTracks,
+					trackIndex,
+					allSongsSource,
+				);
+			} else {
+				// Fallback to single track play
+				playTrack(songId);
+			}
+		},
+		[queueTracks, playTrackWithQueue, playTrack, allSongsSource],
+	);
 
 	const handleLoadMore = useCallback(() => {
 		if (
@@ -148,7 +180,13 @@ export default function AllSongsScreen() {
 			!refreshing &&
 			pagination.page * pagination.limit < pagination.total
 		) {
-			fetchTracks(pagination.page + 1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+			fetchTracks(
+				pagination.page + 1,
+				50,
+				undefined,
+				undefined,
+				TRACK_STATUS_FILTER,
+			);
 		}
 	}, [pagination, isLoading, refreshing, fetchTracks]);
 
@@ -171,46 +209,49 @@ export default function AllSongsScreen() {
 
 	return (
 		<SafeAreaView style={{ flex: 1 }}>
-				{/* Header with Navigation */}
-				<DashboardHeader
-					navPaddingTop={navPaddingTop}
-					navPaddingBottom={navPaddingBottom}
-					navHeight={navHeight}
-					navTextScale={navTextScale}
-					navIconScale={navIconScale}
-					trackCount={pagination?.total}
-					isLoading={isLoading}
-					menuButtonState={menuButtonState}
-					onMenuOpenChange={(open: boolean) => setMenuButtonState(open)}
-					contentInsets={contentInsets}
-				/>
+			{/* Header with Navigation */}
+			<DashboardHeader
+				navPaddingTop={navPaddingTop}
+				navPaddingBottom={navPaddingBottom}
+				navHeight={navHeight}
+				navTextScale={navTextScale}
+				navIconScale={navIconScale}
+				trackCount={pagination?.total}
+				isLoading={isLoading}
+				menuButtonState={menuButtonState}
+				onMenuOpenChange={(open: boolean) => setMenuButtonState(open)}
+				contentInsets={contentInsets}
+			/>
 
-				{/* Error Alert */}
-				{error && (
-					<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
-						<Alert variant="destructive" icon={AlertCircle}>
-							<AlertTitle>Error</AlertTitle>
-							<AlertDescription>{error}</AlertDescription>
-						</Alert>
-					</View>
-				)}
+			{/* Error Alert */}
+			{error && (
+				<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
+					<Alert variant="destructive" icon={AlertCircle}>
+						<AlertTitle>Error</AlertTitle>
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
+				</View>
+			)}
 
-				{/* Loading State */}
-				{isLoading && tracks.length === 0 ? (
-					<LoadingSkeleton />
-				) : (
-					<View
-						style={{ flex: 1, paddingHorizontal: 12, backgroundColor: "transparent" }}
-					>
-						<FlashList
-							data={masonryTracks}
-							renderItem={renderTrackCard}
+			{/* Loading State */}
+			{isLoading && tracks.length === 0 ? (
+				<LoadingSkeleton />
+			) : (
+				<View
+					style={{
+						flex: 1,
+						paddingHorizontal: 12,
+						backgroundColor: "transparent",
+					}}
+				>
+					<FlashList
+						data={masonryTracks}
+						renderItem={renderTrackCard}
 						keyExtractor={(item) => item.id}
 						numColumns={NUM_COLUMNS}
 						masonry
 						onScroll={handleListScroll}
 						scrollEventThrottle={16}
-						
 						optimizeItemArrangement
 						overrideItemLayout={(layout, item) => {
 							layout.span = item.span;
@@ -223,8 +264,8 @@ export default function AllSongsScreen() {
 							<RefreshControl
 								refreshing={refreshing}
 								onRefresh={handleRefresh}
-								tintColor="#8b5cf6"
-								colors={["#8b5cf6"]}
+								tintColor={themeColors.primary}
+								colors={[themeColors.primary]}
 							/>
 						}
 						ListEmptyComponent={!isLoading ? <EmptyTrackList /> : null}
@@ -234,8 +275,8 @@ export default function AllSongsScreen() {
 							) : null
 						}
 					/>
-					</View>
-				)}
+				</View>
+			)}
 		</SafeAreaView>
 	);
 }
