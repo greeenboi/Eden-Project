@@ -10,7 +10,15 @@ import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
-import { useArtistStore } from "@/lib/actions/artists";
+import {
+	type Artist,
+	type ArtistPagination,
+	type ArtistStatistics,
+	type Track,
+	fetchArtistById,
+	fetchArtistStats,
+	fetchArtistTracks,
+} from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams } from "expo-router";
@@ -21,32 +29,30 @@ import {
 	Music,
 	Play,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {
 	const { id } = useLocalSearchParams();
 	const artistId = Array.isArray(id) ? id[0] : id;
-	const [hasInitialized, setHasInitialized] = useState(false);
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	const {
-		currentArtist,
-		currentArtistStats,
-		currentArtistTracks,
-		tracksPagination,
-		isLoading,
-		isLoadingStats,
-		isLoadingTracks,
-		error,
-		fetchArtistById,
-		fetchArtistStats,
-		fetchArtistTracks,
-		clearCurrentArtist,
-		clearError,
-	} = useArtistStore();
+	// Local state instead of store
+	const [currentArtist, setCurrentArtist] = useState<Artist | null>(null);
+	const [currentArtistStats, setCurrentArtistStats] =
+		useState<ArtistStatistics | null>(null);
+	const [currentArtistTracks, setCurrentArtistTracks] = useState<Track[]>([]);
+	const [tracksPagination, setTracksPagination] =
+		useState<ArtistPagination | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isLoadingStats, setIsLoadingStats] = useState(true);
+	const [isLoadingTracks, setIsLoadingTracks] = useState(true);
+	const [error, setError] = useState<string | null>(null);
+
+	const abortControllerRef = useRef<AbortController | null>(null);
+
 	const {
 		albums: artistAlbums,
 		isLoading: isLoadingAlbums,
@@ -55,87 +61,96 @@ export default function ArtistDetailScreen() {
 	const { playTrackWithQueue } = useGlobalPlayer();
 
 	useEffect(() => {
-		let isMounted = true;
-		console.log(`[ArtistDetail] useEffect triggered, artistId: ${artistId}`);
-		setHasInitialized(false);
+		if (!artistId) return;
 
-		const loadArtistData = async () => {
-			if (!artistId) {
-				console.log("[ArtistDetail] No artistId, skipping fetch");
-				return;
-			}
+		// Cancel previous requests
+		abortControllerRef.current?.abort();
+		const controller = new AbortController();
+		abortControllerRef.current = controller;
 
-			console.log(
-				`[ArtistDetail] Starting to load data for artistId: ${artistId}`,
-			);
+		// Reset state
+		setCurrentArtist(null);
+		setCurrentArtistStats(null);
+		setCurrentArtistTracks([]);
+		setTracksPagination(null);
+		setError(null);
+		setIsLoading(true);
+		setIsLoadingStats(true);
+		setIsLoadingTracks(true);
 
+		const loadData = async () => {
 			try {
-				// Fetch all data in parallel, but handle errors gracefully
-				const results = await Promise.allSettled([
-					fetchArtistById(artistId),
-					fetchArtistStats(artistId),
-					fetchArtistTracks(artistId, 1, 20, "published"),
-					fetchAlbums(1, 20, artistId),
-				]);
-
-				console.log(
-					`[ArtistDetail] All fetches completed, isMounted: ${isMounted}`,
-				);
-				console.log(
-					"[ArtistDetail] Results:",
-					results.map((r, i) => ({
-						index: i,
-						status: r.status,
-						reason: r.status === "rejected" ? r.reason?.message : undefined,
-					})),
-				);
-
-				// Log any rejected promises only if still mounted
-				if (isMounted) {
-					setHasInitialized(true);
-					results.forEach((result, index) => {
-						if (result.status === "rejected") {
-							const names = ["artist", "stats", "tracks", "albums"];
-							console.warn(
-								`[ArtistDetail] Failed to load ${names[index]}:`,
-								result.reason,
-							);
-						}
-					});
+				// Fetch artist
+				const artist = await fetchArtistById(artistId, controller.signal);
+				if (!controller.signal.aborted) {
+					setCurrentArtist(artist);
+					setIsLoading(false);
 				}
 			} catch (err) {
-				// This shouldn't happen with allSettled, but just in case
-				if (isMounted) {
-					setHasInitialized(true);
-					console.error(
-						"[ArtistDetail] Unexpected error loading artist data:",
-						err,
-					);
-				}
+				if (err instanceof Error && err.name === "AbortError") return;
+				setError(err instanceof Error ? err.message : "Failed to load artist");
+				setIsLoading(false);
 			}
+
+			try {
+				// Fetch stats
+				const stats = await fetchArtistStats(artistId, controller.signal);
+				if (!controller.signal.aborted) {
+					setCurrentArtistStats(stats);
+					setIsLoadingStats(false);
+				}
+			} catch (err) {
+				if (err instanceof Error && err.name === "AbortError") return;
+				setIsLoadingStats(false);
+			}
+
+			try {
+				// Fetch tracks
+				const tracksData = await fetchArtistTracks(
+					artistId,
+					1,
+					20,
+					"published",
+					controller.signal,
+				);
+				if (!controller.signal.aborted) {
+					setCurrentArtistTracks(tracksData.tracks);
+					setTracksPagination(tracksData.pagination);
+					setIsLoadingTracks(false);
+				}
+			} catch (err) {
+				if (err instanceof Error && err.name === "AbortError") return;
+				setIsLoadingTracks(false);
+			}
+
+			// Fetch albums (still uses store for now)
+			fetchAlbums(1, 20, artistId);
 		};
 
-		// Clear any previous errors before fetching
-		console.log("[ArtistDetail] Clearing error and starting fetch");
-		clearError();
-		loadArtistData();
+		loadData();
 
-		return () => {
-			console.log(
-				"[ArtistDetail] Cleanup called, setting isMounted=false and clearing artist",
+		return () => controller.abort();
+	}, [artistId, fetchAlbums]);
+
+	const loadMoreTracks = useCallback(async () => {
+		if (!artistId || !tracksPagination || isLoadingTracks) return;
+
+		setIsLoadingTracks(true);
+		try {
+			const data = await fetchArtistTracks(
+				artistId,
+				tracksPagination.page + 1,
+				20,
+				"published",
 			);
-			isMounted = false;
-			clearCurrentArtist();
-		};
-	}, [
-		artistId,
-		fetchArtistById,
-		fetchArtistStats,
-		fetchArtistTracks,
-		fetchAlbums,
-		clearCurrentArtist,
-		clearError,
-	]);
+			setCurrentArtistTracks((prev) => [...prev, ...data.tracks]);
+			setTracksPagination(data.pagination);
+		} catch (err) {
+			// Ignore errors for load more
+		} finally {
+			setIsLoadingTracks(false);
+		}
+	}, [artistId, tracksPagination, isLoadingTracks]);
 
 	const getInitials = (name: string) => {
 		return name
@@ -195,14 +210,13 @@ export default function ArtistDetailScreen() {
 					{/* Error Alert */}
 					{error && (
 						<Alert icon={AlertCircle} variant="destructive" className="mb-4">
-							<AlertCircle size={20} />
 							<AlertTitle>Error</AlertTitle>
 							<AlertDescription>{error}</AlertDescription>
 						</Alert>
 					)}
 
 					{/* Loading State */}
-					{(isLoading || !hasInitialized) && (
+					{isLoading && (
 						<View style={{ backgroundColor: "transparent" }} className="gap-4">
 							<Card>
 								<CardContent className="items-center py-6">
@@ -218,7 +232,7 @@ export default function ArtistDetailScreen() {
 					)}
 
 					{/* Artist Content */}
-					{hasInitialized && !isLoading && currentArtist && (
+					{!isLoading && currentArtist && (
 						<>
 							{/* Artist Header */}
 							<Card className="mb-4">
@@ -346,16 +360,7 @@ export default function ArtistDetailScreen() {
 										<Button
 											variant="ghost"
 											className="mt-2 self-center"
-											onPress={() => {
-												if (artistId && tracksPagination) {
-													fetchArtistTracks(
-														artistId,
-														tracksPagination.page + 1,
-														20,
-														"published",
-													);
-												}
-											}}
+											onPress={loadMoreTracks}
 											disabled={isLoadingTracks}
 										>
 											<Text className="text-primary">
@@ -520,7 +525,7 @@ export default function ArtistDetailScreen() {
 					)}
 
 					{/* Not Found State */}
-					{hasInitialized && !isLoading && !currentArtist && !error && (
+					{!isLoading && !currentArtist && !error && (
 						<Card>
 							<CardContent className="py-8 items-center">
 								<AlertCircle size={48} className="opacity-50 mb-4" />
