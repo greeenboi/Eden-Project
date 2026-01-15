@@ -1,9 +1,19 @@
-import { sqliteTable, AnySQLiteColumn, foreignKey, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core"
-  import { sql } from "drizzle-orm"
+import {
+	sqliteTable,
+	AnySQLiteColumn,
+	foreignKey,
+	text,
+	integer,
+	real,
+	uniqueIndex,
+} from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 
 export const albums = sqliteTable("albums", {
 	id: text().primaryKey().notNull(),
-	artistId: text("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" } ),
+	artistId: text("artist_id")
+		.notNull()
+		.references(() => artists.id, { onDelete: "cascade" }),
 	title: text().notNull(),
 	description: text(),
 	artworkUrl: text("artwork_url"),
@@ -24,8 +34,12 @@ export const artists = sqliteTable("artists", {
 
 export const playbackEvents = sqliteTable("playback_events", {
 	id: text().primaryKey().notNull(),
-	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
-	trackId: text("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" } ),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
+	trackId: text("track_id")
+		.notNull()
+		.references(() => tracks.id, { onDelete: "cascade" }),
 	percentListened: real("percent_listened").notNull(),
 	duration: real().notNull(),
 	timestamp: integer().default(sql`(unixepoch())`).notNull(),
@@ -33,15 +47,21 @@ export const playbackEvents = sqliteTable("playback_events", {
 
 export const playlistTracks = sqliteTable("playlist_tracks", {
 	id: text().primaryKey().notNull(),
-	playlistId: text("playlist_id").notNull().references(() => playlists.id, { onDelete: "cascade" } ),
-	trackId: text("track_id").notNull().references(() => tracks.id, { onDelete: "cascade" } ),
+	playlistId: text("playlist_id")
+		.notNull()
+		.references(() => playlists.id, { onDelete: "cascade" }),
+	trackId: text("track_id")
+		.notNull()
+		.references(() => tracks.id, { onDelete: "cascade" }),
 	position: integer().notNull(),
 	addedAt: integer("added_at").default(sql`(unixepoch())`).notNull(),
 });
 
 export const playlists = sqliteTable("playlists", {
 	id: text().primaryKey().notNull(),
-	userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" } ),
+	userId: text("user_id")
+		.notNull()
+		.references(() => users.id, { onDelete: "cascade" }),
 	title: text().notNull(),
 	description: text(),
 	coverUrl: text("cover_url"),
@@ -52,8 +72,12 @@ export const playlists = sqliteTable("playlists", {
 
 export const tracks = sqliteTable("tracks", {
 	id: text().primaryKey().notNull(),
-	artistId: text("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" } ),
-	albumId: text("album_id").references(() => albums.id, { onDelete: "set null" } ),
+	artistId: text("artist_id")
+		.notNull()
+		.references(() => artists.id, { onDelete: "cascade" }),
+	albumId: text("album_id").references(() => albums.id, {
+		onDelete: "set null",
+	}),
 	title: text().notNull(),
 	duration: real(),
 	r2KeyOriginal: text("r2_key_original"),
@@ -70,8 +94,12 @@ export const tracks = sqliteTable("tracks", {
 
 export const uploadRecords = sqliteTable("upload_records", {
 	id: text().primaryKey().notNull(),
-	artistId: text("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" } ),
-	trackId: text("track_id").references(() => tracks.id, { onDelete: "set null" } ),
+	artistId: text("artist_id")
+		.notNull()
+		.references(() => artists.id, { onDelete: "cascade" }),
+	trackId: text("track_id").references(() => tracks.id, {
+		onDelete: "set null",
+	}),
 	status: text().default("initiated").notNull(),
 	r2Key: text("r2_key"),
 	signedUrlExpiresAt: integer("signed_url_expires_at"),
@@ -84,18 +112,18 @@ export const uploadRecords = sqliteTable("upload_records", {
 	completedAt: integer("completed_at"),
 });
 
-export const users = sqliteTable("users", {
-	id: text().primaryKey().notNull(),
-	email: text().notNull(),
-	name: text(),
-	subscriptionTier: text("subscription_tier").default("free").notNull(),
-	region: text(),
-	deviceLimits: integer("device_limits").default(1).notNull(),
-	createdAt: integer("created_at").default(sql`(unixepoch())`).notNull(),
-	updatedAt: integer("updated_at").default(sql`(unixepoch())`).notNull(),
-	passwordHash: text("password_hash"),
-},
-(table) => [
-	uniqueIndex("users_email_unique").on(table.email),
-]);
-
+export const users = sqliteTable(
+	"users",
+	{
+		id: text().primaryKey().notNull(),
+		email: text().notNull(),
+		name: text(),
+		subscriptionTier: text("subscription_tier").default("free").notNull(),
+		region: text(),
+		deviceLimits: integer("device_limits").default(1).notNull(),
+		createdAt: integer("created_at").default(sql`(unixepoch())`).notNull(),
+		updatedAt: integer("updated_at").default(sql`(unixepoch())`).notNull(),
+		passwordHash: text("password_hash"),
+	},
+	(table) => [uniqueIndex("users_email_unique").on(table.email)],
+);

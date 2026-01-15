@@ -2,6 +2,6 @@
  * Services barrel export
  */
 
-export * from './track.service'
-export * from './upload.service'
-export * from './artist.service'
+export * from "./track.service";
+export * from "./upload.service";
+export * from "./artist.service";

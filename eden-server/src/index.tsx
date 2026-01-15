@@ -1,6 +1,6 @@
 /**
  * Eden Server - Main Application Entry
- * 
+ *
  * A Spotify-like music streaming API built on Cloudflare's edge stack:
  * - Cloudflare Workers for serverless compute
  * - D1 (SQLite) for relational metadata storage
@@ -9,111 +9,122 @@
  * - Hono with OpenAPI for type-safe API routing
  */
 
-import { OpenAPIHono } from '@hono/zod-openapi'
-import { Scalar } from '@scalar/hono-api-reference'
-import { cors } from 'hono/cors'
-import { prettyJSON } from 'hono/pretty-json'
-import type { Env } from './lib/db'
-import { logger as workerLogger } from './lib/logger'
-import { renderer } from './renderer'
-import { registerAlbumRoutes } from './routes/album.routes'
-import { registerArtistRoutes } from './routes/artist.routes'
-import { registerAuthRoutes } from './routes/auth.routes'
-import { registerHomeRoutes } from './routes/home.routes.tsx'
-import { registerTrackRoutes } from './routes/track.routes'
-import { registerUploadRoutes } from './routes/upload.routes'
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { Scalar } from "@scalar/hono-api-reference";
+import { cors } from "hono/cors";
+import { prettyJSON } from "hono/pretty-json";
+import type { Env } from "./lib/db";
+import { logger as workerLogger } from "./lib/logger";
+import { renderer } from "./renderer";
+import { registerAlbumRoutes } from "./routes/album.routes";
+import { registerArtistRoutes } from "./routes/artist.routes";
+import { registerAuthRoutes } from "./routes/auth.routes";
+import { registerHomeRoutes } from "./routes/home.routes.tsx";
+import { registerTrackRoutes } from "./routes/track.routes";
+import { registerUploadRoutes } from "./routes/upload.routes";
 
 // Initialize Hono app with Cloudflare bindings and validation error handling
 const app = new OpenAPIHono<{ Bindings: Env }>({
-  defaultHook: (result, c) => {
-    if (!result.success) {
-      return c.json(
-        {
-          error: 'ValidationError',
-          message: 'Request validation failed',
-          code: 'VALIDATION_ERROR',
-          details: result.error.flatten(),
-        },
-        400
-      )
-    }
-  },
-})
+	defaultHook: (result, c) => {
+		if (!result.success) {
+			return c.json(
+				{
+					error: "ValidationError",
+					message: "Request validation failed",
+					code: "VALIDATION_ERROR",
+					details: result.error.flatten(),
+				},
+				400,
+			);
+		}
+	},
+});
 
 // Middleware
-app.use(renderer)
-app.use('/api/*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'https://eden-server.suvan-gowrishanker-204.workers.dev'],
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-}))
-app.use(prettyJSON()) 
+app.use(renderer);
+app.use(
+	"/api/*",
+	cors({
+		origin: [
+			"http://localhost:5173",
+			"http://localhost:3000",
+			"https://eden-server.suvan-gowrishanker-204.workers.dev",
+		],
+		allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		credentials: true,
+	}),
+);
+app.use(prettyJSON());
 
 // Custom request/response logger with status coloring and human-readable timings
-app.use('*', async (c, next) => {
-  const start = Date.now()
-  const { method } = c.req
-  const path = new URL(c.req.url).pathname
+app.use("*", async (c, next) => {
+	const start = Date.now();
+	const { method } = c.req;
+	const path = new URL(c.req.url).pathname;
 
-  // Log incoming request
-  workerLogger.info('Incoming request', { method, path })
-  console.log(`<-- ${method} ${path}`)
+	// Log incoming request
+	workerLogger.info("Incoming request", { method, path });
+	console.log(`<-- ${method} ${path}`);
 
-  await next()
+	await next();
 
-  const status = c.res.status || 0
-  const durationMs = Date.now() - start
-  const durationHuman = durationMs < 1000
-    ? `${durationMs}ms`
-    : `${(durationMs / 1000).toFixed(2)}s`
+	const status = c.res.status || 0;
+	const durationMs = Date.now() - start;
+	const durationHuman =
+		durationMs < 1000
+			? `${durationMs}ms`
+			: `${(durationMs / 1000).toFixed(2)}s`;
 
-  const statusColor = (() => {
-    if (status >= 500) return '\x1b[31m' // red
-    if (status >= 400) return '\x1b[33m' // yellow
-    if (status >= 300) return '\x1b[36m' // cyan
-    if (status >= 200) return '\x1b[32m' // green
-    return '\x1b[35m' // magenta for other codes
-  })()
+	const statusColor = (() => {
+		if (status >= 500) return "\x1b[31m"; // red
+		if (status >= 400) return "\x1b[33m"; // yellow
+		if (status >= 300) return "\x1b[36m"; // cyan
+		if (status >= 200) return "\x1b[32m"; // green
+		return "\x1b[35m"; // magenta for other codes
+	})();
 
-  const resetColor = '\x1b[0m'
-  const coloredStatus = `${statusColor}${status}${resetColor}`
+	const resetColor = "\x1b[0m";
+	const coloredStatus = `${statusColor}${status}${resetColor}`;
 
-  // Structured log for observability; console for quick readability
-  workerLogger.info('Outgoing response', { method, path, status, durationMs })
-  console.log(`--> ${method} ${path} ${coloredStatus} ${durationHuman}`)
-})
+	// Structured log for observability; console for quick readability
+	workerLogger.info("Outgoing response", { method, path, status, durationMs });
+	console.log(`--> ${method} ${path} ${coloredStatus} ${durationHuman}`);
+});
 
 // Error handling middleware
 app.onError((err, c) => {
-  console.error('Unhandled error:', err)
-  return c.json({
-    error: 'InternalServerError',
-    message: err.message || 'An unexpected error occurred',
-  }, 500)
-})
+	console.error("Unhandled error:", err);
+	return c.json(
+		{
+			error: "InternalServerError",
+			message: err.message || "An unexpected error occurred",
+		},
+		500,
+	);
+});
 
 // ============================================================================
 // Register API Routes
 // ============================================================================
 
-registerHomeRoutes(app)
-registerAuthRoutes(app)
-registerUploadRoutes(app)
-registerAlbumRoutes(app)
-registerTrackRoutes(app)
-registerArtistRoutes(app)
+registerHomeRoutes(app);
+registerAuthRoutes(app);
+registerUploadRoutes(app);
+registerAlbumRoutes(app);
+registerTrackRoutes(app);
+registerArtistRoutes(app);
 
 // ============================================================================
 // OpenAPI Documentation
 // ============================================================================
 
-app.doc('/doc', {
-  openapi: '3.0.0',
-  info: {
-    version: '1.0.0',
-    title: 'Eden Server API',
-    description: `
+app.doc("/doc", {
+	openapi: "3.0.0",
+	info: {
+		version: "1.0.0",
+		title: "Eden Server API",
+		description: `
 # Eden Server - Music Streaming API
 
 A comprehensive music streaming platform API built on Cloudflare's edge stack.
@@ -159,44 +170,47 @@ Authorization: Bearer <token>
 3. Complete the upload: \`POST /api/uploads/{id}/complete\`
 4. Track will be processed and made available for streaming
     `.trim(),
-  },
-  servers: [
-    { url: 'http://localhost:5173', description: 'Development Server' },
-    { url: 'https://eden-server.suvan-gowrishanker-204.workers.dev', description: 'Production (Cloudflare Workers)' },
-  ],
-  tags: [
-    {
-      name: 'System',
-      description: 'System health and status endpoints',
-    },
-    {
-      name: 'Artists',
-      description: 'Artist profile management, statistics, and track listings',
-    },
-    {
-      name: 'Uploads',
-      description: 'File upload initiation, completion, and status tracking',
-    },
-    {
-      name: 'Tracks',
-      description: 'Track metadata management and search',
-    },
-  ],
-})
+	},
+	servers: [
+		{ url: "http://localhost:5173", description: "Development Server" },
+		{
+			url: "https://eden-server.suvan-gowrishanker-204.workers.dev",
+			description: "Production (Cloudflare Workers)",
+		},
+	],
+	tags: [
+		{
+			name: "System",
+			description: "System health and status endpoints",
+		},
+		{
+			name: "Artists",
+			description: "Artist profile management, statistics, and track listings",
+		},
+		{
+			name: "Uploads",
+			description: "File upload initiation, completion, and status tracking",
+		},
+		{
+			name: "Tracks",
+			description: "Track metadata management and search",
+		},
+	],
+});
 
 // Scalar UI for API documentation
 app.get(
-  '/scalar',
-  Scalar({
-    url: '/doc',
-    pageTitle: 'Eden Server API Documentation',
-    theme: 'kepler',
-    layout: 'modern',
-    expandAllModelSections: true,
-    defaultOpenAllTags: true,
-    hideClientButton: false,
-    showSidebar: true,
-  })
-)
+	"/scalar",
+	Scalar({
+		url: "/doc",
+		pageTitle: "Eden Server API Documentation",
+		theme: "kepler",
+		layout: "modern",
+		expandAllModelSections: true,
+		defaultOpenAllTags: true,
+		hideClientButton: false,
+		showSidebar: true,
+	}),
+);
 
-export default app
+export default app;

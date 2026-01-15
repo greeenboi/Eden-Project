@@ -32,8 +32,8 @@
 	],
 	"observability": {
 		"logs": {
-		"enabled": true,
-		"invocation_logs": true
+			"enabled": true,
+			"invocation_logs": true
 		}
 	}
 	// Secrets (set via: wrangler secret put <NAME>):
