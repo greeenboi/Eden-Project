@@ -9,6 +9,7 @@ import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
 import { generateSignedUrl } from '../lib/r2'
+import { serializeDate, serializeDateOrNull } from '../lib/utils'
 import {
   CreateTrackRequestSchema,
   ErrorResponseSchema,
@@ -99,9 +100,9 @@ export async function createTrackHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }, 201)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -165,19 +166,19 @@ export async function getTrackHandler(c: ValidatedContext) {
     const track = {
       ...trackWithRelations,
       artworkUrl: trackWithRelations.artworkUrl,
-      publishedAt: trackWithRelations.publishedAt?.toISOString() || null,
-      createdAt: trackWithRelations.createdAt.toISOString(),
-      updatedAt: trackWithRelations.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(trackWithRelations.publishedAt),
+      createdAt: serializeDate(trackWithRelations.createdAt),
+      updatedAt: serializeDate(trackWithRelations.updatedAt),
       artist: trackWithRelations.artist ? {
         ...trackWithRelations.artist,
-        createdAt: trackWithRelations.artist.createdAt.toISOString(),
-        updatedAt: trackWithRelations.artist.updatedAt.toISOString(),
+        createdAt: serializeDate(trackWithRelations.artist.createdAt),
+        updatedAt: serializeDate(trackWithRelations.artist.updatedAt),
       } : null,
       album: trackWithRelations.album ? {
         ...trackWithRelations.album,
-        releaseDate: trackWithRelations.album.releaseDate?.toISOString() || null,
-        createdAt: trackWithRelations.album.createdAt.toISOString(),
-        updatedAt: trackWithRelations.album.updatedAt.toISOString(),
+        releaseDate: serializeDateOrNull(trackWithRelations.album.releaseDate),
+        createdAt: serializeDate(trackWithRelations.album.createdAt),
+        updatedAt: serializeDate(trackWithRelations.album.updatedAt),
       } : null,
     }
     
@@ -263,9 +264,9 @@ export async function listTracksHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }))
     
     return c.json({
@@ -348,9 +349,9 @@ export async function updateTrackHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -441,9 +442,9 @@ export async function updateTrackStatusHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -579,9 +580,9 @@ export async function getPublishedTracksHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }))
     
     return c.json({
@@ -656,9 +657,9 @@ export async function searchTracksHandler(c: ValidatedContext) {
       isrc: track.isrc,
       genre: track.genre,
       explicit: track.explicit,
-      publishedAt: track.publishedAt?.toISOString() || null,
-      createdAt: track.createdAt.toISOString(),
-      updatedAt: track.updatedAt.toISOString(),
+      publishedAt: serializeDateOrNull(track.publishedAt),
+      createdAt: serializeDate(track.createdAt),
+      updatedAt: serializeDate(track.updatedAt),
     }))
     
     return c.json({
@@ -761,9 +762,9 @@ export async function getTrackStreamHandler(c: ValidatedContext) {
         isrc: track.isrc,
         genre: track.genre,
         explicit: track.explicit,
-        publishedAt: track.publishedAt?.toISOString() || null,
-        createdAt: track.createdAt.toISOString(),
-        updatedAt: track.updatedAt.toISOString(),
+        publishedAt: serializeDateOrNull(track.publishedAt),
+        createdAt: serializeDate(track.createdAt),
+        updatedAt: serializeDate(track.updatedAt),
       },
     }, 200)
   } catch (error) {

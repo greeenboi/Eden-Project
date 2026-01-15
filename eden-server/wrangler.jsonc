@@ -29,7 +29,13 @@
 			"binding": "EDEN_R2_BUCKET",
 			"remote": true
 		}
-	]
+	],
+	"observability": {
+		"logs": {
+		"enabled": true,
+		"invocation_logs": true
+		}
+	}
 	// Secrets (set via: wrangler secret put <NAME>):
 	// - JWT_SECRET: Secret key for JWT token signing/verification
 	// - R2_SIGNING_SECRET: Secret key for R2 signed URL generation (legacy, can be same as JWT_SECRET)

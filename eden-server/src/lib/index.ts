@@ -14,3 +14,7 @@ export * from './kv'
 
 // Error handling
 export * from './errors'
+
+// Utility functions
+export * from './utils'
+

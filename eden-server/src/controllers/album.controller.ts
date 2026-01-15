@@ -8,41 +8,42 @@ import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
+import { serializeDate, serializeDateOrNull } from '../lib/utils'
 import {
-    AlbumResponseSchema,
-    CreateAlbumRequestSchema,
-    ErrorResponseSchema,
-    PaginationQuerySchema,
-    TrackResponseSchema,
-    UpdateAlbumRequestSchema,
+  AlbumResponseSchema,
+  CreateAlbumRequestSchema,
+  ErrorResponseSchema,
+  PaginationQuerySchema,
+  TrackResponseSchema,
+  UpdateAlbumRequestSchema,
 } from '../models/dtos'
 import {
-    createAlbum,
-    deleteAlbum,
-    getAlbumTracks,
-    getAlbumWithRelations,
-    listAlbums,
-    updateAlbum,
+  createAlbum,
+  deleteAlbum,
+  getAlbumTracks,
+  getAlbumWithRelations,
+  listAlbums,
+  updateAlbum,
 } from '../services/album.service'
 
-const transformAlbum = <T extends { releaseDate: Date | null; createdAt: Date; updatedAt: Date }>(album: T) => ({
+const transformAlbum = <T extends { releaseDate: Date | string | null; createdAt: Date | string; updatedAt: Date | string }>(album: T) => ({
   ...album,
-  releaseDate: album.releaseDate ? album.releaseDate.toISOString() : null,
-  createdAt: album.createdAt.toISOString(),
-  updatedAt: album.updatedAt.toISOString(),
+  releaseDate: serializeDateOrNull(album.releaseDate),
+  createdAt: serializeDate(album.createdAt),
+  updatedAt: serializeDate(album.updatedAt),
 })
 
-const transformArtist = <T extends { createdAt: Date; updatedAt: Date }>(artist: T) => ({
+const transformArtist = <T extends { createdAt: Date | string; updatedAt: Date | string }>(artist: T) => ({
   ...artist,
-  createdAt: artist.createdAt.toISOString(),
-  updatedAt: artist.updatedAt.toISOString(),
+  createdAt: serializeDate(artist.createdAt),
+  updatedAt: serializeDate(artist.updatedAt),
 })
 
-const transformTrack = <T extends { publishedAt: Date | null; createdAt: Date; updatedAt: Date }>(track: T) => ({
+const transformTrack = <T extends { publishedAt: Date | string | null; createdAt: Date | string; updatedAt: Date | string }>(track: T) => ({
   ...track,
-  publishedAt: track.publishedAt ? track.publishedAt.toISOString() : null,
-  createdAt: track.createdAt.toISOString(),
-  updatedAt: track.updatedAt.toISOString(),
+  publishedAt: serializeDateOrNull(track.publishedAt),
+  createdAt: serializeDate(track.createdAt),
+  updatedAt: serializeDate(track.updatedAt),
 })
 
 type ValidatedContext = Context<{ Bindings: Env }> & {

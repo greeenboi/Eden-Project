@@ -8,6 +8,7 @@ import type { Context } from 'hono'
 import type { Env } from '../lib/db'
 import { getDb } from '../lib/db'
 import { handleError } from '../lib/errors'
+import { serializeDate } from '../lib/utils'
 import {
   ArtistResponseSchema,
   CreateArtistRequestSchema,
@@ -79,8 +80,8 @@ export const createArtistHandler = async (c: ValidatedContext) => {
     
     return c.json({
       ...artist,
-      createdAt: artist.createdAt?.toISOString() || '',
-      updatedAt: artist.updatedAt?.toISOString() || '',
+      createdAt: serializeDate(artist.createdAt),
+      updatedAt: serializeDate(artist.updatedAt),
     }, 201)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -139,8 +140,8 @@ export const getArtistHandler = async (c: ValidatedContext) => {
     
     return c.json({
       ...artist,
-      createdAt: artist.createdAt.toISOString(),
-      updatedAt: artist.updatedAt.toISOString(),
+      createdAt: serializeDate(artist.createdAt),
+      updatedAt: serializeDate(artist.updatedAt),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -207,8 +208,8 @@ export const updateArtistHandler = async (c: ValidatedContext) => {
     
     return c.json({
       ...artist,
-      createdAt: artist.createdAt.toISOString(),
-      updatedAt: artist.updatedAt.toISOString(),
+      createdAt: serializeDate(artist.createdAt),
+      updatedAt: serializeDate(artist.updatedAt),
     }, 200)
   } catch (error) {
     const { status, body } = handleError(error)
@@ -318,8 +319,8 @@ export const listArtistsHandler = async (c: ValidatedContext) => {
     return c.json({
       artists: result.artists.map(artist => ({
         ...artist,
-        createdAt: artist.createdAt.toISOString(),
-        updatedAt: artist.updatedAt.toISOString(),
+        createdAt: serializeDate(artist.createdAt),
+        updatedAt: serializeDate(artist.updatedAt),
       })),
       pagination: {
         page: result.page,
@@ -461,9 +462,9 @@ export const getArtistTracksHandler = async (c: ValidatedContext) => {
     return c.json({
       tracks: result.tracks.map(track => ({
         ...track,
-        createdAt: track.createdAt.toISOString(),
-        updatedAt: track.updatedAt.toISOString(),
-        publishedAt: track.publishedAt?.toISOString() || null,
+        createdAt: serializeDate(track.createdAt),
+        updatedAt: serializeDate(track.updatedAt),
+        publishedAt: serializeDate(track.publishedAt) || null,
       })),
       pagination: {
         page: result.page,
@@ -532,8 +533,8 @@ export const searchArtistsHandler = async (c: ValidatedContext) => {
     return c.json({
       artists: artists.map(artist => ({
         ...artist,
-        createdAt: artist.createdAt.toISOString(),
-        updatedAt: artist.updatedAt.toISOString(),
+        createdAt: serializeDate(artist.createdAt),
+        updatedAt: serializeDate(artist.updatedAt),
       })),
       query: q,
     }, 200)
