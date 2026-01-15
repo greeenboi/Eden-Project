@@ -1,9 +1,7 @@
-import { create } from "zustand";
 import { API_BASE_URL } from "../../constants/constants";
 
 /**
  * Artist profile information
- * @interface Artist
  */
 export interface Artist {
 	id: string;
@@ -19,7 +17,6 @@ export interface Artist {
 
 /**
  * Pagination metadata for artist lists
- * @interface ArtistPagination
  */
 export interface ArtistPagination {
 	page: number;
@@ -29,24 +26,17 @@ export interface ArtistPagination {
 
 /**
  * Statistical data for an artist's content
- * @interface ArtistStatistics
  */
 export interface ArtistStatistics {
-	/** Total number of tracks (all statuses) */
 	totalTracks: number;
-	/** Number of published tracks */
 	publishedTracks: number;
-	/** Total number of albums */
 	totalAlbums: number;
-	/** Total number of uploads */
 	totalUploads: number;
-	/** Number of pending uploads */
 	pendingUploads: number;
 }
 
 /**
  * Track information associated with an artist
- * @interface Track
  */
 export interface Track {
 	id: string;
@@ -63,411 +53,188 @@ export interface Track {
 	updatedAt: string;
 }
 
+// Request timeout in milliseconds
+const REQUEST_TIMEOUT = 15000;
+
 /**
- * Paginated track results for an artist
- * @interface TracksPagination
+ * Helper to create a fetch request with timeout support
  */
-export interface TracksPagination {
-	tracks: Track[];
-	pagination: ArtistPagination;
+async function fetchWithTimeout(
+	url: string,
+	options: RequestInit,
+	signal?: AbortSignal,
+): Promise<Response> {
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+	// Link external abort signal if provided
+	if (signal) {
+		signal.addEventListener("abort", () => controller.abort());
+	}
+
+	try {
+		const response = await fetch(url, {
+			...options,
+			signal: controller.signal,
+		});
+		return response;
+	} finally {
+		clearTimeout(timeoutId);
+	}
 }
 
 /**
- * Zustand store state for managing artists and their content
- * @interface ArtistState
+ * Fetch paginated list of artists
  */
-interface ArtistState {
-	artists: Artist[];
-	currentArtist: Artist | null;
-	currentArtistStats: ArtistStatistics | null;
-	currentArtistTracks: Track[];
-	tracksPagination: ArtistPagination | null;
-	searchResults: Artist[];
-	pagination: ArtistPagination | null;
-	isLoading: boolean;
-	isLoadingStats: boolean;
-	isLoadingTracks: boolean;
-	error: string | null;
+export async function fetchArtists(
+	page = 1,
+	limit = 20,
+	verified: boolean | null = null,
+	signal?: AbortSignal,
+): Promise<{ artists: Artist[]; pagination: ArtistPagination }> {
+	const params = new URLSearchParams({
+		page: page.toString(),
+		limit: limit.toString(),
+	});
 
-	// Actions
-	fetchArtists: (
-		page?: number,
-		limit?: number,
-		verified?: boolean | null,
-	) => Promise<void>;
-	fetchArtistById: (id: string) => Promise<void>;
-	fetchArtistStats: (id: string) => Promise<void>;
-	fetchArtistTracks: (
-		id: string,
-		page?: number,
-		limit?: number,
-		status?: string,
-	) => Promise<void>;
-	searchArtists: (query: string, limit?: number) => Promise<void>;
-	clearError: () => void;
-	clearCurrentArtist: () => void;
-	clearSearchResults: () => void;
+	if (verified !== null) {
+		params.append("verified", verified.toString());
+	}
+
+	const response = await fetchWithTimeout(
+		`${API_BASE_URL}/api/artists?${params}`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+		signal,
+	);
+
+	if (!response.ok) {
+		throw new Error("Failed to fetch artists");
+	}
+
+	return response.json();
 }
 
-export const useArtistStore = create<ArtistState>((set, get) => ({
-	artists: [],
-	currentArtist: null,
-	currentArtistStats: null,
-	currentArtistTracks: [],
-	tracksPagination: null,
-	searchResults: [],
-	pagination: null,
-	isLoading: false,
-	isLoadingStats: false,
-	isLoadingTracks: false,
-	error: null,
+/**
+ * Fetch a single artist by ID
+ */
+export async function fetchArtistById(
+	id: string,
+	signal?: AbortSignal,
+): Promise<Artist> {
+	const response = await fetchWithTimeout(
+		`${API_BASE_URL}/api/artists/${id}`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+		signal,
+	);
 
-	/**
-	 * Clears any error messages from the store
-	 * @returns {void}
-	 */
-	clearError: () => {
-		console.log("[ArtistStore] clearError called");
-		set({ error: null });
-	},
-
-	/**
-	 * Clears the current artist and all related data (stats, tracks)
-	 * @returns {void}
-	 */
-	clearCurrentArtist: () => {
-		console.log("[ArtistStore] clearCurrentArtist called");
-		set({
-			currentArtist: null,
-			currentArtistStats: null,
-			currentArtistTracks: [],
-			tracksPagination: null,
-		});
-	},
-
-	/**
-	 * Clears search results from the store
-	 * @returns {void}
-	 */
-	clearSearchResults: () => set({ searchResults: [] }),
-
-	/**
-	 * Fetches a paginated list of artists with optional verification filter
-	 * @async
-	 * @param {number} [page=1] - Page number (1-indexed)
-	 * @param {number} [limit=20] - Number of artists per page (1-100)
-	 * @param {boolean | null} [verified=null] - Filter by verification status (true|false|null for all)
-	 * @returns {Promise<void>}
-	 * @throws {Error} When the API request fails
-	 * @example
-	 * ```ts
-	 * await fetchArtists(1, 20, true); // Fetch only verified artists
-	 * ```
-	 */
-	fetchArtists: async (page = 1, limit = 20, verified = null) => {
-		set({ isLoading: true, error: null });
-
-		try {
-			const params = new URLSearchParams({
-				page: page.toString(),
-				limit: limit.toString(),
-			});
-
-			if (verified !== null) {
-				params.append("verified", verified.toString());
-			}
-
-			const response = await fetch(`${API_BASE_URL}/api/artists?${params}`, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-
-			if (!response.ok) {
-				throw new Error("Failed to fetch artists");
-			}
-
-			const data = await response.json();
-
-			set((state) => ({
-				// Append artists for subsequent pages, replace for page 1
-				artists:
-					page === 1 ? data.artists : [...state.artists, ...data.artists],
-				pagination: data.pagination,
-				isLoading: false,
-				error: null,
-			}));
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An error occurred fetching artists";
-			set({
-				isLoading: false,
-				error: errorMessage,
-				artists: [],
-				pagination: null,
-			});
-			throw error;
+	if (!response.ok) {
+		if (response.status === 404) {
+			throw new Error("Artist not found");
 		}
-	},
+		throw new Error("Failed to fetch artist");
+	}
 
-	/**
-	 * Fetches detailed information for a specific artist by ID
-	 * @async
-	 * @param {string} id - Artist UUID
-	 * @returns {Promise<void>}
-	 * @throws {Error} When artist is not found (404) or API request fails
-	 * @example
-	 * ```ts
-	 * await fetchArtistById('123e4567-e89b-12d3-a456-426614174000');
-	 * ```
-	 */
-	fetchArtistById: async (id: string) => {
-		console.log(`[ArtistStore] fetchArtistById called with id: ${id}`);
-		console.log("[ArtistStore] Current state before fetch:", {
-			currentArtist: get().currentArtist?.id,
-			isLoading: get().isLoading,
-			error: get().error,
-		});
-		set({ isLoading: true, error: null });
+	return response.json();
+}
 
-		try {
-			const url = `${API_BASE_URL}/api/artists/${id}`;
-			console.log(`[ArtistStore] Fetching from URL: ${url}`);
+/**
+ * Fetch artist statistics
+ */
+export async function fetchArtistStats(
+	id: string,
+	signal?: AbortSignal,
+): Promise<ArtistStatistics> {
+	const response = await fetchWithTimeout(
+		`${API_BASE_URL}/api/artists/${id}/stats`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+		signal,
+	);
 
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-					"Cache-Control": "no-cache",
-				},
-			});
-
-			console.log(`[ArtistStore] Response status: ${response.status}`);
-
-			if (!response.ok) {
-				if (response.status === 404) {
-					throw new Error("Artist not found");
-				}
-				const errorText = await response.text();
-				console.error(`[ArtistStore] Error response body: ${errorText}`);
-				throw new Error("Failed to fetch artist");
-			}
-
-			const data = await response.json();
-			console.log(
-				"[ArtistStore] Successfully fetched artist:",
-				data?.name || data?.id,
-			);
-
-			set({
-				currentArtist: data,
-				isLoading: false,
-				error: null,
-			});
-		} catch (error) {
-			console.error("[ArtistStore] fetchArtistById error:", error);
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An error occurred fetching artist";
-			set({
-				isLoading: false,
-				error: errorMessage,
-				currentArtist: null,
-			});
-			throw error;
+	if (!response.ok) {
+		if (response.status === 404) {
+			throw new Error("Artist not found");
 		}
-	},
+		throw new Error("Failed to fetch artist statistics");
+	}
 
-	/**
-	 * Fetches statistical data for a specific artist (track counts, album counts, uploads)
-	 * @async
-	 * @param {string} id - Artist UUID
-	 * @returns {Promise<void>}
-	 * @throws {Error} When artist is not found (404) or API request fails
-	 * @example
-	 * ```ts
-	 * await fetchArtistStats('123e4567-e89b-12d3-a456-426614174000');
-	 * ```
-	 */
-	fetchArtistStats: async (id: string) => {
-		console.log(`[ArtistStore] fetchArtistStats called with id: ${id}`);
-		set({ isLoadingStats: true, error: null });
+	return response.json();
+}
 
-		try {
-			const url = `${API_BASE_URL}/api/artists/${id}/stats`;
-			console.log(`[ArtistStore] Fetching stats from URL: ${url}`);
+/**
+ * Fetch paginated tracks for an artist
+ */
+export async function fetchArtistTracks(
+	id: string,
+	page = 1,
+	limit = 20,
+	status?: string,
+	signal?: AbortSignal,
+): Promise<{ tracks: Track[]; pagination: ArtistPagination }> {
+	const params = new URLSearchParams({
+		page: page.toString(),
+		limit: limit.toString(),
+	});
 
-			const response = await fetch(url, {
-				method: "GET",
-				headers: {
-					"Content-Type": "application/json",
-					"Cache-Control": "no-cache",
-				},
-			});
+	if (status) {
+		params.append("status", status);
+	}
 
-			console.log(`[ArtistStore] Stats response status: ${response.status}`);
+	const response = await fetchWithTimeout(
+		`${API_BASE_URL}/api/artists/${id}/tracks?${params}`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+		signal,
+	);
 
-			if (!response.ok) {
-				if (response.status === 404) {
-					throw new Error("Artist not found");
-				}
-				throw new Error("Failed to fetch artist statistics");
-			}
-
-			const data = await response.json();
-
-			set({
-				currentArtistStats: data,
-				isLoadingStats: false,
-				error: null,
-			});
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An error occurred fetching statistics";
-			set({
-				isLoadingStats: false,
-				error: errorMessage,
-				currentArtistStats: null,
-			});
-			throw error;
+	if (!response.ok) {
+		if (response.status === 404) {
+			throw new Error("Artist not found");
 		}
-	},
+		throw new Error("Failed to fetch artist tracks");
+	}
 
-	/**
-	 * Fetches paginated tracks for a specific artist with optional status filter
-	 * @async
-	 * @param {string} id - Artist UUID
-	 * @param {number} [page=1] - Page number (1-indexed)
-	 * @param {number} [limit=20] - Number of tracks per page (1-100)
-	 * @param {string} [status] - Filter by track status (initiated|uploaded|processing|published|failed)
-	 * @returns {Promise<void>}
-	 * @throws {Error} When artist is not found (404) or API request fails
-	 * @example
-	 * ```ts
-	 * await fetchArtistTracks('123e4567-e89b-12d3-a456-426614174000', 1, 20, 'published');
-	 * ```
-	 */
-	fetchArtistTracks: async (
-		id: string,
-		page = 1,
-		limit = 20,
-		status?: string,
-	) => {
-		set({ isLoadingTracks: true, error: null });
+	return response.json();
+}
 
-		try {
-			const params = new URLSearchParams({
-				page: page.toString(),
-				limit: limit.toString(),
-			});
+/**
+ * Search artists by name
+ */
+export async function searchArtists(
+	query: string,
+	limit = 20,
+	signal?: AbortSignal,
+): Promise<{ artists: Artist[] }> {
+	const params = new URLSearchParams({
+		q: query,
+		limit: limit.toString(),
+	});
 
-			if (status) {
-				params.append("status", status);
-			}
+	const response = await fetchWithTimeout(
+		`${API_BASE_URL}/api/artists/search?${params}`,
+		{
+			method: "GET",
+			headers: { "Content-Type": "application/json" },
+		},
+		signal,
+	);
 
-			const response = await fetch(
-				`${API_BASE_URL}/api/artists/${id}/tracks?${params}`,
-				{
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (!response.ok) {
-				if (response.status === 404) {
-					throw new Error("Artist not found");
-				}
-				throw new Error("Failed to fetch artist tracks");
-			}
-
-			const data = await response.json();
-
-			// Append to existing tracks if loading more pages
-			const existingTracks = page > 1 ? get().currentArtistTracks : [];
-
-			set({
-				currentArtistTracks: [...existingTracks, ...data.tracks],
-				tracksPagination: data.pagination,
-				isLoadingTracks: false,
-				error: null,
-			});
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An error occurred fetching tracks";
-			set({
-				isLoadingTracks: false,
-				error: errorMessage,
-			});
-			throw error;
+	if (!response.ok) {
+		if (response.status === 400) {
+			throw new Error("Invalid search query");
 		}
-	},
+		throw new Error("Failed to search artists");
+	}
 
-	/**
-	 * Searches for artists by name
-	 * @async
-	 * @param {string} query - Search query string (minimum 1 character)
-	 * @param {number} [limit=20] - Maximum number of results (1-50)
-	 * @returns {Promise<void>}
-	 * @throws {Error} When query is invalid (400) or API request fails
-	 * @example
-	 * ```ts
-	 * await searchArtists('Queen', 20);
-	 * ```
-	 */
-	searchArtists: async (query: string, limit = 20) => {
-		set({ isLoading: true, error: null });
-
-		try {
-			const params = new URLSearchParams({
-				q: query,
-				limit: limit.toString(),
-			});
-
-			const response = await fetch(
-				`${API_BASE_URL}/api/artists/search?${params}`,
-				{
-					method: "GET",
-					headers: {
-						"Content-Type": "application/json",
-					},
-				},
-			);
-
-			if (!response.ok) {
-				if (response.status === 400) {
-					throw new Error("Invalid search query");
-				}
-				throw new Error("Failed to search artists");
-			}
-
-			const data = await response.json();
-
-			set({
-				searchResults: data.artists,
-				isLoading: false,
-				error: null,
-			});
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error
-					? error.message
-					: "An error occurred searching artists";
-			set({
-				isLoading: false,
-				error: errorMessage,
-				searchResults: [],
-			});
-			throw error;
-		}
-	},
-}));
+	return response.json();
+}

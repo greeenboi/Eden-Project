@@ -1,52 +1,102 @@
-import { FlashList } from "@shopify/flash-list";
-import { router } from "expo-router";
-import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View } from "@/components/Themed";
 import {
 	ArtistCard,
 	ArtistsHeader,
 	ArtistsSearchBar,
 } from "@/components/pages/artists";
-import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Toggle, ToggleIcon } from "@/components/ui/toggle";
-import { type Artist, useArtistStore } from "@/lib/actions/artists";
+import {
+	type Artist,
+	type ArtistPagination,
+	fetchArtists,
+	searchArtists,
+} from "@/lib/actions/artists";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshControl } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearchMode, setIsSearchMode] = useState(false);
 	const [showNames, setShowNames] = useState(false);
-	const {
-		artists,
-		searchResults,
-		pagination,
-		isLoading,
-		error,
-		fetchArtists,
-		searchArtists,
-		clearSearchResults,
-	} = useArtistStore();
+	const [isRefreshing, setIsRefreshing] = useState(false);
+
+	// Local state instead of store
+	const [artists, setArtists] = useState<Artist[]>([]);
+	const [searchResults, setSearchResults] = useState<Artist[]>([]);
+	const [pagination, setPagination] = useState<ArtistPagination | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const abortControllerRef = useRef<AbortController | null>(null);
+
+	const loadArtists = useCallback(async (page = 1) => {
+		// Cancel previous request
+		abortControllerRef.current?.abort();
+		const controller = new AbortController();
+		abortControllerRef.current = controller;
+
+		setIsLoading(true);
+		setError(null);
+
+		try {
+			const data = await fetchArtists(page, 20, null, controller.signal);
+			setArtists((prev) =>
+				page === 1 ? data.artists : [...prev, ...data.artists],
+			);
+			setPagination(data.pagination);
+		} catch (err) {
+			if (err instanceof Error && err.name === "AbortError") return;
+			setError(err instanceof Error ? err.message : "Failed to fetch artists");
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	const doSearch = useCallback(async (query: string) => {
+		abortControllerRef.current?.abort();
+		const controller = new AbortController();
+		abortControllerRef.current = controller;
+
+		setIsLoading(true);
+		setError(null);
+
+		try {
+			const data = await searchArtists(query, 20, controller.signal);
+			setSearchResults(data.artists);
+		} catch (err) {
+			if (err instanceof Error && err.name === "AbortError") return;
+			setError(err instanceof Error ? err.message : "Failed to search artists");
+			setSearchResults([]);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
 
 	useEffect(() => {
-		fetchArtists();
-	}, [fetchArtists]);
+		loadArtists();
+		return () => abortControllerRef.current?.abort();
+	}, [loadArtists]);
 
 	// Debounced search
 	useEffect(() => {
 		if (searchQuery.trim().length > 0) {
 			const timer = setTimeout(() => {
 				setIsSearchMode(true);
-				searchArtists(searchQuery);
+				doSearch(searchQuery);
 			}, 500);
 			return () => clearTimeout(timer);
 		}
 		setIsSearchMode(false);
-		clearSearchResults();
-	}, [searchQuery, searchArtists, clearSearchResults]);
+		setSearchResults([]);
+	}, [searchQuery, doSearch]);
 
 	const displayArtists = isSearchMode ? searchResults : artists;
 
@@ -57,8 +107,21 @@ export default function ArtistsScreen() {
 	const handleClearSearch = useCallback(() => {
 		setSearchQuery("");
 		setIsSearchMode(false);
-		clearSearchResults();
-	}, [clearSearchResults]);
+		setSearchResults([]);
+	}, []);
+
+	const handleRefresh = useCallback(async () => {
+		setIsRefreshing(true);
+		try {
+			if (isSearchMode && searchQuery.trim().length > 0) {
+				await doSearch(searchQuery);
+			} else {
+				await loadArtists(1);
+			}
+		} finally {
+			setIsRefreshing(false);
+		}
+	}, [isSearchMode, searchQuery, doSearch, loadArtists]);
 
 	const handleLoadMore = useCallback(() => {
 		if (
@@ -67,9 +130,9 @@ export default function ArtistsScreen() {
 			pagination.page * pagination.limit < pagination.total &&
 			!isLoading
 		) {
-			fetchArtists(pagination.page + 1, pagination.limit);
+			loadArtists(pagination.page + 1);
 		}
-	}, [isSearchMode, pagination, isLoading, fetchArtists]);
+	}, [isSearchMode, pagination, isLoading, loadArtists]);
 
 	const renderArtist = useCallback(
 		({ item }: { item: Artist }) => (
@@ -171,10 +234,18 @@ export default function ArtistsScreen() {
 		if (isLoading) {
 			return (
 				<View className="flex-row flex-wrap px-1.5 gap-3">
-					<Skeleton className="flex-1 min-w-[150px] h-[140px] rounded-xl" />
-					<Skeleton className="flex-1 min-w-[150px] h-[140px] rounded-xl" />
-					<Skeleton className="flex-1 min-w-[150px] h-[140px] rounded-xl" />
-					<Skeleton className="flex-1 min-w-[150px] h-[140px] rounded-xl" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
+					<Skeleton className="flex-1 min-w-[150px] h-[160px] rounded-full" />
 				</View>
 			);
 		}
@@ -206,6 +277,13 @@ export default function ArtistsScreen() {
 					contentContainerStyle={{ paddingHorizontal: 10, paddingBottom: 100 }}
 					onEndReached={handleLoadMore}
 					onEndReachedThreshold={0.5}
+					refreshControl={
+						<RefreshControl
+							refreshing={isRefreshing}
+							onRefresh={handleRefresh}
+						/>
+					}
+					// estimatedItemSize={showNames ? 70 : 180}
 				/>
 			</View>
 		</SafeAreaView>
