@@ -41,7 +41,7 @@ export function TrackCard({ item, index, onPress }: TrackCardProps) {
 	return (
 		//add long press for action sheet
 		<Pressable
-			android_ripple={{ borderless: false, foreground: true }}
+			
 			onPress={() => onPress(item.id)}
 			style={{ padding: 4 }}
 		>

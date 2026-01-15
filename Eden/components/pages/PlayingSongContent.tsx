@@ -1,11 +1,7 @@
-import { router } from "expo-router";
-import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
+import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -13,6 +9,10 @@ import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
+import { router } from "expo-router";
+import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Pressable, StyleSheet } from "react-native";
 import { MiniPlayer } from "./player/MiniPlayer";
 import { PlayerArtwork } from "./player/PlayerArtwork";
 import { PlayerControls } from "./player/PlayerControls";
@@ -363,7 +363,7 @@ export function PlayingSongContent({
 										onCollapse?.();
 										router.push("/queue");
 									}}
-									android_ripple={{ borderless: true, foreground: true }}
+									
 									style={{ padding: 8 }}
 								>
 									<ListMusic size={24} color={themeColors.tint} />

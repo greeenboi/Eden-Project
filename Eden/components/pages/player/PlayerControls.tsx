@@ -1,13 +1,13 @@
+import { View } from "@/components/Themed";
 import {
-	Pause,
-	Play,
-	Repeat,
-	Shuffle,
-	SkipBack,
-	SkipForward,
+    Pause,
+    Play,
+    Repeat,
+    Shuffle,
+    SkipBack,
+    SkipForward,
 } from "lucide-react-native";
 import { ActivityIndicator, Pressable } from "react-native";
-import { View } from "@/components/Themed";
 
 interface PlayerControlsProps {
 	isLoaded: boolean;
@@ -58,7 +58,7 @@ export function PlayerControls({
 			className="flex-row items-center justify-center gap-6 mb-4"
 		>
 			<Pressable
-				android_ripple={{ borderless: false, foreground: true }}
+				
 				onPress={onToggleLoop}
 			>
 				<Repeat
@@ -69,7 +69,7 @@ export function PlayerControls({
 			</Pressable>
 
 			<Pressable
-				android_ripple={{ borderless: false, foreground: true }}
+				
 				onPress={onSkipPrevious}
 				disabled={!hasPrevious}
 				style={{ opacity: hasPrevious ? 1 : 0.5 }}
@@ -78,7 +78,7 @@ export function PlayerControls({
 			</Pressable>
 
 			<Pressable
-				android_ripple={{ borderless: false, foreground: true }}
+				
 				onPress={onTogglePlayback}
 				disabled={!isLoaded || loadingStream}
 			>
@@ -108,7 +108,7 @@ export function PlayerControls({
 
 			<Pressable
 				onPress={onSkipNext}
-				android_ripple={{ borderless: false, foreground: true }}
+				
 				disabled={!hasNext}
 				style={{ opacity: hasNext ? 1 : 0.4 }}
 			>
@@ -116,7 +116,7 @@ export function PlayerControls({
 			</Pressable>
 
 			<Pressable
-				android_ripple={{ borderless: false, foreground: true }}
+				
 				onPress={onToggleShuffle}
 			>
 				<Shuffle
@@ -126,7 +126,7 @@ export function PlayerControls({
 				/>
 			</Pressable>
 
-			{/* <Pressable android_ripple={{ borderless: false, foreground: true }}   onPress={onToggleMute}>
+			{/* <Pressable    onPress={onToggleMute}>
 				{
 					isMuted ?
 						<VolumeX

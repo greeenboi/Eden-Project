@@ -1,9 +1,9 @@
+import { View } from "@/components/Themed";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
 import { Music, Pause, Play, SkipBack, SkipForward } from "lucide-react-native";
 import { ActivityIndicator, Image, Pressable } from "react-native";
-import { View } from "@/components/Themed";
-import { Card, CardContent } from "@/components/ui/card";
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Text } from "@/components/ui/text";
 
 interface MiniPlayerProps {
 	trackId?: string;
@@ -93,7 +93,7 @@ export function MiniPlayer({
 			</Pressable>
 			<View className="flex-row items-center gap-3">
 				<Pressable
-					android_ripple={{ borderless: false, foreground: true }}
+					
 					onPress={onSkipPrevious}
 					disabled={!hasPrevious}
 					style={{ opacity: hasPrevious ? 1 : 0.4 }}
@@ -101,7 +101,7 @@ export function MiniPlayer({
 					<SkipBack color={themeColors.tint} size={22} />
 				</Pressable>
 				<Pressable
-					android_ripple={{ borderless: false, foreground: true }}
+					
 					onPress={onTogglePlayback}
 					disabled={!isLoaded || loadingStream}
 				>
@@ -126,7 +126,7 @@ export function MiniPlayer({
 					</View>
 				</Pressable>
 				<Pressable
-					android_ripple={{ borderless: false, foreground: true }}
+					
 					onPress={onSkipNext}
 					disabled={!hasNext}
 					style={{ opacity: hasNext ? 1 : 0.4 }}
