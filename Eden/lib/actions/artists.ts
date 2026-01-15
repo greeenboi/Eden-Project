@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../../constants/constants";
+import type { Track } from "./tracks";
 
 /**
  * Artist profile information
@@ -33,24 +34,6 @@ export interface ArtistStatistics {
 	totalAlbums: number;
 	totalUploads: number;
 	pendingUploads: number;
-}
-
-/**
- * Track information associated with an artist
- */
-export interface Track {
-	id: string;
-	title: string;
-	artistId: string;
-	albumId: string | null;
-	duration: number;
-	trackNumber: number | null;
-	discNumber: number | null;
-	audioUrl: string | null;
-	coverUrl: string;
-	status: "initiated" | "uploaded" | "processing" | "published" | "failed";
-	createdAt: string;
-	updatedAt: string;
 }
 
 // Request timeout in milliseconds

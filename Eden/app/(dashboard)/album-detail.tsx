@@ -8,13 +8,14 @@ import { Text } from "@/components/ui/text";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
+import { formatDuration } from "@/lib/utils";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    AlertCircle,
-    ArrowLeft,
-    Clock,
-    Music,
-    Play,
+	AlertCircle,
+	ArrowLeft,
+	Clock,
+	Music,
+	Play,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
@@ -49,13 +50,6 @@ export default function AlbumDetailScreen() {
 			fetchTrackById(tracks[0].id);
 		}
 	}, [tracks, currentTrack, fetchTrackById]);
-
-	const formatDuration = (seconds: number | null) => {
-		if (!seconds) return "--:--";
-		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
-		return `${mins}:${secs.toString().padStart(2, "0")}`;
-	};
 
 	const getTotalDuration = () => {
 		if (!tracks.length) return "0:00";

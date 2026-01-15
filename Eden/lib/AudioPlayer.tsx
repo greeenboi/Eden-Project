@@ -43,14 +43,6 @@ const defaultBackgroundAudioMode: Partial<AudioMode> = {
 	interruptionMode: "mixWithOthers",
 };
 
-export function formatDuration(seconds?: number) {
-	if (!Number.isFinite(seconds)) return "0:00";
-	const value = Math.max(0, Math.floor(seconds ?? 0));
-	const mins = Math.floor(value / 60);
-	const secs = value % 60;
-	return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
-
 export function useTrackAudioPlayer({
 	trackId,
 	fetchStream,

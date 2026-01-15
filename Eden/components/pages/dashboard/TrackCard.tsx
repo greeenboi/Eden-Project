@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { Track } from "@/lib/actions/tracks";
+import { formatDuration } from "@/lib/utils";
 import { Clock, Disc } from "lucide-react-native";
 import { Image, Pressable } from "react-native";
 
@@ -32,13 +33,7 @@ const IMAGE_COLORS = [
 	"bg-chart-4/20",
 ];
 
-function formatDuration(seconds: number | null) {
-	if (!seconds) return "--:--";
-	const totalSeconds = Math.max(0, Math.floor(seconds));
-	const mins = Math.floor(totalSeconds / 60);
-	const secs = totalSeconds % 60;
-	return `${mins}:${secs.toString().padStart(2, "0")}`;
-}
+
 
 export function TrackCard({ item, index, onPress }: TrackCardProps) {
 	const imageColor = IMAGE_COLORS[index % IMAGE_COLORS.length];

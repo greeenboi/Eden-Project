@@ -14,20 +14,20 @@ import {
 	type Artist,
 	type ArtistPagination,
 	type ArtistStatistics,
-	type Track,
 	fetchArtistById,
 	fetchArtistStats,
 	fetchArtistTracks,
 } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import type { Track } from "@/lib/actions/tracks";
+import { formatDuration } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams } from "expo-router";
 import {
 	AlertCircle,
 	BadgeCheck,
 	Disc3,
-	Music,
-	Play,
+	Play
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Image, Pressable, ScrollView } from "react-native";
@@ -39,7 +39,6 @@ export default function ArtistDetailScreen() {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	// Local state instead of store
 	const [currentArtist, setCurrentArtist] = useState<Artist | null>(null);
 	const [currentArtistStats, setCurrentArtistStats] =
 		useState<ArtistStatistics | null>(null);
@@ -167,7 +166,7 @@ export default function ArtistDetailScreen() {
 			id: track.id,
 			title: track.title,
 			artistName: currentArtist?.name ?? "Loading...",
-			artworkUrl: track.coverUrl,
+			artworkUrl: track.artworkUrl,
 			duration: track.duration,
 		}));
 	}, [currentArtistTracks, currentArtist?.name]);
@@ -313,36 +312,30 @@ export default function ArtistDetailScreen() {
 													className="mr-3 active:opacity-70"
 												>
 													<View className="w-32 bg-transparent">
-														{track.coverUrl ? (
-															<Image
-																source={{ uri: track.coverUrl }}
-																style={{
-																	width: 128,
-																	height: 128,
-																	borderRadius: 12,
-																}}
-																resizeMode="cover"
-															/>
-														) : (
-															<View className="w-32 h-32 rounded-xl bg-primary/10 items-center justify-center">
-																<Music size={32} className="opacity-40" />
-															</View>
-														)}
-														<Text
-															className="font-semibold text-sm mt-2"
-															numberOfLines={1}
-														>
-															{track.title}
-														</Text>
-														<Text
-															className="text-xs opacity-60"
-															numberOfLines={1}
-														>
-															{Math.floor(track.duration / 60)}:
-															{(track.duration % 60)
-																.toString()
-																.padStart(2, "0")}
-														</Text>
+														<Image
+															// biome-ignore lint/style/noNonNullAssertion: will never be null
+															source={{ uri: track.artworkUrl! }}
+															style={{
+																width: 128,
+																height: 128,
+																borderRadius: 12,
+															}}
+															resizeMode="cover"
+														/>
+														<View className="flex flex-row justify-between items-center mt-2">
+															<Text
+																className="font-semibold text-sm"
+																numberOfLines={1}
+															>
+																{track.title}
+															</Text>
+															<Text
+																className="text-xs opacity-60"
+																numberOfLines={1}
+															>
+																{formatDuration(track.duration)}
+															</Text>
+														</View>
 													</View>
 												</Pressable>
 											)}

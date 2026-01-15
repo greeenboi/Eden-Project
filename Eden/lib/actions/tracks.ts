@@ -26,6 +26,7 @@ export interface Track {
 	id: string;
 	artistId: string;
 	albumId: string | null;
+	artworkUrl: string | null;
 	title: string;
 	duration: number | null;
 	r2KeyOriginal: string | null;
@@ -34,7 +35,6 @@ export interface Track {
 	isrc: string | null;
 	genre: string | null;
 	explicit: boolean;
-	artworkUrl: string | null;
 	publishedAt: string | null;
 	createdAt: string;
 	updatedAt: string;

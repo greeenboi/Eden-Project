@@ -1,7 +1,7 @@
-import Slider from "@react-native-community/slider";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
-import { formatDuration } from "@/lib/AudioPlayer";
+import { formatDuration } from "@/lib/utils";
+import Slider from "@react-native-community/slider";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -76,7 +76,8 @@ export function PlayerSlider({
 					{formatDuration(sliderValue)}
 				</Text>
 				<Text className="text-sm opacity-50">
-					{formatDuration(duration ?? undefined)}
+					{/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
+					{formatDuration(duration!)}
 				</Text>
 			</View>
 		</View>
