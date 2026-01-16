@@ -19,6 +19,7 @@ export type QueueSource =
 	| { type: "playlist"; playlistId: string; playlistName: string }
 	| { type: "album"; albumId: string; albumName: string }
 	| { type: "artist"; artistId: string; artistName: string }
+	| { type: "search"; query: string }
 	| { type: "custom"; name: string };
 
 interface QueueState {

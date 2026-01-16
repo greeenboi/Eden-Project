@@ -27,7 +27,7 @@ export default function AppLayout() {
 				screenOptions={{
 					headerShown: false,
 					drawerPosition: "right",
-					drawerType: "front",
+					drawerType: "slide",
 					swipeEnabled: true,
 					swipeEdgeWidth: 50,
 					drawerStyle: {
@@ -42,6 +42,8 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "All Songs",
 						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
+						lazy: false
+
 					}}
 				/>
 				<Drawer.Screen
@@ -49,6 +51,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Artists",
 						drawerItemStyle: { display: "none" },
+						lazy: false
 					}}
 				/>
 				<Drawer.Screen
@@ -56,6 +59,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Search",
 						drawerItemStyle: { display: "none" },
+						lazy: false
 					}}
 				/>
 
