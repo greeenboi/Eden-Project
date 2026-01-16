@@ -50,6 +50,17 @@ const ErrorResponseSchema = z
 	})
 	.openapi("ErrorResponse");
 
+const UserResponseSchema = z
+	.object({
+		user: z.object({
+			id: z.string().openapi({ example: "user-123" }),
+			email: z.email().openapi({ example: "user@example.com" }),
+			name: z.string().openapi({ example: "John Doe" }),
+			role: z.enum(["user", "artist", "admin"]).openapi({ example: "user" }),
+		}),
+	})
+	.openapi("UserResponse");
+
 // ============================================================================
 // Routes
 // ============================================================================
@@ -263,6 +274,103 @@ export function registerAuthRoutes(app: OpenAPIHono<{ Bindings: Env }>) {
 					message: "Signup failed",
 				} as const,
 				400,
+			);
+		}
+	});
+
+	// Get Current User Route (Me)
+	const meRoute = createRoute({
+		method: "get",
+		path: "/api/auth/me",
+		tags: ["Auth"],
+		summary: "Get current user",
+		description: "Get the currently authenticated user's information",
+		responses: {
+			200: {
+				content: {
+					"application/json": {
+						schema: UserResponseSchema,
+					},
+				},
+				description: "User information retrieved successfully",
+			},
+			401: {
+				content: {
+					"application/json": {
+						schema: ErrorResponseSchema,
+					},
+				},
+				description: "Unauthorized - invalid or missing token",
+			},
+		},
+	});
+
+	app.openapi(meRoute, async (c) => {
+		try {
+			const authHeader = c.req.header("Authorization");
+			if (!authHeader?.startsWith("Bearer ")) {
+				return c.json(
+					{
+						error: "Unauthorized",
+						message: "Missing or invalid authorization header",
+					} as const,
+					401,
+				);
+			}
+
+			const token = authHeader.slice(7);
+
+			// Verify JWT and extract user ID
+			const { verifyJWT } = await import("../lib/auth");
+			const payload = await verifyJWT(token, c.env.JWT_SECRET);
+
+			if (!payload || !payload.sub) {
+				return c.json(
+					{
+						error: "Unauthorized",
+						message: "Invalid or expired token",
+					} as const,
+					401,
+				);
+			}
+
+			const db = getDb(c.env);
+			const account = await db.query.users.findFirst({
+				where: eq(users.id, payload.sub),
+				columns: { id: true, email: true, name: true },
+			});
+
+			if (!account) {
+				return c.json(
+					{
+						error: "Unauthorized",
+						message: "User not found",
+					} as const,
+					401,
+				);
+			}
+
+			logger.info("Get current user successful", { userId: account.id });
+
+			return c.json(
+				{
+					user: {
+						id: account.id,
+						email: account.email,
+						name: account.name || "",
+						role: (payload.role as "user" | "artist" | "admin") || "user",
+					},
+				} as const,
+				200,
+			);
+		} catch (error) {
+			logger.error("Get current user error", error);
+			return c.json(
+				{
+					error: "Unauthorized",
+					message: "Authentication failed",
+				} as const,
+				401,
 			);
 		}
 	});
