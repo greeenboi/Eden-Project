@@ -1,14 +1,3 @@
-import { View } from "@/components/Themed";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Text } from "@/components/ui/text";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { useTrackStore } from "@/lib/actions/tracks";
-import { formatDuration } from "@/lib/utils";
 import { router, useLocalSearchParams } from "expo-router";
 import {
 	AlertCircle,
@@ -19,6 +8,17 @@ import {
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
+import { View } from "@/components/Themed";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { useTrackStore } from "@/lib/actions/tracks";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { formatDuration } from "@/lib/utils";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();
@@ -211,7 +211,10 @@ export default function AlbumDetailScreen() {
 									style={{ backgroundColor: "transparent" }}
 									className="flex-row items-center gap-2"
 								>
-									<Play size={20} className="text-primary-foreground fill-primary-foreground" />
+									<Play
+										size={20}
+										className="text-primary-foreground fill-primary-foreground"
+									/>
 									<Text className="text-primary-foreground font-semibold">
 										Play Album
 									</Text>
@@ -304,7 +307,10 @@ export default function AlbumDetailScreen() {
 													style={{ backgroundColor: "transparent" }}
 													className="w-8 h-8 rounded-full bg-primary items-center justify-center"
 												>
-													<Play size={14} className="text-primary-foreground fill-primary-foreground" />
+													<Play
+														size={14}
+														className="text-primary-foreground fill-primary-foreground"
+													/>
 												</View>
 											</View>
 										</CardContent>

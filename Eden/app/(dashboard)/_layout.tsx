@@ -1,10 +1,10 @@
-import { CustomDrawerContent } from "@/components/pages/dashboard";
-import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
-import { useSession } from "@/lib/ctx";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 import { Redirect } from "expo-router";
 import { Drawer } from "expo-router/drawer";
+import { CustomDrawerContent } from "@/components/pages/dashboard";
+import { useSession } from "@/lib/ctx";
+import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 
 export default function AppLayout() {
 	const { session, isLoading } = useSession();
@@ -42,8 +42,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "All Songs",
 						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
-						lazy: false
-
+						lazy: false,
 					}}
 				/>
 				<Drawer.Screen
@@ -51,7 +50,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Artists",
 						drawerItemStyle: { display: "none" },
-						lazy: false
+						lazy: false,
 					}}
 				/>
 				<Drawer.Screen
@@ -59,7 +58,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Search",
 						drawerItemStyle: { display: "none" },
-						lazy: false
+						lazy: false,
 					}}
 				/>
 				<Drawer.Screen
@@ -67,7 +66,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Settings",
 						drawerItemStyle: { display: "none" },
-						lazy: false
+						lazy: false,
 					}}
 				/>
 

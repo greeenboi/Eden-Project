@@ -1,30 +1,30 @@
+import {
+	BottomSheetModal,
+	BottomSheetModalProvider,
+	BottomSheetScrollView,
+	useBottomSheet,
+} from "@gorhom/bottom-sheet";
+import {
+	createContext,
+	type ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
 import PlayerHandle from "@/components/ui/PlayerHandle";
 import {
-    type QueueSource,
-    type QueueTrack,
-    type RepeatMode,
-    type ShuffleMode,
-    useQueueStore,
+	type QueueSource,
+	type QueueTrack,
+	type RepeatMode,
+	type ShuffleMode,
+	useQueueStore,
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
-import {
-    BottomSheetModal,
-    BottomSheetModalProvider,
-    BottomSheetScrollView,
-    useBottomSheet,
-} from "@gorhom/bottom-sheet";
-import {
-    type ReactNode,
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
 
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */

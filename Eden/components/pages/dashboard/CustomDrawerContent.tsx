@@ -1,21 +1,15 @@
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 import {
 	type DrawerContentComponentProps,
 	DrawerContentScrollView,
 	DrawerItem,
 } from "@react-navigation/drawer";
 import { router } from "expo-router";
-import {
-	Music,
-	Search,
-	Settings,
-	Users,
-	X
-} from "lucide-react-native";
+import { Music, Search, Settings, Users, X } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
+import { View } from "@/components/Themed";
+import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const isDark = useIsDark();
@@ -40,10 +34,7 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 					<Music size={28} color={primaryColor} />
 					<Text className="text-2xl font-bold text-foreground ml-2">Eden</Text>
 				</View>
-				<Pressable
-					onPress={() => props.navigation.closeDrawer()}
-					hitSlop={8}
-				>
+				<Pressable onPress={() => props.navigation.closeDrawer()} hitSlop={8}>
 					<X size={24} color={mutedColor} />
 				</Pressable>
 			</View>
@@ -62,7 +53,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						icon={({ size }) => (
 							<Music
 								size={size}
-								color={currentRoute === "index" ? primaryColor : foregroundColor}
+								color={
+									currentRoute === "index" ? primaryColor : foregroundColor
+								}
 							/>
 						)}
 						focused={currentRoute === "index"}
@@ -72,7 +65,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						}}
 						activeTintColor={primaryColor}
 						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+						activeBackgroundColor={
+							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+						}
 						style={styles.drawerItem}
 						labelStyle={styles.drawerLabel}
 					/>
@@ -81,7 +76,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						icon={({ size }) => (
 							<Users
 								size={size}
-								color={currentRoute === "artists" ? primaryColor : foregroundColor}
+								color={
+									currentRoute === "artists" ? primaryColor : foregroundColor
+								}
 							/>
 						)}
 						focused={currentRoute === "artists"}
@@ -91,7 +88,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						}}
 						activeTintColor={primaryColor}
 						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+						activeBackgroundColor={
+							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+						}
 						style={styles.drawerItem}
 						labelStyle={styles.drawerLabel}
 					/>
@@ -100,7 +99,11 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						icon={({ size }) => (
 							<Search
 								size={size}
-								color={currentRoute === "search-songs" ? primaryColor : foregroundColor}
+								color={
+									currentRoute === "search-songs"
+										? primaryColor
+										: foregroundColor
+								}
 							/>
 						)}
 						focused={currentRoute === "search-songs"}
@@ -110,7 +113,9 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						}}
 						activeTintColor={primaryColor}
 						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}
+						activeBackgroundColor={
+							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+						}
 						style={styles.drawerItem}
 						labelStyle={styles.drawerLabel}
 					/>

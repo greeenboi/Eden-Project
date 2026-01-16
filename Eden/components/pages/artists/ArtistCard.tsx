@@ -1,10 +1,10 @@
+import { BadgeCheck } from "lucide-react-native";
+import { Pressable, useColorScheme } from "react-native";
 import { View } from "@/components/Themed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
 import type { Artist } from "@/lib/actions/artists";
-import { BadgeCheck } from "lucide-react-native";
-import { Pressable, useColorScheme } from "react-native";
 
 interface ArtistCardProps {
 	artist: Artist;

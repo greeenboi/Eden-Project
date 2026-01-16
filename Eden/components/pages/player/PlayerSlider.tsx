@@ -1,7 +1,7 @@
+import Slider from "@react-native-community/slider";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
-import Slider from "@react-native-community/slider";
 
 interface PlayerSliderProps {
 	trackId?: string;

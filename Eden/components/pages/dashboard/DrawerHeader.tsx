@@ -1,6 +1,6 @@
 import { DrawerActions, useNavigation } from "@react-navigation/native";
-import { Menu, Search } from "lucide-react-native";
 import type { LucideIcon } from "lucide-react-native";
+import { Menu, Search } from "lucide-react-native";
 import type { ReactNode } from "react";
 import { Animated, Pressable } from "react-native";
 import { View } from "@/components/Themed";

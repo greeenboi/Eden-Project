@@ -1,9 +1,15 @@
-import { View } from "@/components/Themed";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { RefreshControl } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
 	ArtistCard,
 	ArtistsHeader,
 	ArtistsSearchBar,
 } from "@/components/pages/artists";
+import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,12 +21,6 @@ import {
 	fetchArtists,
 	searchArtists,
 } from "@/lib/actions/artists";
-import { FlashList } from "@shopify/flash-list";
-import { router } from "expo-router";
-import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");

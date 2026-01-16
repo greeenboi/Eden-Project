@@ -1,10 +1,3 @@
-import { View } from "@/components/Themed";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
-import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
@@ -18,6 +11,13 @@ import Reanimated, {
 	useAnimatedStyle,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { View } from "@/components/Themed";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
+import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 
 interface QueueItemProps {
 	track: QueueTrack;

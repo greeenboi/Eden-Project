@@ -1,11 +1,11 @@
+import { Clock, Disc } from "lucide-react-native";
+import { Image, Pressable } from "react-native";
 import { View } from "@/components/Themed";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { Track } from "@/lib/actions/tracks";
 import { formatDuration } from "@/lib/utils";
-import { Clock, Disc } from "lucide-react-native";
-import { Image, Pressable } from "react-native";
 
 interface MasonryTrack extends Track {
 	span: number;
@@ -33,18 +33,12 @@ const IMAGE_COLORS = [
 	"bg-chart-4/20",
 ];
 
-
-
 export function TrackCard({ item, index, onPress }: TrackCardProps) {
 	const imageColor = IMAGE_COLORS[index % IMAGE_COLORS.length];
 
 	return (
 		//add long press for action sheet
-		<Pressable
-			
-			onPress={() => onPress(item.id)}
-			style={{ padding: 4 }}
-		>
+		<Pressable onPress={() => onPress(item.id)} style={{ padding: 4 }}>
 			<Card className="bg-transparent border-0 p-0">
 				<View
 					style={{ backgroundColor: "transparent" }}

@@ -1,30 +1,3 @@
-import { View } from "@/components/Themed";
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Text } from "@/components/ui/text";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
-import type { Album } from "@/lib/actions/albums";
-import type { Artist } from "@/lib/actions/artists";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import {
-	searchTracks,
-	searchWithRelated
-} from "@/lib/actions/search";
-import type { Track } from "@/lib/actions/tracks";
-import { formatDuration } from "@/lib/utils";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
@@ -48,6 +21,30 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { View } from "@/components/Themed";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
+import type { Album } from "@/lib/actions/albums";
+import type { Artist } from "@/lib/actions/artists";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { searchTracks, searchWithRelated } from "@/lib/actions/search";
+import type { Track } from "@/lib/actions/tracks";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { formatDuration } from "@/lib/utils";
 
 type SearchType = "all" | "title" | "artist";
 
@@ -95,9 +92,7 @@ function ArtistCircleCard({
 				</AvatarFallback>
 			</Avatar>
 			{artist.verified && (
-				<View
-					className="absolute top-0 right-0 w-5 h-5 rounded-full items-center justify-center bg-success"
-				>
+				<View className="absolute top-0 right-0 w-5 h-5 rounded-full items-center justify-center bg-success">
 					<BadgeCheck size={12} color={themeColors.successForeground} />
 				</View>
 			)}
@@ -437,7 +432,12 @@ export default function SearchSongsScreen() {
 				// Artist-only search with related content
 				const result = await searchWithRelated(
 					query,
-					{ artistLimit: 50, trackLimit: 0, albumLimit: 20, relatedTracksLimit: 30 },
+					{
+						artistLimit: 50,
+						trackLimit: 0,
+						albumLimit: 20,
+						relatedTracksLimit: 30,
+					},
 					controller.signal,
 				);
 				setArtists(result.artists);
@@ -455,7 +455,12 @@ export default function SearchSongsScreen() {
 				// Search all with related content
 				const result = await searchWithRelated(
 					query,
-					{ artistLimit: 10, trackLimit: 30, albumLimit: 10, relatedTracksLimit: 20 },
+					{
+						artistLimit: 10,
+						trackLimit: 30,
+						albumLimit: 10,
+						relatedTracksLimit: 20,
+					},
 					controller.signal,
 				);
 				setArtists(result.artists);
@@ -531,7 +536,12 @@ export default function SearchSongsScreen() {
 			const trackIndex = queueTracks.findIndex((t) => t.id === trackId);
 			const selectedTrack = queueTracks[trackIndex];
 			if (selectedTrack && queueTracks.length > 0) {
-				playTrackWithQueue(selectedTrack, queueTracks, trackIndex, searchSource);
+				playTrackWithQueue(
+					selectedTrack,
+					queueTracks,
+					trackIndex,
+					searchSource,
+				);
 			}
 		},
 		[queueTracks, playTrackWithQueue, searchSource],
@@ -810,10 +820,7 @@ export default function SearchSongsScreen() {
 							{/* All Tracks - Vertical List */}
 							{showTracksSection && allTracks.length > 0 && (
 								<View className="mb-6">
-									<SectionHeader
-										title="All Tracks"
-										count={allTracks.length}
-									/>
+									<SectionHeader title="All Tracks" count={allTracks.length} />
 									{allTracks.map((track, index) => (
 										<TrackListItem
 											key={track.id}

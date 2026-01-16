@@ -1,10 +1,10 @@
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { Menu, Users } from "lucide-react-native";
+import { Pressable } from "react-native";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
-import { Menu, Users } from "lucide-react-native";
-import { Pressable } from "react-native";
 
 export function ArtistsHeader() {
 	const navigation = useNavigation();

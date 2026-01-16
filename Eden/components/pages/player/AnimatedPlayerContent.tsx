@@ -1,32 +1,32 @@
-import { View } from "@/components/Themed";
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import type { RepeatMode } from "@/lib/actions/queue";
 import {
-    ListMusic,
-    Music,
-    Pause,
-    Play,
-    SkipBack,
-    SkipForward,
+	ListMusic,
+	Music,
+	Pause,
+	Play,
+	SkipBack,
+	SkipForward,
 } from "lucide-react-native";
 import { memo, useEffect } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    StyleSheet,
-    useWindowDimensions,
+	ActivityIndicator,
+	Image,
+	Pressable,
+	StyleSheet,
+	useWindowDimensions,
 } from "react-native";
 import Animated, {
-    Easing,
-    Extrapolation,
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring
+	Easing,
+	Extrapolation,
+	interpolate,
+	useAnimatedStyle,
+	useSharedValue,
+	withSpring,
 } from "react-native-reanimated";
+import { View } from "@/components/Themed";
+import { Card, CardContent } from "@/components/ui/card";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Text } from "@/components/ui/text";
+import type { RepeatMode } from "@/lib/actions/queue";
 import { PlayerControls } from "./PlayerControls";
 import { PlayerSlider } from "./PlayerSlider";
 import { PlayerTrackInfo } from "./PlayerTrackInfo";
@@ -247,7 +247,9 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 				<Animated.View style={[styles.miniContainer, miniContainerStyle]}>
 					{/* Artwork */}
 					<Pressable onPress={onExpand}>
-						<Animated.View style={[styles.artworkContainer, artworkContainerStyle]}>
+						<Animated.View
+							style={[styles.artworkContainer, artworkContainerStyle]}
+						>
 							<Card className="w-full h-full p-0 overflow-hidden">
 								<CardContent className="p-0 w-full h-full bg-primary/10">
 									{artworkUrl ? (
@@ -290,7 +292,10 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 						>
 							<SkipBack color={themeColors.tint} size={22} />
 						</Pressable>
-						<Pressable onPress={onTogglePlayback} disabled={!isLoaded || loadingStream}>
+						<Pressable
+							onPress={onTogglePlayback}
+							disabled={!isLoaded || loadingStream}
+						>
 							<View style={styles.miniPlayButton}>
 								{isLoaded ? (
 									isPlaying ? (
@@ -319,7 +324,9 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 				<Animated.View style={[styles.fullContainer, fullContainerStyle]}>
 					{/* Artwork */}
 					<View style={styles.fullArtworkWrapper}>
-						<Animated.View style={[styles.artworkContainer, artworkContainerStyle]}>
+						<Animated.View
+							style={[styles.artworkContainer, artworkContainerStyle]}
+						>
 							<Card className="w-full h-full p-0 overflow-hidden">
 								<CardContent className="p-0 w-full h-full bg-primary/10">
 									{artworkUrl ? (

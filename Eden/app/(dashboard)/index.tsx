@@ -1,16 +1,3 @@
-import { View } from "@/components/Themed";
-import {
-	DashboardHeader,
-	EmptyTrackList,
-	LoadingMoreTracks,
-	LoadingSkeleton,
-	TrackCard,
-} from "@/components/pages/dashboard";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,9 +9,20 @@ import {
 	RefreshControl,
 	useColorScheme,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
-	SafeAreaView,
-} from "react-native-safe-area-context";
+	DashboardHeader,
+	EmptyTrackList,
+	LoadingMoreTracks,
+	LoadingSkeleton,
+	TrackCard,
+} from "@/components/pages/dashboard";
+import { View } from "@/components/Themed";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Colors from "@/constants/Colors";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { type Track, useTrackStore } from "@/lib/actions/tracks";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";

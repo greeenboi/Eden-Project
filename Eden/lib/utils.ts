@@ -34,8 +34,8 @@ export function generateGradientColors(seed: string): [string, string, string] {
 }
 
 export function getInitials(name: string | undefined): string {
-	if (name === undefined){
-		return "null"
+	if (name === undefined) {
+		return "null";
 	}
 	return name
 		.split(" ")

@@ -1,7 +1,8 @@
-import { type PropsWithChildren, createContext, use, useEffect } from "react";
+import { createContext, type PropsWithChildren, use, useEffect } from "react";
 import type { User } from "./auth-store";
 import { useAuthStore } from "./auth-store";
 import { useStorageState } from "./useStorageState";
+
 interface AuthContextType {
 	signIn: (email: string, password: string) => Promise<void>;
 	signUp: (email: string, password: string, name: string) => Promise<void>;

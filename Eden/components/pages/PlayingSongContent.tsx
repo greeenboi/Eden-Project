@@ -1,7 +1,11 @@
+import { router } from "expo-router";
+import { AlertCircle, ArrowLeft } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StyleSheet, useColorScheme } from "react-native";
 import { View } from "@/components/Themed";
-import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
@@ -9,10 +13,6 @@ import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import type { RepeatMode } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
-import { router } from "expo-router";
-import { AlertCircle, ArrowLeft } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet, useColorScheme } from "react-native";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 
 type PlayingSongContentProps = {
@@ -84,20 +84,14 @@ export function PlayingSongContent({
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	const {
-		player,
-		status,
-		loadingStream,
-		toggleMute,
-		togglePlayback,
-		isMuted,
-	} = useTrackAudioPlayer({
-		trackId,
-		fetchStream: getStreamingUrl,
-		enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
-		updateInterval: 100,
-		onTrackEnd,
-	});
+	const { player, status, loadingStream, toggleMute, togglePlayback, isMuted } =
+		useTrackAudioPlayer({
+			trackId,
+			fetchStream: getStreamingUrl,
+			enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
+			updateInterval: 100,
+			onTrackEnd,
+		});
 
 	// Sync playback state to shared store for handle slider
 	const {

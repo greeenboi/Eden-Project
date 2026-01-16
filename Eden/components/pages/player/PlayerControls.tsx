@@ -1,5 +1,3 @@
-import { View } from "@/components/Themed";
-import type { RepeatMode } from "@/lib/actions/queue";
 import {
 	Pause,
 	Play,
@@ -10,6 +8,8 @@ import {
 	SkipForward,
 } from "lucide-react-native";
 import { ActivityIndicator, Pressable } from "react-native";
+import { View } from "@/components/Themed";
+import type { RepeatMode } from "@/lib/actions/queue";
 
 interface PlayerControlsProps {
 	isLoaded: boolean;
@@ -65,25 +65,23 @@ export function PlayerControls({
 			style={{ backgroundColor: "transparent" }}
 			className="flex-row items-center justify-center gap-6 mb-4"
 		>
-			<Pressable onPress={onToggleRepeat} style={{  }}>
-				{
-					isRepeatActive ? 
+			<Pressable onPress={onToggleRepeat} style={{}}>
+				{isRepeatActive ? (
 					<Repeat1
 						size={24}
 						color={isRepeatActive ? themeColors.primary : themeColors.tint}
 						style={{ opacity: isRepeatActive ? 1 : 0.8 }}
 					/>
-					:
+				) : (
 					<RepeatIcon
 						size={24}
 						color={isRepeatActive ? themeColors.primary : themeColors.tint}
 						style={{ opacity: isRepeatActive ? 1 : 0.8 }}
 					/>
-				}
+				)}
 			</Pressable>
 
 			<Pressable
-				
 				onPress={onSkipPrevious}
 				disabled={!hasPrevious}
 				style={{ opacity: hasPrevious ? 1 : 0.5 }}
@@ -92,7 +90,6 @@ export function PlayerControls({
 			</Pressable>
 
 			<Pressable
-				
 				onPress={onTogglePlayback}
 				disabled={!isLoaded || loadingStream}
 			>
@@ -122,7 +119,6 @@ export function PlayerControls({
 
 			<Pressable
 				onPress={onSkipNext}
-				
 				disabled={!hasNext}
 				style={{ opacity: hasNext ? 1 : 0.4 }}
 			>

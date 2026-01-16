@@ -1,7 +1,7 @@
 import { API_BASE_URL } from "../../constants/constants";
+import type { Album } from "./albums";
 import type { Artist } from "./artists";
 import type { Track } from "./tracks";
-import type { Album } from "./albums";
 
 // Request timeout in milliseconds
 const REQUEST_TIMEOUT = 15000;

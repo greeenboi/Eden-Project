@@ -1,8 +1,8 @@
+import { Music } from "lucide-react-native";
+import { Image } from "react-native";
 import { View } from "@/components/Themed";
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
-import { Music } from "lucide-react-native";
-import { Image } from "react-native";
 
 interface PlayerArtworkProps {
 	artworkUrl?: string | null;
@@ -28,9 +28,7 @@ export function PlayerArtwork({ artworkUrl, explicit }: PlayerArtworkProps) {
 					resizeMode="cover"
 				/>
 			) : (
-				<View
-					className="w-full h-full items-center justify-center bg-primary/10"
-				>
+				<View className="w-full h-full items-center justify-center bg-primary/10">
 					<Music size={120} className="text-primary opacity-50" />
 				</View>
 			)}
