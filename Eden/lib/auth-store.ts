@@ -22,7 +22,7 @@ interface AuthState {
 	signup: (email: string, password: string, name: string) => Promise<void>;
 	logout: () => Promise<void>;
 	clearError: () => void;
-	initializeAuth: (storedToken: string | null) => void;
+	initializeAuth: (storedToken: string | null) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -37,11 +37,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 	clearError: () => set({ error: null }),
 
-	initializeAuth: (storedToken) => {
-		if (storedToken) {
-			set({ token: storedToken, isLoading: false });
-			// Optionally validate the token with a /me endpoint if you have one
-		} else {
+	initializeAuth: async (storedToken) => {
+		if (!storedToken) {
+			set({ isLoading: false });
+			return;
+		}
+
+		set({ token: storedToken, isLoading: true });
+
+		try {
+			const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+				method: "GET",
+				headers: {
+					Authorization: `Bearer ${storedToken}`,
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (response.ok) {
+				const data = await response.json();
+				set({ user: data.user, isLoading: false });
+			} else {
+				// Token is invalid/expired, clear auth state
+				await setStorageItemAsync("auth-token", null);
+				set({ token: null, user: null, isLoading: false });
+			}
+		} catch {
+			// Network error - keep token, user will be null but can retry
 			set({ isLoading: false });
 		}
 	},

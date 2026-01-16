@@ -59,8 +59,8 @@ export default function RootLayout() {
 function RootLayoutNav() {
 	const colorScheme = useColorScheme();
 	const { session, isLoading } = useSession();
-	console.log(session);
-	console.log(!!session);
+	// console.log(session);
+	// console.log(!!session);
 
 	// Wait for auth initialization
 	if (isLoading) {
@@ -79,7 +79,6 @@ function RootLayoutNav() {
 
 					<Stack.Protected guard={!!session}>
 						<Stack.Screen name="(dashboard)" />
-						<Stack.Screen name="(home)" />
 					</Stack.Protected>
 				</Stack>
 				<PortalHost />

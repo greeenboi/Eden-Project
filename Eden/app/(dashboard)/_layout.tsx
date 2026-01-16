@@ -62,6 +62,14 @@ export default function AppLayout() {
 						lazy: false
 					}}
 				/>
+				<Drawer.Screen
+					name="settings"
+					options={{
+						drawerLabel: "Settings",
+						drawerItemStyle: { display: "none" },
+						lazy: false
+					}}
+				/>
 
 				{/* Modal screens - hidden from drawer */}
 				<Drawer.Screen

@@ -1,17 +1,19 @@
-import { createContext, type PropsWithChildren, use, useEffect } from "react";
+import { type PropsWithChildren, createContext, use, useEffect } from "react";
+import type { User } from "./auth-store";
 import { useAuthStore } from "./auth-store";
 import { useStorageState } from "./useStorageState";
-
-const AuthContext = createContext<{
+interface AuthContextType {
 	signIn: (email: string, password: string) => Promise<void>;
 	signUp: (email: string, password: string, name: string) => Promise<void>;
 	signOut: () => void;
 	session?: string | null;
-	user: ReturnType<typeof useAuthStore>["user"];
+	user: User | null;
 	isLoading: boolean;
 	error: string | null;
 	clearError: () => void;
-}>({
+}
+
+const AuthContext = createContext<AuthContextType>({
 	signIn: async () => {},
 	signUp: async () => {},
 	signOut: () => null,

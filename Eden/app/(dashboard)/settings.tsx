@@ -31,11 +31,14 @@ import {
 	TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useSession } from "@/lib/ctx";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
+import { generateGradientColors, getInitials } from "@/lib/utils";
+import { DrawerActions } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as MailComposer from "expo-mail-composer";
-import { router } from "expo-router";
+import { useNavigation } from "expo-router";
 import {
-	ArrowLeft,
 	Bell,
 	Bug,
 	Code,
@@ -43,45 +46,20 @@ import {
 	Heart,
 	LogOut,
 	Mail,
+	Menu,
 	Moon,
 	Music,
+	Settings,
 	Shield,
 	User,
 	Volume2,
-	Wifi,
+	Wifi
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Generate gradient colors based on user ID or email
-function generateGradientColors(seed: string): [string, string, string] {
-	let hash = 0;
-	for (let i = 0; i < seed.length; i++) {
-		const char = seed.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash = hash & hash;
-	}
 
-	const hue1 = Math.abs(hash % 360);
-	const hue2 = (hue1 + 45) % 360;
-	const hue3 = (hue1 + 90) % 360;
-
-	return [
-		`hsl(${hue1}, 70%, 50%)`,
-		`hsl(${hue2}, 65%, 45%)`,
-		`hsl(${hue3}, 60%, 40%)`,
-	];
-}
-
-function getInitials(name: string): string {
-	return name
-		.split(" ")
-		.map((n) => n[0])
-		.join("")
-		.toUpperCase()
-		.slice(0, 2);
-}
 
 // Setting item wrapper with tooltip for "coming soon" features
 function SettingItemWithTooltip({
@@ -98,7 +76,7 @@ function SettingItemWithTooltip({
 	return (
 		<Tooltip delayDuration={300}>
 			<TooltipTrigger asChild>
-				<View className="opacity-50">{children}</View>
+				<View className="">{children}</View>
 			</TooltipTrigger>
 			<TooltipContent>
 				<Text>Coming Soon</Text>
@@ -116,6 +94,15 @@ export default function SettingsScreen() {
 	const [bugReportOpen, setBugReportOpen] = useState(false);
 	const [bugTitle, setBugTitle] = useState("");
 	const [bugDescription, setBugDescription] = useState("");
+	const navigation = useNavigation();
+	const isDark = useIsDark();
+	const foregroundColor = isDark
+		? THEME.dark.foreground
+		: THEME.light.foreground;
+
+	const handleOpenDrawer = () => {
+		navigation.dispatch(DrawerActions.openDrawer());
+	};
 
 	const gradientColors = useMemo(
 		() => generateGradientColors(user?.email || user?.name || "default"),
@@ -224,12 +211,16 @@ export default function SettingsScreen() {
 		<SafeAreaView className="flex-1">
 			<View className="flex-1">
 				{/* Header */}
-				<View className="flex-row items-center justify-between p-4 bg-transparent">
-					<Button variant="ghost" size="sm" onPress={() => router.back()}>
-						<ArrowLeft size={24} />
-					</Button>
-					<Text className="text-xl font-bold">Settings</Text>
-					<View className="w-10 bg-transparent" />
+				<View className=" px-4 py-3 flex-row items-center justify-between">
+					<View className=" flex-row items-center gap-3">
+						<Settings size={28} className="text-primary" color={foregroundColor} />
+						<Text style={{ color: foregroundColor }} className="text-3xl font-bold">
+							Artists
+						</Text>
+					</View>
+					<Pressable onPress={handleOpenDrawer}>
+						<Menu size={28} color={foregroundColor} />
+					</Pressable>
 				</View>
 
 				<ScrollView className="flex-1" contentContainerClassName="p-4">
@@ -251,17 +242,17 @@ export default function SettingsScreen() {
 								/>
 								<Avatar
 									alt={user?.name || "User"}
-									className="w-24 h-24 bg-transparent"
+									className="w-24 h-24 "
 								>
-									<AvatarFallback className="bg-transparent">
+									<AvatarFallback className="">
 										<Text className="text-3xl text-white font-bold">
-											{user?.name ? getInitials(user.name) : "U"}
+											{getInitials(user?.name)}
 										</Text>
 									</AvatarFallback>
 								</Avatar>
 							</View>
 							<Text className="text-2xl font-bold mb-1">{user?.name}</Text>
-							<Text className="text-base opacity-70">{user?.email}</Text>
+							<Text className="text-base ">{user?.email}</Text>
 							<Badge className="mt-2">
 								<Text className="capitalize">{user?.role || "user"}</Text>
 							</Badge>
@@ -275,11 +266,11 @@ export default function SettingsScreen() {
 						</CardHeader>
 						<CardContent className="gap-3">
 							{accountInfo.map((item, index) => (
-								<View key={item.label} className="bg-transparent">
-									<View className="flex-row items-center gap-3 py-2 bg-transparent">
-										<item.icon size={20} className="opacity-70" />
-										<View className="flex-1 bg-transparent">
-											<Text className="text-sm opacity-70 mb-1">
+								<View key={item.label} className="">
+									<View className="flex-row items-center gap-3 py-2">
+										<item.icon size={20} className="" />
+										<View className="flex-1 ">
+											<Text className="text-sm  mb-1">
 												{item.label}
 											</Text>
 											<Text className="text-base font-medium">{item.value}</Text>
@@ -299,17 +290,17 @@ export default function SettingsScreen() {
 							</CardHeader>
 							<CardContent className="gap-3">
 								{section.items.map((item, itemIndex) => (
-									<View key={item.label} className="bg-transparent">
+									<View key={item.label} className="">
 										<SettingItemWithTooltip isComingSoon={item.isComingSoon}>
 											{item.type === "switch" ? (
-												<View className="flex-row items-center justify-between py-2 bg-transparent">
-													<View className="flex-row items-center gap-3 flex-1 bg-transparent">
-														<item.icon size={20} className="opacity-70" />
-														<View className="flex-1 bg-transparent">
+												<View className="flex-row items-center justify-between py-2">
+													<View className="flex-row items-center gap-3 flex-1">
+														<item.icon size={20} className="" />
+														<View className="flex-1 ">
 															<Label nativeID={`switch-${section.title}-${item.label}`}>
 																{item.label}
 															</Label>
-															<Text className="text-sm opacity-70">
+															<Text className="text-sm ">
 																{item.description}
 															</Text>
 														</View>
@@ -325,19 +316,18 @@ export default function SettingsScreen() {
 												<Pressable
 													onPress={item.isComingSoon ? undefined : item.action}
 												>
-													<View className="flex-row items-center justify-between py-2 bg-transparent">
-														<View className="flex-row items-center gap-3 flex-1 bg-transparent">
-															<item.icon size={20} className="opacity-70" />
-															<View className="flex-1 bg-transparent">
+													<View className="flex-row items-center justify-between py-2 ">
+														<View className="flex-row items-center gap-3 flex-1 ">
+															<item.icon size={20} className="" />
+															<View className="flex-1 ">
 																<Text className="text-base font-medium">
 																	{item.label}
 																</Text>
-																<Text className="text-sm opacity-70">
+																<Text className="text-sm ">
 																	{item.description}
 																</Text>
 															</View>
 														</View>
-														<Text className="opacity-50">→</Text>
 													</View>
 												</Pressable>
 											)}
@@ -358,31 +348,30 @@ export default function SettingsScreen() {
 							<Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
 								<DialogTrigger asChild>
 									<Pressable>
-										<View className="flex-row items-center justify-between py-2 bg-transparent">
-											<View className="flex-row items-center gap-3 bg-transparent">
-												<Bug size={20} className="opacity-70" />
-												<View className="bg-transparent">
+										<View className="flex-row items-center justify-between py-2 ">
+											<View className="flex-row items-center gap-3 ">
+												<Bug size={20} className="" />
+												<View className="">
 													<Text className="text-base font-medium">
 														Report a Bug
 													</Text>
-													<Text className="text-sm opacity-70">
+													<Text className="text-sm ">
 														Help us improve Eden
 													</Text>
 												</View>
 											</View>
-											<Text className="opacity-50">→</Text>
 										</View>
 									</Pressable>
 								</DialogTrigger>
-								<DialogContent className="w-[90%] max-w-md">
+								<DialogContent className="">
 									<DialogHeader>
 										<DialogTitle>Report a Bug</DialogTitle>
 										<DialogDescription>
 											Describe the issue you encountered
 										</DialogDescription>
 									</DialogHeader>
-									<View className="gap-4 bg-transparent">
-										<View className="gap-2 bg-transparent">
+									<View className="gap-4 ">
+										<View className="gap-2 ">
 											<Label nativeID="bug-title">Title</Label>
 											<Input
 												placeholder="Brief summary of the issue"
@@ -391,7 +380,7 @@ export default function SettingsScreen() {
 												aria-labelledby="bug-title"
 											/>
 										</View>
-										<View className="gap-2 bg-transparent">
+										<View className="gap-2 ">
 											<Label nativeID="bug-description">Description</Label>
 											<Textarea
 												placeholder="Describe what happened, what you expected, and steps to reproduce..."
@@ -439,7 +428,7 @@ export default function SettingsScreen() {
 							<Badge variant="outline">
 								<Text>Version 1.0.0</Text>
 							</Badge>
-							<Text className="text-center opacity-70 mt-3 text-sm">
+							<Text className="text-center  mt-3 text-sm">
 								A beautiful music streaming app built with modern technologies
 							</Text>
 						</CardContent>
@@ -448,21 +437,21 @@ export default function SettingsScreen() {
 					{/* Developer Credits */}
 					<Card className="mb-4">
 						<CardHeader>
-							<View className="flex-row items-center gap-2 bg-transparent">
+							<View className="flex-row items-center gap-2 ">
 								<Code size={18} />
 								<CardTitle>Developer</CardTitle>
 							</View>
 							<CardDescription>Built with ❤️ by</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<View className="py-2 bg-transparent">
+							<View className="py-2 ">
 								<Text className="text-base font-semibold mb-1">
 									Suvan Gowrishanker
 								</Text>
-								<Text className="text-sm opacity-70 mb-1">Lead Developer</Text>
-								<View className="flex-row items-center gap-2 bg-transparent">
-									<Mail size={14} className="opacity-50" />
-									<Text className="text-sm opacity-70">
+								<Text className="text-sm  mb-1">Lead Developer</Text>
+								<View className="flex-row items-center gap-2 ">
+									<Mail size={14} className="" />
+									<Text className="text-sm ">
 										suvan.gowrishanker.204@gmail.com
 									</Text>
 								</View>
@@ -477,7 +466,7 @@ export default function SettingsScreen() {
 							<CardDescription>Powered by amazing open-source tools</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<View className="flex-row flex-wrap gap-2 bg-transparent">
+							<View className="flex-row flex-wrap gap-2 ">
 								{technologies.map((tech) => (
 									<Badge key={tech.name} variant="secondary">
 										<Text>{tech.name}</Text>
@@ -488,12 +477,12 @@ export default function SettingsScreen() {
 					</Card>
 
 					{/* Footer */}
-					<View className="items-center py-6 mb-8 bg-transparent">
+					<View className="items-center py-6 mb-8 ">
 						<Heart size={20} className="text-destructive mb-2" />
-						<Text className="text-center opacity-70 text-sm">
+						<Text className="text-center  text-sm">
 							Made with passion for music lovers
 						</Text>
-						<Text className="text-xs opacity-50 mt-1">
+						<Text className="text-xs  mt-1">
 							© 2025 Eden Music. All rights reserved.
 						</Text>
 					</View>

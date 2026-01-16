@@ -1,22 +1,21 @@
+import { View } from "@/components/Themed";
+import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 import {
+	type DrawerContentComponentProps,
 	DrawerContentScrollView,
 	DrawerItem,
-	type DrawerContentComponentProps,
 } from "@react-navigation/drawer";
 import { router } from "expo-router";
 import {
 	Music,
 	Search,
 	Settings,
-	User,
 	Users,
-	X,
+	X
 } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const isDark = useIsDark();
@@ -123,19 +122,6 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
 						Account
 					</Text>
-					<DrawerItem
-						label="Profile"
-						icon={({ size }) => (
-							<User size={size} color={foregroundColor} />
-						)}
-						onPress={() => {
-							router.push("/account");
-							props.navigation.closeDrawer();
-						}}
-						inactiveTintColor={foregroundColor}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
 					<DrawerItem
 						label="Settings"
 						icon={({ size }) => (
