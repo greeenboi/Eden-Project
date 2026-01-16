@@ -1,19 +1,20 @@
 import { View } from "@/components/Themed";
+import type { RepeatMode } from "@/lib/actions/queue";
 import {
-    Pause,
-    Play,
-    Repeat,
-    Shuffle,
-    SkipBack,
-    SkipForward,
+	Pause,
+	Play,
+	Repeat,
+	Repeat1,
+	Shuffle,
+	SkipBack,
+	SkipForward,
 } from "lucide-react-native";
 import { ActivityIndicator, Pressable } from "react-native";
 
 interface PlayerControlsProps {
 	isLoaded: boolean;
 	isPlaying: boolean;
-	isLooping: boolean;
-	isMuted: boolean;
+	isMuted?: boolean;
 	loadingStream: boolean;
 	themeColors: {
 		tint: string;
@@ -25,9 +26,12 @@ interface PlayerControlsProps {
 	hasPrevious?: boolean;
 	/** Whether shuffle is enabled */
 	isShuffled?: boolean;
+	/** Current repeat mode */
+	repeatMode?: RepeatMode;
 	onTogglePlayback: () => void;
-	onToggleLoop: () => void;
-	onToggleMute: () => void;
+	/** Toggle repeat mode (off -> all -> one -> off) */
+	onToggleRepeat?: () => void;
+	onToggleMute?: () => void;
 	onToggleShuffle?: () => void;
 	/** Skip to next track in queue */
 	onSkipNext?: () => void;
@@ -38,34 +42,44 @@ interface PlayerControlsProps {
 export function PlayerControls({
 	isLoaded,
 	isPlaying,
-	isLooping,
 	isMuted,
 	loadingStream,
 	themeColors,
 	hasNext = false,
 	hasPrevious = false,
 	isShuffled = false,
+	repeatMode = "off",
 	onTogglePlayback,
-	onToggleLoop,
+	onToggleRepeat,
 	onToggleMute,
 	onToggleShuffle,
 	onSkipNext,
 	onSkipPrevious,
 }: PlayerControlsProps) {
+	// Determine repeat icon and color based on repeat mode
+	const isRepeatActive = repeatMode !== "off";
+	const RepeatIcon = repeatMode === "one" ? Repeat1 : Repeat;
+
 	return (
 		<View
 			style={{ backgroundColor: "transparent" }}
 			className="flex-row items-center justify-center gap-6 mb-4"
 		>
-			<Pressable
-				
-				onPress={onToggleLoop}
-			>
-				<Repeat
-					size={24}
-					color={isLooping ? themeColors.primary : themeColors.tint}
-					style={{ opacity: isLooping ? 1 : 0.8 }}
-				/>
+			<Pressable onPress={onToggleRepeat} style={{  }}>
+				{
+					isRepeatActive ? 
+					<Repeat1
+						size={24}
+						color={isRepeatActive ? themeColors.primary : themeColors.tint}
+						style={{ opacity: isRepeatActive ? 1 : 0.8 }}
+					/>
+					:
+					<RepeatIcon
+						size={24}
+						color={isRepeatActive ? themeColors.primary : themeColors.tint}
+						style={{ opacity: isRepeatActive ? 1 : 0.8 }}
+					/>
+				}
 			</Pressable>
 
 			<Pressable
@@ -115,10 +129,7 @@ export function PlayerControls({
 				<SkipForward color={themeColors.tint} size={32} />
 			</Pressable>
 
-			<Pressable
-				
-				onPress={onToggleShuffle}
-			>
+			<Pressable onPress={onToggleShuffle}>
 				<Shuffle
 					size={24}
 					color={isShuffled ? themeColors.primary : themeColors.tint}
