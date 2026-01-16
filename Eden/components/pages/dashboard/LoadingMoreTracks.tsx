@@ -1,8 +1,7 @@
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, useColorScheme } from "react-native";
 
 export function LoadingMoreTracks() {
 	const colorScheme = useColorScheme();

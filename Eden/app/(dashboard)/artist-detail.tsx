@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
@@ -30,7 +29,7 @@ import {
 	Play
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {

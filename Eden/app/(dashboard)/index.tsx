@@ -7,7 +7,6 @@ import {
 	TrackCard,
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
@@ -21,6 +20,7 @@ import {
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
 	RefreshControl,
+	useColorScheme,
 } from "react-native";
 import {
 	SafeAreaView,

@@ -2,7 +2,6 @@ import { View } from "@/components/Themed";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
@@ -10,13 +9,13 @@ import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
 import { useCallback, useMemo } from "react";
-import { Image, Pressable } from "react-native";
+import { Image, Pressable, useColorScheme } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
-    Extrapolation,
-    interpolate,
-    type SharedValue,
-    useAnimatedStyle,
+	Extrapolation,
+	interpolate,
+	type SharedValue,
+	useAnimatedStyle,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 

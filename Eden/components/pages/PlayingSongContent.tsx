@@ -4,7 +4,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import type { RepeatMode } from "@/lib/actions/queue";
@@ -13,7 +12,7 @@ import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, useColorScheme } from "react-native";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 
 type PlayingSongContentProps = {

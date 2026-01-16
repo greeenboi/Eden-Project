@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { Album } from "@/lib/actions/albums";
@@ -44,6 +43,8 @@ import {
 	Image,
 	Pressable,
 	ScrollView,
+	StyleSheet,
+	useColorScheme,
 	useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -835,3 +836,135 @@ export default function SearchSongsScreen() {
 		</SafeAreaView>
 	);
 }
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+	},
+	header: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		paddingHorizontal: 16,
+		paddingVertical: 12,
+	},
+	searchContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: 16,
+		paddingBottom: 12,
+	},
+	searchInputWrapper: {
+		flex: 1,
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: "rgba(128, 128, 128, 0.1)",
+		borderRadius: 12,
+		height: 52,
+	},
+	searchIcon: {
+		position: "absolute",
+		left: 14,
+		zIndex: 1,
+	},
+	searchInput: {
+		paddingLeft: 32,
+	},
+	clearButton: {
+		padding: 8,
+	},
+	accordionContainer: {
+		paddingHorizontal: 16,
+		marginBottom: 8,
+	},
+	filtersContent: {
+		paddingVertical: 8,
+	},
+	resultsContainer: {
+		flex: 1,
+	},
+	resultsContent: {
+		paddingBottom: 100,
+	},
+	section: {
+		marginBottom: 24,
+	},
+	sectionHeader: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		paddingHorizontal: 16,
+		marginBottom: 12,
+	},
+	horizontalList: {
+		flexDirection: "row",
+		paddingHorizontal: 12,
+		gap: 12,
+	},
+	horizontalListContent: {
+		paddingHorizontal: 16,
+	},
+	artistCard: {
+		alignItems: "center",
+		marginRight: 12,
+	},
+	verifiedBadge: {
+		position: "absolute",
+		top: 0,
+		right: 0,
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	trackCard: {
+		marginRight: 12,
+	},
+	trackArtwork: {
+		borderRadius: 8,
+		overflow: "hidden",
+	},
+	albumCard: {
+		marginRight: 12,
+	},
+	albumArtwork: {
+		borderRadius: 8,
+		overflow: "hidden",
+	},
+	trackListItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingHorizontal: 16,
+		paddingVertical: 8,
+		gap: 12,
+	},
+	trackListArtwork: {
+		width: 56,
+		height: 56,
+		borderRadius: 6,
+		overflow: "hidden",
+	},
+	trackListInfo: {
+		flex: 1,
+		justifyContent: "center",
+		gap: 2,
+	},
+	emptyState: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingVertical: 80,
+		paddingHorizontal: 32,
+	},
+	errorContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		padding: 16,
+		marginHorizontal: 16,
+		marginBottom: 16,
+		backgroundColor: "rgba(239, 68, 68, 0.1)",
+		borderRadius: 8,
+	},
+});
