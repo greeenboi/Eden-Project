@@ -1,14 +1,27 @@
+import { DrawerActions } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as MailComposer from "expo-mail-composer";
+import { useNavigation } from "expo-router";
+import {
+	Bell,
+	Bug,
+	Download,
+	Heart,
+	LogOut,
+	Mail,
+	Menu,
+	Settings,
+	User,
+	Volume2,
+	Wifi,
+} from "lucide-react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/Themed";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogClose,
@@ -25,72 +38,16 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useSession } from "@/lib/ctx";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
 import { generateGradientColors, getInitials } from "@/lib/utils";
-import { DrawerActions } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
-import * as MailComposer from "expo-mail-composer";
-import { useNavigation } from "expo-router";
-import {
-	Bell,
-	Bug,
-	Code,
-	Download,
-	Heart,
-	LogOut,
-	Mail,
-	Menu,
-	Moon,
-	Music,
-	Settings,
-	Shield,
-	User,
-	Volume2,
-	Wifi
-} from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-
-
-// Setting item wrapper with tooltip for "coming soon" features
-function SettingItemWithTooltip({
-	children,
-	isComingSoon,
-}: {
-	children: React.ReactNode;
-	isComingSoon: boolean;
-}) {
-	if (!isComingSoon) {
-		return <>{children}</>;
-	}
-
-	return (
-		<Tooltip delayDuration={300}>
-			<TooltipTrigger asChild>
-				<View className="">{children}</View>
-			</TooltipTrigger>
-			<TooltipContent>
-				<Text>Coming Soon</Text>
-			</TooltipContent>
-		</Tooltip>
-	);
-}
 
 export default function SettingsScreen() {
 	const { signOut, user } = useSession();
 	const [notifications, setNotifications] = useState(true);
 	const [autoDownload, setAutoDownload] = useState(false);
 	const [wifiOnly, setWifiOnly] = useState(true);
-	const [darkMode, setDarkMode] = useState(false);
 	const [bugReportOpen, setBugReportOpen] = useState(false);
 	const [bugTitle, setBugTitle] = useState("");
 	const [bugDescription, setBugDescription] = useState("");
@@ -99,6 +56,8 @@ export default function SettingsScreen() {
 	const foregroundColor = isDark
 		? THEME.dark.foreground
 		: THEME.light.foreground;
+
+	const cardColor = THEME.dark.card;
 
 	const handleOpenDrawer = () => {
 		navigation.dispatch(DrawerActions.openDrawer());
@@ -124,6 +83,8 @@ export default function SettingsScreen() {
 		}
 	};
 
+	// const comingSoon = ToastAndroid.show("Coming Soon", ToastAndroid.SHORT)
+
 	const settingsSections = [
 		{
 			title: "Playback",
@@ -132,7 +93,7 @@ export default function SettingsScreen() {
 					icon: Volume2,
 					label: "Audio Quality",
 					description: "High (320kbps)",
-					action: () => console.log("Audio quality"),
+					action: () => {},
 					type: "nav" as const,
 					isComingSoon: true,
 				},
@@ -162,20 +123,6 @@ export default function SettingsScreen() {
 			],
 		},
 		{
-			title: "Appearance",
-			items: [
-				{
-					icon: Moon,
-					label: "Dark Mode",
-					description: "Use dark theme",
-					value: darkMode,
-					onChange: setDarkMode,
-					type: "switch" as const,
-					isComingSoon: true,
-				},
-			],
-		},
-		{
 			title: "Notifications",
 			items: [
 				{
@@ -194,17 +141,7 @@ export default function SettingsScreen() {
 	const accountInfo = [
 		{ icon: User, label: "Name", value: user?.name || "User" },
 		{ icon: Mail, label: "Email", value: user?.email || "" },
-		{ icon: Shield, label: "Role", value: user?.role || "user" },
-	];
-
-	const technologies = [
-		{ name: "React Native", description: "Mobile framework" },
-		{ name: "Expo", description: "Development platform" },
-		{ name: "TypeScript", description: "Type-safe JavaScript" },
-		{ name: "Zustand", description: "State management" },
-		{ name: "Cloudflare Workers", description: "Backend API" },
-		{ name: "Drizzle ORM", description: "Database ORM" },
-		{ name: "Hono", description: "Web framework" },
+		// { icon: Shield, label: "Role", value: user?.role || "user" },
 	];
 
 	return (
@@ -213,9 +150,16 @@ export default function SettingsScreen() {
 				{/* Header */}
 				<View className=" px-4 py-3 flex-row items-center justify-between">
 					<View className=" flex-row items-center gap-3">
-						<Settings size={28} className="text-primary" color={foregroundColor} />
-						<Text style={{ color: foregroundColor }} className="text-3xl font-bold">
-							Artists
+						<Settings
+							size={28}
+							className="text-primary"
+							color={foregroundColor}
+						/>
+						<Text
+							style={{ color: foregroundColor }}
+							className="text-3xl font-bold"
+						>
+							Settings
 						</Text>
 					</View>
 					<Pressable onPress={handleOpenDrawer}>
@@ -240,11 +184,8 @@ export default function SettingsScreen() {
 										bottom: 0,
 									}}
 								/>
-								<Avatar
-									alt={user?.name || "User"}
-									className="w-24 h-24 "
-								>
-									<AvatarFallback className="">
+								<Avatar alt={user?.name || "User"} className="w-24 h-24 ">
+									<AvatarFallback className="bg-transparent">
 										<Text className="text-3xl text-white font-bold">
 											{getInitials(user?.name)}
 										</Text>
@@ -253,9 +194,6 @@ export default function SettingsScreen() {
 							</View>
 							<Text className="text-2xl font-bold mb-1">{user?.name}</Text>
 							<Text className="text-base ">{user?.email}</Text>
-							<Badge className="mt-2">
-								<Text className="capitalize">{user?.role || "user"}</Text>
-							</Badge>
 						</CardContent>
 					</Card>
 
@@ -266,14 +204,24 @@ export default function SettingsScreen() {
 						</CardHeader>
 						<CardContent className="gap-3">
 							{accountInfo.map((item, index) => (
-								<View key={item.label} className="">
-									<View className="flex-row items-center gap-3 py-2">
+								<View
+									key={item.label}
+									className=""
+									style={{ backgroundColor: cardColor }}
+								>
+									<View
+										className="flex-row items-center gap-3 py-2"
+										style={{ backgroundColor: cardColor }}
+									>
 										<item.icon size={20} className="" />
-										<View className="flex-1 ">
-											<Text className="text-sm  mb-1">
-												{item.label}
+										<View
+											className="flex-1 "
+											style={{ backgroundColor: cardColor }}
+										>
+											<Text className="text-sm  mb-1">{item.label}</Text>
+											<Text className="text-base font-medium">
+												{item.value}
 											</Text>
-											<Text className="text-base font-medium">{item.value}</Text>
 										</View>
 									</View>
 									{index < accountInfo.length - 1 && <Separator />}
@@ -288,50 +236,60 @@ export default function SettingsScreen() {
 							<CardHeader>
 								<CardTitle>{section.title}</CardTitle>
 							</CardHeader>
-							<CardContent className="gap-3">
+							<CardContent className="gap-3 bg-card">
 								{section.items.map((item, itemIndex) => (
-									<View key={item.label} className="">
-										<SettingItemWithTooltip isComingSoon={item.isComingSoon}>
-											{item.type === "switch" ? (
-												<View className="flex-row items-center justify-between py-2">
-													<View className="flex-row items-center gap-3 flex-1">
-														<item.icon size={20} className="" />
-														<View className="flex-1 ">
-															<Label nativeID={`switch-${section.title}-${item.label}`}>
-																{item.label}
-															</Label>
-															<Text className="text-sm ">
-																{item.description}
-															</Text>
-														</View>
-													</View>
-													<Switch
-														checked={item.value}
-														onCheckedChange={item.onChange}
-														aria-labelledby={`switch-${section.title}-${item.label}`}
-														disabled={item.isComingSoon}
-													/>
-												</View>
-											) : (
-												<Pressable
-													onPress={item.isComingSoon ? undefined : item.action}
+									<View key={item.label} className="bg-card">
+										{item.type === "switch" ? (
+											<View
+												className="flex-row items-center justify-between py-2 bg-card"
+												style={{ backgroundColor: cardColor }}
+											>
+												<View
+													className="flex-row items-center gap-3 flex-1 bg-card"
+													style={{ backgroundColor: cardColor }}
 												>
-													<View className="flex-row items-center justify-between py-2 ">
-														<View className="flex-row items-center gap-3 flex-1 ">
-															<item.icon size={20} className="" />
-															<View className="flex-1 ">
-																<Text className="text-base font-medium">
-																	{item.label}
-																</Text>
-																<Text className="text-sm ">
-																	{item.description}
-																</Text>
-															</View>
-														</View>
+													<item.icon size={20} className="" />
+													<View
+														className="flex-1 bg-card"
+														style={{ backgroundColor: cardColor }}
+													>
+														<Label
+															nativeID={`switch-${section.title}-${item.label}`}
+														>
+															{item.label}
+														</Label>
+														<Text className="text-sm ">{item.description}</Text>
 													</View>
-												</Pressable>
-											)}
-										</SettingItemWithTooltip>
+												</View>
+												<Switch
+													checked={item.value}
+													onCheckedChange={item.onChange}
+													aria-labelledby={`switch-${section.title}-${item.label}`}
+													disabled={item.isComingSoon}
+												/>
+											</View>
+										) : (
+											<View
+												className="flex-row items-center justify-between py-2 bg-card"
+												style={{ backgroundColor: cardColor }}
+											>
+												<View
+													className="flex-row items-center gap-3 flex-1 bg-card "
+													style={{ backgroundColor: cardColor }}
+												>
+													<item.icon size={20} color={THEME.dark.primary} />
+													<View
+														className="flex-1 bg-card "
+														style={{ backgroundColor: cardColor }}
+													>
+														<Text className="text-base font-medium">
+															{item.label}
+														</Text>
+														<Text className="text-sm ">{item.description}</Text>
+													</View>
+												</View>
+											</View>
+										)}
 										{itemIndex < section.items.length - 1 && <Separator />}
 									</View>
 								))}
@@ -346,51 +304,55 @@ export default function SettingsScreen() {
 						</CardHeader>
 						<CardContent>
 							<Dialog open={bugReportOpen} onOpenChange={setBugReportOpen}>
-								<DialogTrigger asChild>
-									<Pressable>
-										<View className="flex-row items-center justify-between py-2 ">
-											<View className="flex-row items-center gap-3 ">
-												<Bug size={20} className="" />
-												<View className="">
-													<Text className="text-base font-medium">
-														Report a Bug
-													</Text>
-													<Text className="text-sm ">
-														Help us improve Eden
-													</Text>
-												</View>
+								<DialogTrigger>
+									<View
+										className="flex-row items-center justify-between py-2"
+										style={{ backgroundColor: cardColor }}
+									>
+										<View
+											className="flex-row items-center gap-3"
+											style={{ backgroundColor: cardColor }}
+										>
+											<Bug size={20} className="text-primary-foreground" />
+											<View style={{ backgroundColor: cardColor }}>
+												<Text className="text-base font-medium">
+													Report a Bug
+												</Text>
+												<Text className="text-sm">Help us improve Eden</Text>
 											</View>
 										</View>
-									</Pressable>
+									</View>
 								</DialogTrigger>
-								<DialogContent className="">
+								<DialogContent className="max-w-[90%]">
 									<DialogHeader>
 										<DialogTitle>Report a Bug</DialogTitle>
 										<DialogDescription>
 											Describe the issue you encountered
 										</DialogDescription>
 									</DialogHeader>
-									<View className="gap-4 ">
-										<View className="gap-2 ">
-											<Label nativeID="bug-title">Title</Label>
-											<Input
-												placeholder="Brief summary of the issue"
-												value={bugTitle}
-												onChangeText={setBugTitle}
-												aria-labelledby="bug-title"
-											/>
+									<ScrollView className="max-h-60">
+										<View className="gap-4">
+											<View className="gap-2">
+												<Label nativeID="bug-title">Title</Label>
+												<Input
+													placeholder="Brief summary of the issue"
+													value={bugTitle}
+													onChangeText={setBugTitle}
+													aria-labelledby="bug-title"
+												/>
+											</View>
+											<View className="gap-2">
+												<Label nativeID="bug-description">Description</Label>
+												<Textarea
+													placeholder="Describe what happened, what you expected, and steps to reproduce..."
+													value={bugDescription}
+													onChangeText={setBugDescription}
+													aria-labelledby="bug-description"
+													numberOfLines={4}
+												/>
+											</View>
 										</View>
-										<View className="gap-2 ">
-											<Label nativeID="bug-description">Description</Label>
-											<Textarea
-												placeholder="Describe what happened, what you expected, and steps to reproduce..."
-												value={bugDescription}
-												onChangeText={setBugDescription}
-												aria-labelledby="bug-description"
-												numberOfLines={4}
-											/>
-										</View>
-									</View>
+									</ScrollView>
 									<DialogFooter>
 										<DialogClose asChild>
 											<Button variant="outline">
@@ -418,39 +380,27 @@ export default function SettingsScreen() {
 
 					<Separator className="mb-6" />
 
-					{/* About Section */}
-					<Card className="mb-4">
-						<CardContent className="items-center py-6">
-							<View className="w-16 h-16 bg-primary/20 rounded-full items-center justify-center mb-3">
-								<Music size={32} className="text-primary" />
-							</View>
-							<Text className="text-xl font-bold mb-1">Eden Music</Text>
-							<Badge variant="outline">
-								<Text>Version 1.0.0</Text>
-							</Badge>
-							<Text className="text-center  mt-3 text-sm">
-								A beautiful music streaming app built with modern technologies
-							</Text>
-						</CardContent>
-					</Card>
-
 					{/* Developer Credits */}
 					<Card className="mb-4">
 						<CardHeader>
-							<View className="flex-row items-center gap-2 ">
-								<Code size={18} />
-								<CardTitle>Developer</CardTitle>
+							<View
+								className="flex-row items-center gap-2 "
+								style={{ backgroundColor: cardColor }}
+							>
+								<CardTitle>Developer Credits</CardTitle>
 							</View>
-							<CardDescription>Built with ❤️ by</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<View className="py-2 ">
+							<View className="py-2" style={{ backgroundColor: cardColor }}>
 								<Text className="text-base font-semibold mb-1">
 									Suvan Gowrishanker
 								</Text>
 								<Text className="text-sm  mb-1">Lead Developer</Text>
-								<View className="flex-row items-center gap-2 ">
-									<Mail size={14} className="" />
+								<View
+									className="flex-row items-center gap-2 "
+									style={{ backgroundColor: cardColor }}
+								>
+									<Mail size={14} color={THEME.dark.primary} />
 									<Text className="text-sm ">
 										suvan.gowrishanker.204@gmail.com
 									</Text>
@@ -459,31 +409,11 @@ export default function SettingsScreen() {
 						</CardContent>
 					</Card>
 
-					{/* Technologies */}
-					<Card className="mb-4">
-						<CardHeader>
-							<CardTitle>Technologies</CardTitle>
-							<CardDescription>Powered by amazing open-source tools</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<View className="flex-row flex-wrap gap-2 ">
-								{technologies.map((tech) => (
-									<Badge key={tech.name} variant="secondary">
-										<Text>{tech.name}</Text>
-									</Badge>
-								))}
-							</View>
-						</CardContent>
-					</Card>
-
 					{/* Footer */}
 					<View className="items-center py-6 mb-8 ">
-						<Heart size={20} className="text-destructive mb-2" />
+						<Heart size={20} color={THEME.dark.destructive} />
 						<Text className="text-center  text-sm">
 							Made with passion for music lovers
-						</Text>
-						<Text className="text-xs  mt-1">
-							© 2025 Eden Music. All rights reserved.
 						</Text>
 					</View>
 				</ScrollView>
