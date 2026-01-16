@@ -1,10 +1,10 @@
 import { View } from "@/components/Themed";
 import {
-    DashboardHeader,
-    EmptyTrackList,
-    LoadingMoreTracks,
-    LoadingSkeleton,
-    TrackCard,
+	DashboardHeader,
+	EmptyTrackList,
+	LoadingMoreTracks,
+	LoadingSkeleton,
+	TrackCard,
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useColorScheme } from "@/components/useColorScheme";
@@ -16,15 +16,14 @@ import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
-    Easing,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    RefreshControl,
+	Animated,
+	Easing,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	RefreshControl,
 } from "react-native";
 import {
-    SafeAreaView,
-    useSafeAreaInsets,
+	SafeAreaView,
 } from "react-native-safe-area-context";
 
 const NUM_COLUMNS = 2;
@@ -38,7 +37,6 @@ interface MasonryTrack extends Track {
 
 export default function AllSongsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
-	const [menuButtonState, setMenuButtonState] = useState(false);
 	const [navCollapsed, setNavCollapsed] = useState(false);
 	const navAnim = useRef(new Animated.Value(0)).current;
 	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
@@ -55,14 +53,6 @@ export default function AllSongsScreen() {
 			clearTracks();
 		};
 	}, [fetchTracks, clearTracks]);
-
-	const insets = useSafeAreaInsets();
-	const contentInsets = {
-		top: insets.top,
-		bottom: insets.bottom,
-		left: 4,
-		right: 4,
-	};
 
 	// Transform tracks for masonry layout with varying heights and spans
 	const masonryTracks: MasonryTrack[] = useMemo(() => {
@@ -218,9 +208,6 @@ export default function AllSongsScreen() {
 				navIconScale={navIconScale}
 				trackCount={pagination?.total}
 				isLoading={isLoading}
-				menuButtonState={menuButtonState}
-				onMenuOpenChange={(open: boolean) => setMenuButtonState(open)}
-				contentInsets={contentInsets}
 			/>
 
 			{/* Error Alert */}

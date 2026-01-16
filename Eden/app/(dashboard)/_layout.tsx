@@ -1,9 +1,18 @@
-import { Redirect, Stack } from "expo-router";
-import { useSession } from "@/lib/ctx";
+import { CustomDrawerContent } from "@/components/pages/dashboard";
 import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
+import { useSession } from "@/lib/ctx";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
+import { Redirect } from "expo-router";
+import { Drawer } from "expo-router/drawer";
 
 export default function AppLayout() {
 	const { session, isLoading } = useSession();
+	const isDark = useIsDark();
+
+	const backgroundColor = isDark
+		? THEME.dark.background
+		: THEME.light.background;
 
 	// Only require authentication within the (dashboard) group's layout as it could be
 	// problematic to require authentication within the root layout.
@@ -13,32 +22,66 @@ export default function AppLayout() {
 
 	return (
 		<GlobalPlayerProvider>
-			<Stack screenOptions={{ headerShown: false }}>
-				<Stack.Screen name="index" />
-				<Stack.Screen name="search-songs" />
-				<Stack.Screen name="artists" />
-				<Stack.Screen
+			<Drawer
+				drawerContent={(props) => <CustomDrawerContent {...props} />}
+				screenOptions={{
+					headerShown: false,
+					drawerPosition: "right",
+					drawerType: "front",
+					swipeEnabled: true,
+					swipeEdgeWidth: 50,
+					drawerStyle: {
+						backgroundColor,
+						width: 280,
+					},
+				}}
+			>
+				{/* Main drawer screens */}
+				<Drawer.Screen
+					name="index"
+					options={{
+						drawerLabel: "All Songs",
+						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
+					}}
+				/>
+				<Drawer.Screen
+					name="artists"
+					options={{
+						drawerLabel: "Artists",
+						drawerItemStyle: { display: "none" },
+					}}
+				/>
+				<Drawer.Screen
+					name="search-songs"
+					options={{
+						drawerLabel: "Search",
+						drawerItemStyle: { display: "none" },
+					}}
+				/>
+
+				{/* Modal screens - hidden from drawer */}
+				<Drawer.Screen
 					name="artist-detail"
 					options={{
-						presentation: "modal",
-						animation: "slide_from_right",
+						drawerItemStyle: { display: "none" },
+						swipeEnabled: false,
 					}}
 				/>
-				<Stack.Screen
+				<Drawer.Screen
 					name="album-detail"
 					options={{
-						presentation: "modal",
-						animation: "slide_from_right",
+						drawerItemStyle: { display: "none" },
+						swipeEnabled: false,
 					}}
 				/>
-				<Stack.Screen
+				<Drawer.Screen
 					name="queue"
 					options={{
-						presentation: "modal",
-						animation: "slide_from_bottom",
+						drawerItemStyle: { display: "none" },
+						swipeEnabled: false,
 					}}
 				/>
-			</Stack>
+			</Drawer>
 		</GlobalPlayerProvider>
 	);
 }

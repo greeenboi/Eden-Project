@@ -1,19 +1,11 @@
-import { router } from "expo-router";
-import { Menu, Music, Search, X } from "lucide-react-native";
-import { Animated, Pressable } from "react-native";
 import { View } from "@/components/Themed";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
+import { Menu, Music, Search } from "lucide-react-native";
+import { Animated, Pressable } from "react-native";
 
 interface DashboardHeaderProps {
 	navPaddingTop: Animated.AnimatedInterpolation<number>;
@@ -23,14 +15,6 @@ interface DashboardHeaderProps {
 	navIconScale: Animated.AnimatedInterpolation<number>;
 	trackCount?: number;
 	isLoading: boolean;
-	menuButtonState: boolean;
-	onMenuOpenChange: (open: boolean) => void;
-	contentInsets: {
-		top: number;
-		bottom: number;
-		left: number;
-		right: number;
-	};
 }
 
 export function DashboardHeader({
@@ -41,14 +25,16 @@ export function DashboardHeader({
 	navIconScale,
 	trackCount,
 	isLoading,
-	menuButtonState,
-	onMenuOpenChange,
-	contentInsets,
 }: DashboardHeaderProps) {
+	const navigation = useNavigation();
 	const isDark = useIsDark();
 	const foregroundColor = isDark
 		? THEME.dark.foreground
 		: THEME.light.foreground;
+
+	const handleOpenDrawer = () => {
+		navigation.dispatch(DrawerActions.openDrawer());
+	};
 
 	return (
 		<Animated.View
@@ -91,38 +77,11 @@ export function DashboardHeader({
 						<Search color={foregroundColor} size={32} />
 					</Animated.View>
 				</Pressable>
-				<DropdownMenu onOpenChange={onMenuOpenChange}>
+				<Pressable onPress={handleOpenDrawer}>
 					<Animated.View style={{ transform: [{ scale: navIconScale }] }}>
-						<DropdownMenuTrigger>
-							{menuButtonState ? (
-								<X size={32} color={foregroundColor} />
-							) : (
-								<Menu size={32} color={foregroundColor} />
-							)}
-						</DropdownMenuTrigger>
+						<Menu size={32} color={foregroundColor} />
 					</Animated.View>
-					<DropdownMenuContent
-						insets={contentInsets}
-						sideOffset={2}
-						className="w-56"
-						align="start"
-					>
-						<DropdownMenuItem onPress={() => router.push("/artists")}>
-							<Text>Artists</Text>
-						</DropdownMenuItem>
-						<DropdownMenuSeparator />
-						<DropdownMenuLabel>My Account</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem onPress={() => router.push("/account")}>
-								<Text>Account</Text>
-							</DropdownMenuItem>
-							<DropdownMenuItem onPress={() => router.push("/settings")}>
-								<Text>Settings</Text>
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				</Pressable>
 			</View>
 		</Animated.View>
 	);

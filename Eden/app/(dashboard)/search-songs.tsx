@@ -1,7 +1,3 @@
-import { router } from "expo-router";
-import { ArrowLeft, Search } from "lucide-react-native";
-import { useState } from "react";
-import { ScrollView, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,8 +12,20 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
+import { ArrowLeft, Menu, Search } from "lucide-react-native";
+import { useState } from "react";
+import { Pressable, ScrollView, StyleSheet } from "react-native";
 
 export default function SearchSongsScreen() {
+	const navigation = useNavigation();
+	const isDark = useIsDark();
+	const foregroundColor = isDark
+		? THEME.dark.foreground
+		: THEME.light.foreground;
 	const [searchQuery, setSearchQuery] = useState("");
 	const [searchType, setSearchType] = useState<
 		"all" | "title" | "artist" | "album"
@@ -30,16 +38,28 @@ export default function SearchSongsScreen() {
 		console.log({ searchQuery, searchType, genre, year });
 	};
 
+	const handleOpenDrawer = () => {
+		navigation.dispatch(DrawerActions.openDrawer());
+	};
+
 	return (
 		<View style={styles.container}>
 			<View
 				style={{ backgroundColor: "transparent" }}
-				className="flex-row items-center gap-3 p-4"
+				className="flex-row items-center justify-between p-4"
 			>
-				<Button variant="ghost" size="sm" onPress={() => router.back()}>
-					<ArrowLeft size={24} />
-				</Button>
-				<Text className="text-2xl font-bold">Search Songs</Text>
+				<View
+					style={{ backgroundColor: "transparent" }}
+					className="flex-row items-center gap-3"
+				>
+					<Button variant="ghost" size="sm" onPress={() => router.back()}>
+						<ArrowLeft size={24} />
+					</Button>
+					<Text className="text-2xl font-bold">Search Songs</Text>
+				</View>
+				<Pressable onPress={handleOpenDrawer}>
+					<Menu size={28} color={foregroundColor} />
+				</Pressable>
 			</View>
 
 			<ScrollView
