@@ -158,10 +158,16 @@ export const useQueueStore = create<QueueState>()(
 
 			removeFromQueue: (index) => {
 				set((state) => {
+					// Get the track being removed from the current queue
+					const trackToRemove = state.queue[index];
 					const newQueue = state.queue.filter((_, i) => i !== index);
-					const newOriginalQueue = state.originalQueue.filter(
-						(_, i) => i !== index,
-					);
+
+					// When shuffle is on, find and remove the track by ID from originalQueue
+					// instead of using the same index (which would be wrong)
+					const newOriginalQueue = trackToRemove
+						? state.originalQueue.filter((t) => t.id !== trackToRemove.id)
+						: state.originalQueue.filter((_, i) => i !== index);
+
 					let newIndex = state.currentIndex;
 
 					// Adjust current index if necessary
@@ -321,13 +327,18 @@ export const useQueueStore = create<QueueState>()(
 				set((state) => {
 					if (state.shuffleMode === "off") {
 						// Turn on shuffle - shuffle remaining tracks after current
+						// IMPORTANT: Save the current unshuffled queue as original (only if not already shuffled)
+						const originalToSave =
+							state.originalQueue.length > 0
+								? state.originalQueue
+								: state.queue;
 						const beforeCurrent = state.queue.slice(0, state.currentIndex + 1);
 						const afterCurrent = state.queue.slice(state.currentIndex + 1);
 						const shuffledAfter = shuffleArray(afterCurrent);
 
 						return {
 							shuffleMode: "on",
-							originalQueue: state.queue, // Save original order
+							originalQueue: originalToSave,
 							queue: [...beforeCurrent, ...shuffledAfter],
 						};
 					}

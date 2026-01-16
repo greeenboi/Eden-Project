@@ -188,19 +188,22 @@ export function useTrackAudioPlayer({
 	const hasTriggeredEndRef = useRef(false);
 	const prevTrackIdRef = useRef(trackId);
 
-	// Reset the end trigger when track changes
-	if (prevTrackIdRef.current !== trackId) {
-		hasTriggeredEndRef.current = false;
-		prevTrackIdRef.current = trackId;
-	}
+	// Reset the end trigger when track changes (moved inside effect to avoid render-time side effects)
+	useEffect(() => {
+		if (prevTrackIdRef.current !== trackId) {
+			hasTriggeredEndRef.current = false;
+			prevTrackIdRef.current = trackId;
+		}
+	}, [trackId]);
 
 	useEffect(() => {
 		if (!status.isLoaded || !status.duration || status.duration <= 0) return;
 		if (hasTriggeredEndRef.current) return;
 		if (player.loop) return; // Don't trigger if looping
 
-		// Check if we're at the end (within 0.5s of duration) and not playing
-		const isAtEnd = status.currentTime >= status.duration - 0.5;
+		// Check if we're at the end (within 0.3s of duration) and not playing
+		// Use a tighter threshold to avoid false positives when pausing near end
+		const isAtEnd = status.currentTime >= status.duration - 0.3;
 		const hasFinished = isAtEnd && !status.playing && !status.isBuffering;
 
 		if (hasFinished) {

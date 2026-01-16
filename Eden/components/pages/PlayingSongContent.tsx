@@ -7,17 +7,14 @@ import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/components/useColorScheme";
 import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
+import type { RepeatMode } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
-import { AlertCircle, ArrowLeft, ListMusic } from "lucide-react-native";
+import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet } from "react-native";
-import { MiniPlayer } from "./player/MiniPlayer";
-import { PlayerArtwork } from "./player/PlayerArtwork";
-import { PlayerControls } from "./player/PlayerControls";
-import { PlayerSlider } from "./player/PlayerSlider";
-import { PlayerTrackInfo } from "./player/PlayerTrackInfo";
+import { StyleSheet } from "react-native";
+import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 
 type PlayingSongContentProps = {
 	trackId?: string;
@@ -31,6 +28,8 @@ type PlayingSongContentProps = {
 	onSkipPrevious?: () => void;
 	/** Toggle shuffle mode */
 	onToggleShuffle?: () => void;
+	/** Toggle repeat mode */
+	onToggleRepeat?: () => void;
 	/** Expand player to full view (for mini variant) */
 	onExpand?: () => void;
 	/** Collapse player to mini view */
@@ -41,6 +40,8 @@ type PlayingSongContentProps = {
 	hasPrevious?: boolean;
 	/** Whether shuffle is enabled */
 	isShuffled?: boolean;
+	/** Current repeat mode */
+	repeatMode?: RepeatMode;
 	/** Next track artwork URL for swipe preview */
 	nextArtworkUrl?: string | null;
 	/** Previous track artwork URL for swipe preview */
@@ -56,11 +57,13 @@ export function PlayingSongContent({
 	onSkipNext,
 	onSkipPrevious,
 	onToggleShuffle,
+	onToggleRepeat,
 	onExpand,
 	onCollapse,
 	hasNext = false,
 	hasPrevious = false,
 	isShuffled = false,
+	repeatMode = "off",
 	nextArtworkUrl,
 	previousArtworkUrl,
 }: PlayingSongContentProps) {
@@ -86,9 +89,6 @@ export function PlayingSongContent({
 		player,
 		status,
 		loadingStream,
-		seekForward,
-		seekBackward,
-		toggleLoop,
 		toggleMute,
 		togglePlayback,
 		isMuted,
@@ -124,6 +124,16 @@ export function PlayingSongContent({
 		loadingStream,
 		updatePlayback,
 	]);
+
+	// Sync player.loop with repeatMode - loop single track when repeatMode is "one"
+	// Re-apply after each track loads since player.replace() may reset the loop setting
+	useEffect(() => {
+		if (!status.isLoaded) return; // Only set loop once track is loaded
+		const shouldLoop = repeatMode === "one";
+		if (player.loop !== shouldLoop) {
+			player.loop = shouldLoop;
+		}
+	}, [repeatMode, player, status.isLoaded]);
 
 	// Register seek callback so handle slider can control playback
 	useEffect(() => {
@@ -296,127 +306,43 @@ export function PlayingSongContent({
 					nextArtworkUrl={nextArtworkUrl}
 					previousArtworkUrl={previousArtworkUrl}
 				>
-					{variant === "full" && (
-						<View style={{ flex: 1 }} className="px-4 py-4 gap-4">
-							{/* Artwork Section */}
-							<View className="items-center justify-center px-8 py-2">
-								<PlayerArtwork
-									artworkUrl={currentTrack.artworkUrl}
-									explicit={currentTrack.explicit}
-								/>
-							</View>
-
-							{/* Track Info */}
-							<PlayerTrackInfo
-								title={currentTrack.title}
-								collapseOnClick={onCollapse}
-								artistId={currentTrack.artistId}
-								artistName={currentTrack.artist.name}
-								genre={currentTrack.genre}
-							/>
-
-							{/* Playback Controls */}
-							<View
-								style={{ backgroundColor: "transparent" }}
-								className="px-8 pb-8"
-							>
-								<PlayerControls
-									isLoaded={status.isLoaded}
-									isPlaying={status.playing}
-									isLooping={player.loop}
-									isMuted={isMuted}
-									loadingStream={loadingStream}
-									themeColors={themeColors}
-									hasNext={hasNext}
-									hasPrevious={hasPrevious}
-									isShuffled={isShuffled}
-									onTogglePlayback={togglePlayback}
-									onToggleLoop={toggleLoop}
-									onToggleMute={toggleMute}
-									onToggleShuffle={onToggleShuffle}
-									onSkipNext={onSkipNext}
-									onSkipPrevious={onSkipPrevious}
-								/>
-							</View>
-
-							{/* Progress Slider */}
-							<PlayerSlider
-								trackId={trackId}
-								sliderValue={safeSliderValue}
-								sliderMax={safeSliderMax}
-								duration={status.duration}
-								isLoaded={status.isLoaded}
-								loadingStream={loadingStream}
-								themeColors={themeColors}
-								onSlidingStart={handleSlidingStart}
-								onValueChange={handleValueChange}
-								onSlidingComplete={handleSlidingComplete}
-							/>
-
-							{/* Secondary Actions */}
-							<View
-								style={{ backgroundColor: "transparent" }}
-								className="flex-row items-center justify-end px-4"
-							>
-								<Pressable
-									onPress={() => {
-										onCollapse?.();
-										router.push("/queue");
-									}}
-									
-									style={{ padding: 8 }}
-								>
-									<ListMusic size={24} color={themeColors.tint} />
-								</Pressable>
-							</View>
-
-							{/* Album Info
-							{currentTrack.album ? (
-								<Pressable
-									onPress={() =>
-										currentTrack.albumId &&
-										router.push(`/album-detail?id=${currentTrack.albumId}`)
-									}
-								>
-									<Text className="text-sm opacity-50 underline">
-										{currentTrack.album.title}
-									</Text>
-								</Pressable>
-							) : (
-								<Text className="text-sm opacity-50">Single</Text>
-							)} */}
-
-							{/* Artist Card
-							<ArtistCard
-								artistName={currentTrack.artist.name}
-								verified={currentTrack.artist.verified}
-							/> */}
-						</View>
-					)}
-
-					{variant === "mini" && (
-						<MiniPlayer
-							trackId={trackId}
-							artworkUrl={currentTrack.artworkUrl}
-							title={currentTrack.title}
-							artistName={currentTrack.artist.name}
-							isPlaying={status.playing}
-							isLoaded={status.isLoaded}
-							loadingStream={loadingStream}
-							sliderValue={safeSliderValue}
-							sliderMax={safeSliderMax}
-							themeColors={themeColors}
-							hasNext={hasNext}
-							hasPrevious={hasPrevious}
-							onExpand={onExpand}
-							onTogglePlayback={togglePlayback}
-							onSkipNext={onSkipNext}
-							onSkipPrevious={onSkipPrevious}
-							onSlidingStart={handleSlidingStart}
-							onValueChange={handleValueChange}
-							onSlidingComplete={handleSlidingComplete}
-						/>
-					)}
+					<AnimatedPlayerContent
+						variant={variant}
+						trackId={trackId}
+						artworkUrl={currentTrack.artworkUrl}
+						title={currentTrack.title}
+						artistId={currentTrack.artistId}
+						artistName={currentTrack.artist.name}
+						genre={currentTrack.genre}
+						explicit={currentTrack.explicit}
+						isPlaying={status.playing}
+						isLoaded={status.isLoaded}
+						loadingStream={loadingStream}
+						sliderValue={safeSliderValue}
+						sliderMax={safeSliderMax}
+						duration={status.duration ?? 0}
+						themeColors={themeColors}
+						hasNext={hasNext}
+						hasPrevious={hasPrevious}
+						isShuffled={isShuffled}
+						repeatMode={repeatMode}
+						isMuted={isMuted}
+						onExpand={onExpand}
+						onCollapse={onCollapse}
+						onTogglePlayback={togglePlayback}
+						onToggleRepeat={onToggleRepeat}
+						onToggleShuffle={onToggleShuffle}
+						onToggleMute={toggleMute}
+						onSkipNext={onSkipNext}
+						onSkipPrevious={onSkipPrevious}
+						onSlidingStart={handleSlidingStart}
+						onValueChange={handleValueChange}
+						onSlidingComplete={handleSlidingComplete}
+						onQueuePress={() => {
+							onCollapse?.();
+							router.push("/queue");
+						}}
+					/>
 				</SwipeablePlayer>
 			)}
 

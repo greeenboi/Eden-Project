@@ -1,13 +1,13 @@
-import { router } from "expo-router";
-import { Pressable } from "react-native";
 import { View } from "@/components/Themed";
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
+import { router } from "expo-router";
+import { Pressable } from "react-native";
 
 interface PlayerTrackInfoProps {
 	title: string;
 	collapseOnClick: (() => void) | undefined;
-	artistId: string;
+	artistId?: string;
 	artistName: string;
 	genre?: string | null;
 }
@@ -32,9 +32,12 @@ export function PlayerTrackInfo({
 					<Text className="text-2xl font-bold mb-1">{title}</Text>
 					<Pressable
 						onPress={() => {
-							collapseOnClick?.();
-							router.push(`/artist-detail?id=${artistId}`);
+							if (artistId) {
+								collapseOnClick?.();
+								router.push(`/artist-detail?id=${artistId}`);
+							}
 						}}
+						disabled={!artistId}
 					>
 						<Text className="text-lg opacity-70 mb-1 underline">
 							{artistName}
