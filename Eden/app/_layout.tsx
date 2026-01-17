@@ -1,3 +1,5 @@
+import { SessionProvider, useSession } from "@/lib/ctx";
+import { SplashScreenController } from "@/lib/splash";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
@@ -7,21 +9,23 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SessionProvider, useSession } from "@/lib/ctx";
-import { SplashScreenController } from "@/lib/splash";
 import "react-native-reanimated";
+import { vexo } from 'vexo-analytics';
 import "../global.css";
 import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
 
 export {
 	// Catch any errors thrown by the Layout component.
-	ErrorBoundary,
+	ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
 	// Ensure that reloading on `/modal` keeps a back button present.
 	initialRouteName: "(dashboard)/index",
 };
+
+// biome-ignore lint/style/noNonNullAssertion: always gonna be there
+vexo(process.env.EXPO_PUBLIC_VEXO_APPID!);
 
 SplashScreen.setOptions({
 	duration: 1000,

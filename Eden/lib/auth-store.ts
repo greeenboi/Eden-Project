@@ -1,3 +1,4 @@
+import { identifyDevice } from "vexo-analytics";
 import { create } from "zustand";
 import { API_BASE_URL } from "../constants/constants";
 import { setStorageItemAsync } from "./useStorageState";
@@ -89,6 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			// Store token securely
 			await setStorageItemAsync("auth-token", data.token);
 
+			// Identify device for Vexo analytics
+			await identifyDevice(data.user?.email ?? null);
+
 			set({
 				token: data.token,
 				user: data.user,
@@ -131,6 +135,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			// Store token securely
 			await setStorageItemAsync("auth-token", data.token);
 
+			// Identify device for Vexo analytics
+			await identifyDevice(data.user?.email ?? null);
+
 			set({
 				token: data.token,
 				user: data.user,
@@ -155,6 +162,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 	logout: async () => {
 		// Clear token from secure storage
 		await setStorageItemAsync("auth-token", null);
+
+		// Anonymize device for Vexo analytics
+		await identifyDevice(null);
 
 		set({
 			token: null,

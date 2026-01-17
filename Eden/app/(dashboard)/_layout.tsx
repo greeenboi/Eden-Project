@@ -1,10 +1,10 @@
-import { Redirect } from "expo-router";
-import { Drawer } from "expo-router/drawer";
 import { CustomDrawerContent } from "@/components/pages/dashboard";
-import { useSession } from "@/lib/ctx";
 import { GlobalPlayerProvider } from "@/lib/GlobalPlayerProvider";
+import { useSession } from "@/lib/ctx";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
+import { Redirect } from "expo-router";
+import { Drawer } from "expo-router/drawer";
 
 export default function AppLayout() {
 	const { session, isLoading } = useSession();
