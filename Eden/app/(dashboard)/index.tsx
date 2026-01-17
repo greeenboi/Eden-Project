@@ -1,28 +1,33 @@
+import { View } from "@/components/Themed";
+import {
+    DashboardHeader,
+    EmptyTrackList,
+    LoadingMoreTracks,
+    LoadingSkeleton,
+    TrackCard,
+} from "@/components/pages/dashboard";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Colors from "@/constants/Colors";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { type Track, useTrackStore } from "@/lib/actions/tracks";
+import {
+    loadMoreTriggered,
+    trackPlayWithQueue,
+    tracksRefreshed,
+} from "@/lib/analytics";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-	Animated,
-	Easing,
-	type NativeScrollEvent,
-	type NativeSyntheticEvent,
-	RefreshControl,
-	useColorScheme,
+    Animated,
+    Easing,
+    type NativeScrollEvent,
+    type NativeSyntheticEvent,
+    RefreshControl,
+    useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-	DashboardHeader,
-	EmptyTrackList,
-	LoadingMoreTracks,
-	LoadingSkeleton,
-	TrackCard,
-} from "@/components/pages/dashboard";
-import { View } from "@/components/Themed";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import Colors from "@/constants/Colors";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { type Track, useTrackStore } from "@/lib/actions/tracks";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
@@ -145,6 +150,15 @@ export default function AllSongsScreen() {
 			const selectedTrack = queueTracks[trackIndex];
 
 			if (selectedTrack && queueTracks.length > 0) {
+				// Track analytics event
+				trackPlayWithQueue(
+					songId,
+					selectedTrack.title,
+					"all-songs",
+					queueTracks.length,
+					trackIndex,
+				);
+
 				// Play with queue context - all visible tracks become the queue
 				// Source is "all-songs" so queue contains all songs from this page
 				playTrackWithQueue(
@@ -168,6 +182,9 @@ export default function AllSongsScreen() {
 			!refreshing &&
 			pagination.page * pagination.limit < pagination.total
 		) {
+			// Track load more event
+			loadMoreTriggered(pagination.page + 1, "all-songs");
+
 			fetchTracks(
 				pagination.page + 1,
 				50,
@@ -183,10 +200,12 @@ export default function AllSongsScreen() {
 		try {
 			clearTracks();
 			await fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+			// Track refresh event after tracks are loaded
+			tracksRefreshed(tracks.length);
 		} finally {
 			setRefreshing(false);
 		}
-	}, [clearTracks, fetchTracks]);
+	}, [clearTracks, fetchTracks, tracks.length]);
 
 	const renderTrackCard = useCallback(
 		({ item, index }: { item: MasonryTrack; index: number }) => (

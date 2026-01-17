@@ -1,36 +1,16 @@
-import { DrawerActions } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
-import * as MailComposer from "expo-mail-composer";
-import { useNavigation } from "expo-router";
-import {
-	Bell,
-	Bug,
-	Download,
-	Heart,
-	LogOut,
-	Mail,
-	Menu,
-	Settings,
-	User,
-	Volume2,
-	Wifi,
-} from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/Themed";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-	Dialog,
-	DialogClose,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,10 +18,31 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
+import { bugReportSubmitted, settingChanged } from "@/lib/analytics";
 import { useSession } from "@/lib/ctx";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
 import { generateGradientColors, getInitials } from "@/lib/utils";
+import { DrawerActions } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
+import * as MailComposer from "expo-mail-composer";
+import { useNavigation } from "expo-router";
+import {
+    Bell,
+    Bug,
+    Download,
+    Heart,
+    LogOut,
+    Mail,
+    Menu,
+    Settings,
+    User,
+    Volume2,
+    Wifi,
+} from "lucide-react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {
 	const { signOut, user } = useSession();
@@ -72,6 +73,9 @@ export default function SettingsScreen() {
 		const isAvailable = await MailComposer.isAvailableAsync();
 
 		if (isAvailable) {
+			// Track bug report submission
+			bugReportSubmitted(bugTitle);
+
 			await MailComposer.composeAsync({
 				recipients: ["suvan.gowrishanker.204@gmail.com"],
 				subject: `[Eden Bug Report] ${bugTitle}`,
@@ -107,7 +111,10 @@ export default function SettingsScreen() {
 					label: "Auto Download",
 					description: "Download songs automatically",
 					value: autoDownload,
-					onChange: setAutoDownload,
+					onChange: (value: boolean) => {
+						setAutoDownload(value);
+						settingChanged("autoDownload", value);
+					},
 					type: "switch" as const,
 					isComingSoon: true,
 				},
@@ -116,7 +123,10 @@ export default function SettingsScreen() {
 					label: "Download on WiFi Only",
 					description: "Save mobile data",
 					value: wifiOnly,
-					onChange: setWifiOnly,
+					onChange: (value: boolean) => {
+						setWifiOnly(value);
+						settingChanged("wifiOnly", value);
+					},
 					type: "switch" as const,
 					isComingSoon: true,
 				},
@@ -130,7 +140,10 @@ export default function SettingsScreen() {
 					label: "Push Notifications",
 					description: "Get notified about new releases",
 					value: notifications,
-					onChange: setNotifications,
+					onChange: (value: boolean) => {
+						setNotifications(value);
+						settingChanged("pushNotifications", value);
+					},
 					type: "switch" as const,
 					isComingSoon: false,
 				},

@@ -1,13 +1,3 @@
-import { router, useLocalSearchParams } from "expo-router";
-import {
-	AlertCircle,
-	ArrowLeft,
-	Clock,
-	Music,
-	Play,
-} from "lucide-react-native";
-import { useCallback, useEffect, useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,10 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { albumPlayStarted, albumViewed, trackPlayWithQueue } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+    AlertCircle,
+    ArrowLeft,
+    Clock,
+    Music,
+    Play,
+} from "lucide-react-native";
+import { useCallback, useEffect, useMemo } from "react";
+import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();
@@ -65,6 +66,13 @@ export default function AlbumDetailScreen() {
 	const albumInfo = currentTrack?.album;
 	const artistInfo = currentTrack?.artist;
 
+	// Track album view when album info is loaded
+	useEffect(() => {
+		if (albumInfo?.title && id) {
+			albumViewed(id as string, albumInfo.title);
+		}
+	}, [id, albumInfo?.title]);
+
 	// Convert tracks to queue format for album playback
 	const queueTracks: QueueTrack[] = useMemo(() => {
 		return tracks.map((track) => ({
@@ -90,6 +98,15 @@ export default function AlbumDetailScreen() {
 		(trackId: string, index: number) => {
 			const selectedTrack = queueTracks[index];
 			if (selectedTrack && albumQueueSource) {
+				// Track analytics
+				trackPlayWithQueue(
+					trackId,
+					selectedTrack.title,
+					"album",
+					queueTracks.length,
+					index,
+				);
+
 				playTrackWithQueue(selectedTrack, queueTracks, index, albumQueueSource);
 			}
 		},
@@ -98,9 +115,16 @@ export default function AlbumDetailScreen() {
 
 	const handlePlayAlbum = useCallback(() => {
 		if (queueTracks.length > 0 && albumQueueSource) {
+			// Track analytics for playing full album
+			albumPlayStarted(
+				id as string,
+				albumInfo?.title ?? "Unknown",
+				queueTracks.length,
+			);
+
 			playTrackWithQueue(queueTracks[0], queueTracks, 0, albumQueueSource);
 		}
-	}, [queueTracks, albumQueueSource, playTrackWithQueue]);
+	}, [queueTracks, albumQueueSource, playTrackWithQueue, id, albumInfo?.title]);
 
 	return (
 		<View style={styles.container}>

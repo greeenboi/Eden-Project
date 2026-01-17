@@ -1,3 +1,11 @@
+import { View } from "@/components/Themed";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
+import { queueCleared, queueTrackRemoved, trackPlayWithQueue } from "@/lib/analytics";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
@@ -5,19 +13,12 @@ import { useCallback, useMemo } from "react";
 import { Image, Pressable, useColorScheme } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
-	Extrapolation,
-	interpolate,
-	type SharedValue,
-	useAnimatedStyle,
+    Extrapolation,
+    interpolate,
+    type SharedValue,
+    useAnimatedStyle,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View } from "@/components/Themed";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import Colors from "@/constants/Colors";
-import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 
 interface QueueItemProps {
 	track: QueueTrack;
@@ -190,21 +191,34 @@ export default function QueueScreen() {
 
 	const handlePlayTrack = useCallback(
 		(index: number) => {
+			const track = queue[index];
+			if (track) {
+				// Track analytics
+				trackPlayWithQueue(track.id, track.title, "queue", queue.length, index);
+			}
 			queueStore.skipToIndex(index);
 		},
-		[queueStore],
+		[queueStore, queue],
 	);
 
 	const handleRemoveTrack = useCallback(
 		(trackId: string) => {
+			const track = queue.find((t) => t.id === trackId);
+			if (track) {
+				queueTrackRemoved(trackId, track.title);
+			}
 			queueStore.removeFromQueueById(trackId);
 		},
-		[queueStore],
+		[queueStore, queue],
 	);
 
 	const handleClearQueue = useCallback(() => {
 		// Clear upcoming tracks only, keep current
 		const upcoming = queue.slice(currentIndex + 1);
+
+		// Track analytics
+		queueCleared(upcoming.length);
+
 		for (const track of upcoming) {
 			queueStore.removeFromQueueById(track.id);
 		}

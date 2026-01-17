@@ -1,9 +1,3 @@
-import { FlashList } from "@shopify/flash-list";
-import { useLocalSearchParams } from "expo-router";
-import { AlertCircle, BadgeCheck, Disc3, Play } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, useColorScheme } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,19 +7,30 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
 import {
-	type Artist,
-	type ArtistPagination,
-	type ArtistStatistics,
-	fetchArtistById,
-	fetchArtistStats,
-	fetchArtistTracks,
+    type Artist,
+    type ArtistPagination,
+    type ArtistStatistics,
+    fetchArtistById,
+    fetchArtistStats,
+    fetchArtistTracks,
 } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import type { Track } from "@/lib/actions/tracks";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import {
+    artistViewed,
+    loadMoreTriggered,
+    trackPlayWithQueue,
+} from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
+import { FlashList } from "@shopify/flash-list";
+import { useLocalSearchParams } from "expo-router";
+import { AlertCircle, BadgeCheck, Disc3, Play } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Image, Pressable, ScrollView, useColorScheme } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {
 	const { id } = useLocalSearchParams();
@@ -78,6 +83,9 @@ export default function ArtistDetailScreen() {
 				if (!controller.signal.aborted) {
 					setCurrentArtist(artist);
 					setIsLoading(false);
+
+					// Track artist view
+					artistViewed(artistId, artist.name);
 				}
 			} catch (err) {
 				if (err instanceof Error && err.name === "AbortError") return;
@@ -127,6 +135,9 @@ export default function ArtistDetailScreen() {
 
 	const loadMoreTracks = useCallback(async () => {
 		if (!artistId || !tracksPagination || isLoadingTracks) return;
+
+		// Track load more event
+		loadMoreTriggered(tracksPagination.page + 1, "artist-detail");
 
 		setIsLoadingTracks(true);
 		try {
@@ -179,6 +190,15 @@ export default function ArtistDetailScreen() {
 		(trackId: string, index: number) => {
 			const selectedTrack = queueTracks[index];
 			if (selectedTrack && artistQueueSource) {
+				// Track analytics
+				trackPlayWithQueue(
+					trackId,
+					selectedTrack.title,
+					"artist",
+					queueTracks.length,
+					index,
+				);
+
 				playTrackWithQueue(
 					selectedTrack,
 					queueTracks,
@@ -192,6 +212,15 @@ export default function ArtistDetailScreen() {
 
 	const handlePlayArtist = useCallback(() => {
 		if (queueTracks.length > 0 && artistQueueSource) {
+			// Track analytics for playing all artist tracks
+			trackPlayWithQueue(
+				queueTracks[0].id,
+				queueTracks[0].title,
+				"artist-play-all",
+				queueTracks.length,
+				0,
+			);
+
 			playTrackWithQueue(queueTracks[0], queueTracks, 0, artistQueueSource);
 		}
 	}, [queueTracks, artistQueueSource, playTrackWithQueue]);

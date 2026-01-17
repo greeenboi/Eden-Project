@@ -1,6 +1,7 @@
 import { identifyDevice } from "vexo-analytics";
 import { create } from "zustand";
 import { API_BASE_URL } from "../constants/constants";
+import { authFailed, authSuccess, userLoggedOut } from "./analytics";
 import { setStorageItemAsync } from "./useStorageState";
 
 export interface User {
@@ -93,6 +94,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			// Identify device for Vexo analytics
 			await identifyDevice(data.user?.email ?? null);
 
+			// Track successful login
+			authSuccess("login");
+
 			set({
 				token: data.token,
 				user: data.user,
@@ -104,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				error instanceof Error
 					? error.message
 					: "An error occurred during login";
+			authFailed("login", errorMessage);
 			set({
 				isLoading: false,
 				error: errorMessage,
@@ -138,6 +143,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 			// Identify device for Vexo analytics
 			await identifyDevice(data.user?.email ?? null);
 
+			// Track successful signup
+			authSuccess("signup");
+
 			set({
 				token: data.token,
 				user: data.user,
@@ -149,6 +157,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				error instanceof Error
 					? error.message
 					: "An error occurred during signup";
+			authFailed("signup", errorMessage);
 			set({
 				isLoading: false,
 				error: errorMessage,
@@ -160,6 +169,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 	},
 
 	logout: async () => {
+		// Track logout event
+		userLoggedOut();
+
 		// Clear token from secure storage
 		await setStorageItemAsync("auth-token", null);
 

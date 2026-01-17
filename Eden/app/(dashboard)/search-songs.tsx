@@ -1,32 +1,9 @@
-import { DrawerActions, useNavigation } from "@react-navigation/native";
-import { router } from "expo-router";
-import {
-	AlertCircle,
-	BadgeCheck,
-	Clock,
-	Disc,
-	Library,
-	Menu,
-	Search,
-	X,
-} from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	ActivityIndicator,
-	Image,
-	Pressable,
-	ScrollView,
-	StyleSheet,
-	useColorScheme,
-	useWindowDimensions,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { View } from "@/components/Themed";
 import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -38,13 +15,43 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
+import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { Album } from "@/lib/actions/albums";
 import type { Artist } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { searchTracks, searchWithRelated } from "@/lib/actions/search";
 import type { Track } from "@/lib/actions/tracks";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import {
+    albumViewed,
+    artistViewed,
+    searchCleared,
+    searchPerformed,
+    trackPlayWithQueue,
+} from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
+import {
+    AlertCircle,
+    BadgeCheck,
+    Clock,
+    Disc,
+    Library,
+    Menu,
+    Search,
+    X,
+} from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    ActivityIndicator,
+    Image,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    useColorScheme,
+    useWindowDimensions,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type SearchType = "all" | "title" | "artist";
 
@@ -444,6 +451,13 @@ export default function SearchSongsScreen() {
 				setTracks([]);
 				setAlbums(result.albums);
 				setRelatedTracks(result.relatedTracks);
+
+				// Track search analytics
+				searchPerformed(query, "artist", {
+					artists: result.artists.length,
+					tracks: 0,
+					albums: result.albums.length,
+				});
 			} else if (searchType === "title") {
 				// Track-only search
 				const result = await searchTracks(query, 50, controller.signal);
@@ -451,6 +465,13 @@ export default function SearchSongsScreen() {
 				setArtists([]);
 				setAlbums([]);
 				setRelatedTracks([]);
+
+				// Track search analytics
+				searchPerformed(query, "title", {
+					artists: 0,
+					tracks: result.tracks.length,
+					albums: 0,
+				});
 			} else {
 				// Search all with related content
 				const result = await searchWithRelated(
@@ -467,6 +488,13 @@ export default function SearchSongsScreen() {
 				setTracks(result.tracks);
 				setAlbums(result.albums);
 				setRelatedTracks(result.relatedTracks);
+
+				// Track search analytics
+				searchPerformed(query, "all", {
+					artists: result.artists.length,
+					tracks: result.tracks.length + result.relatedTracks.length,
+					albums: result.albums.length,
+				});
 			}
 		} catch (err) {
 			if (err instanceof Error && err.name === "AbortError") return;
@@ -523,19 +551,44 @@ export default function SearchSongsScreen() {
 		[searchQuery],
 	);
 
-	const handleArtistPress = useCallback((artistId: string) => {
-		router.push(`/artist-detail?id=${artistId}`);
-	}, []);
+	const handleArtistPress = useCallback(
+		(artistId: string) => {
+			// Find artist name for analytics
+			const artist = artists.find((a) => a.id === artistId);
+			if (artist) {
+				artistViewed(artistId, artist.name);
+			}
+			router.push(`/artist-detail?id=${artistId}`);
+		},
+		[artists],
+	);
 
-	const handleAlbumPress = useCallback((albumId: string) => {
-		router.push(`/album-detail?id=${albumId}`);
-	}, []);
+	const handleAlbumPress = useCallback(
+		(albumId: string) => {
+			// Find album title for analytics
+			const album = albums.find((a) => a.id === albumId);
+			if (album) {
+				albumViewed(albumId, album.title);
+			}
+			router.push(`/album-detail?id=${albumId}`);
+		},
+		[albums],
+	);
 
 	const handleTrackPress = useCallback(
 		(trackId: string) => {
 			const trackIndex = queueTracks.findIndex((t) => t.id === trackId);
 			const selectedTrack = queueTracks[trackIndex];
 			if (selectedTrack && queueTracks.length > 0) {
+				// Track analytics
+				trackPlayWithQueue(
+					trackId,
+					selectedTrack.title,
+					"search",
+					queueTracks.length,
+					trackIndex,
+				);
+
 				playTrackWithQueue(
 					selectedTrack,
 					queueTracks,
@@ -548,6 +601,7 @@ export default function SearchSongsScreen() {
 	);
 
 	const handleClearSearch = useCallback(() => {
+		searchCleared();
 		setSearchQuery("");
 		setArtists([]);
 		setTracks([]);
