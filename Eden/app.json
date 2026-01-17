@@ -51,7 +51,14 @@
       "expo-font",
       "expo-web-browser",
       "expo-mail-composer",
-      "expo-build-properties"
+      "expo-build-properties",
+      [
+        "expo-notifications",
+        {
+          "color": "#180518",
+          "defaultChannel": "media-playback"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

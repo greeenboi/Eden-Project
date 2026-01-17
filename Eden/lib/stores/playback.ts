@@ -15,7 +15,7 @@ interface PlaybackState {
 	// Actions
 	/** Update playback state */
 	updatePlayback: (
-		state: Partial<Omit<PlaybackState, "updatePlayback" | "seekTo" | "reset">>,
+		state: Partial<Omit<PlaybackState, "updatePlayback" | "seekTo" | "reset" | "togglePlayback" | "registerToggleCallback" | "unregisterToggleCallback">>,
 	) => void;
 	/** Seek callback - set by the player component */
 	seekTo: ((time: number) => void) | null;
@@ -23,6 +23,12 @@ interface PlaybackState {
 	registerSeekCallback: (callback: (time: number) => void) => void;
 	/** Unregister seek callback */
 	unregisterSeekCallback: () => void;
+	/** Toggle playback callback - set by the player component */
+	togglePlayback: (() => void) | null;
+	/** Register toggle playback callback */
+	registerToggleCallback: (callback: () => void) => void;
+	/** Unregister toggle playback callback */
+	unregisterToggleCallback: () => void;
 	/** Reset playback state */
 	reset: () => void;
 }
@@ -34,6 +40,7 @@ const initialState = {
 	isPlaying: false,
 	isLoading: false,
 	seekTo: null,
+	togglePlayback: null,
 };
 
 /**
@@ -53,6 +60,14 @@ export const usePlaybackStore = create<PlaybackState>((set) => ({
 
 	unregisterSeekCallback: () => {
 		set({ seekTo: null });
+	},
+
+	registerToggleCallback: (callback) => {
+		set({ togglePlayback: callback });
+	},
+
+	unregisterToggleCallback: () => {
+		set({ togglePlayback: null });
 	},
 
 	reset: () => {

@@ -1,30 +1,37 @@
-import {
-	BottomSheetModal,
-	BottomSheetModalProvider,
-	BottomSheetScrollView,
-	useBottomSheet,
-} from "@gorhom/bottom-sheet";
-import {
-	createContext,
-	type ReactNode,
-	useCallback,
-	useContext,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
 import PlayerHandle from "@/components/ui/PlayerHandle";
 import {
-	type QueueSource,
-	type QueueTrack,
-	type RepeatMode,
-	type ShuffleMode,
-	useQueueStore,
+    type QueueSource,
+    type QueueTrack,
+    type RepeatMode,
+    type ShuffleMode,
+    useQueueStore,
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
+import {
+    addMediaNotificationResponseListener,
+    dismissMediaNotification,
+    setupMediaNotifications,
+    showMediaNotification
+} from "@/lib/services/media-notifications";
+import { usePlaybackStore } from "@/lib/stores/playback";
 import { THEME } from "@/lib/theme";
+import {
+    BottomSheetModal,
+    BottomSheetModalProvider,
+    BottomSheetScrollView,
+    useBottomSheet,
+} from "@gorhom/bottom-sheet";
+import {
+    type ReactNode,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
@@ -140,6 +147,30 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	// Queue store integration
 	const queueStore = useQueueStore();
 
+	// Playback store for notification state
+	const { isPlaying } = usePlaybackStore();
+
+	// Track if notifications are set up
+	const notificationsSetupRef = useRef(false);
+
+	// Set up notifications on mount
+	useEffect(() => {
+		if (notificationsSetupRef.current) {
+			console.log("[GlobalPlayer] Notifications already set up, skipping");
+			return;
+		}
+		notificationsSetupRef.current = true;
+
+		console.log("[GlobalPlayer] Setting up notifications...");
+		setupMediaNotifications()
+			.then((success) => {
+				console.log("[GlobalPlayer] Notification setup result:", success);
+			})
+			.catch((err) => {
+				console.warn("[GlobalPlayer] Failed to setup notifications:", err);
+			});
+	}, []);
+
 	const snapPoints = useMemo(() => ["20%", "98%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 	const MINI_SNAP_INDEX = 0;
@@ -251,12 +282,87 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			? queue[currentIndex - 1]?.artworkUrl
 			: null;
 
+	// Current track for notifications
+	const currentTrack = queue[currentIndex] ?? null;
+
+	// Update notification when track or playback state changes
+	useEffect(() => {
+		console.log("[GlobalPlayer] Notification effect triggered");
+		console.log("[GlobalPlayer] - isPlayerVisible:", isPlayerVisible);
+		console.log("[GlobalPlayer] - currentTrack:", currentTrack?.title ?? "none");
+		console.log("[GlobalPlayer] - isPlaying:", isPlaying);
+		console.log("[GlobalPlayer] - hasNext:", hasNext);
+		console.log("[GlobalPlayer] - hasPrevious:", hasPrevious);
+
+		if (!isPlayerVisible || !currentTrack) {
+			console.log("[GlobalPlayer] No player or track, dismissing notification");
+			// Dismiss notification when player is hidden
+			dismissMediaNotification().catch(() => {});
+			return;
+		}
+
+		console.log("[GlobalPlayer] Showing notification for:", currentTrack.title);
+		showMediaNotification({
+			track: currentTrack,
+			isPlaying,
+			hasNext,
+			hasPrevious,
+		})
+			.then(() => {
+				console.log("[GlobalPlayer] showMediaNotification completed");
+			})
+			.catch((err) => {
+				console.warn("[GlobalPlayer] Failed to show notification:", err);
+			});
+	}, [currentTrack, isPlaying, hasNext, hasPrevious, isPlayerVisible]);
+
+	// Listen for notification action responses (play/pause/next/previous)
+	useEffect(() => {
+		console.log("[GlobalPlayer] Setting up notification response listener");
+		const subscription = addMediaNotificationResponseListener((action) => {
+			console.log("[GlobalPlayer] Notification action received:", action);
+			switch (action) {
+				case "PLAY":
+				case "PAUSE":
+					// Toggle playback via the registered callback
+					console.log("[GlobalPlayer] Toggling playback");
+					usePlaybackStore.getState().togglePlayback?.();
+					break;
+				case "NEXT": {
+					console.log("[GlobalPlayer] Skipping to next");
+					queueStore.skipToNext();
+					const nextTrack = queueStore.getCurrentTrack();
+					if (nextTrack) {
+						setSelectedTrackId(nextTrack.id);
+					}
+					break;
+				}
+				case "PREVIOUS": {
+					console.log("[GlobalPlayer] Skipping to previous");
+					queueStore.skipToPrevious();
+					const prevTrack = queueStore.getCurrentTrack();
+					if (prevTrack) {
+						setSelectedTrackId(prevTrack.id);
+					}
+					break;
+				}
+			}
+		});
+
+		return () => {
+			console.log("[GlobalPlayer] Removing notification response listener");
+			subscription.remove();
+		};
+	}, [queueStore]);
+
 	const dismissPlayer = useCallback(() => {
 		bottomSheetRef.current?.dismiss();
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
 		queueStore.clearQueue();
+		// Dismiss notification when player is dismissed
+		dismissMediaNotification().catch(() => {});
 	}, [queueStore]);
 
 	const expandPlayer = useCallback(() => {
