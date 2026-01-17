@@ -1,36 +1,36 @@
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
 import PlayerHandle from "@/components/ui/PlayerHandle";
 import {
-    type QueueSource,
-    type QueueTrack,
-    type RepeatMode,
-    type ShuffleMode,
-    useQueueStore,
+	type QueueSource,
+	type QueueTrack,
+	type RepeatMode,
+	type ShuffleMode,
+	useQueueStore,
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
 import {
-    addMediaNotificationResponseListener,
-    dismissMediaNotification,
-    setupMediaNotifications,
-    showMediaNotification
+	addMediaNotificationResponseListener,
+	dismissMediaNotification,
+	setupMediaNotifications,
+	showMediaNotification,
 } from "@/lib/services/media-notifications";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { THEME } from "@/lib/theme";
 import {
-    BottomSheetModal,
-    BottomSheetModalProvider,
-    BottomSheetScrollView,
-    useBottomSheet,
+	BottomSheetModal,
+	BottomSheetModalProvider,
+	BottomSheetScrollView,
+	useBottomSheet,
 } from "@gorhom/bottom-sheet";
 import {
-    type ReactNode,
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
+	type ReactNode,
+	createContext,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
 } from "react";
 
 interface GlobalPlayerContextValue {
@@ -289,7 +289,10 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	useEffect(() => {
 		console.log("[GlobalPlayer] Notification effect triggered");
 		console.log("[GlobalPlayer] - isPlayerVisible:", isPlayerVisible);
-		console.log("[GlobalPlayer] - currentTrack:", currentTrack?.title ?? "none");
+		console.log(
+			"[GlobalPlayer] - currentTrack:",
+			currentTrack?.title ?? "none",
+		);
 		console.log("[GlobalPlayer] - isPlaying:", isPlaying);
 		console.log("[GlobalPlayer] - hasNext:", hasNext);
 		console.log("[GlobalPlayer] - hasPrevious:", hasPrevious);

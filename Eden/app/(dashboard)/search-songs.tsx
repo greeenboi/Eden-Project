@@ -1,9 +1,9 @@
 import { View } from "@/components/Themed";
 import {
-    Accordion,
-    AccordionContent,
-    AccordionItem,
-    AccordionTrigger,
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,34 +22,34 @@ import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { searchTracks, searchWithRelated } from "@/lib/actions/search";
 import type { Track } from "@/lib/actions/tracks";
 import {
-    albumViewed,
-    artistViewed,
-    searchCleared,
-    searchPerformed,
-    trackPlayWithQueue,
+	albumViewed,
+	artistViewed,
+	searchCleared,
+	searchPerformed,
+	trackPlayWithQueue,
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
-    AlertCircle,
-    BadgeCheck,
-    Clock,
-    Disc,
-    Library,
-    Menu,
-    Search,
-    X,
+	AlertCircle,
+	BadgeCheck,
+	Clock,
+	Disc,
+	Library,
+	Menu,
+	Search,
+	X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ActivityIndicator,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    useColorScheme,
-    useWindowDimensions,
+	ActivityIndicator,
+	Image,
+	Pressable,
+	ScrollView,
+	StyleSheet,
+	useColorScheme,
+	useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

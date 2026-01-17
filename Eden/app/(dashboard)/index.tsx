@@ -1,10 +1,10 @@
 import { View } from "@/components/Themed";
 import {
-    DashboardHeader,
-    EmptyTrackList,
-    LoadingMoreTracks,
-    LoadingSkeleton,
-    TrackCard,
+	DashboardHeader,
+	EmptyTrackList,
+	LoadingMoreTracks,
+	LoadingSkeleton,
+	TrackCard,
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Colors from "@/constants/Colors";
@@ -12,20 +12,20 @@ import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import {
-    loadMoreTriggered,
-    trackPlayWithQueue,
-    tracksRefreshed,
+	loadMoreTriggered,
+	trackPlayWithQueue,
+	tracksRefreshed,
 } from "@/lib/analytics";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
-    Easing,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    RefreshControl,
-    useColorScheme,
+	Animated,
+	Easing,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	RefreshControl,
+	useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

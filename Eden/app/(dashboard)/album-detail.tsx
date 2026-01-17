@@ -8,15 +8,19 @@ import { Text } from "@/components/ui/text";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
-import { albumPlayStarted, albumViewed, trackPlayWithQueue } from "@/lib/analytics";
+import {
+	albumPlayStarted,
+	albumViewed,
+	trackPlayWithQueue,
+} from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import { router, useLocalSearchParams } from "expo-router";
 import {
-    AlertCircle,
-    ArrowLeft,
-    Clock,
-    Music,
-    Play,
+	AlertCircle,
+	ArrowLeft,
+	Clock,
+	Music,
+	Play,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
 import { Image, Pressable, ScrollView, StyleSheet } from "react-native";

@@ -15,7 +15,17 @@ interface PlaybackState {
 	// Actions
 	/** Update playback state */
 	updatePlayback: (
-		state: Partial<Omit<PlaybackState, "updatePlayback" | "seekTo" | "reset" | "togglePlayback" | "registerToggleCallback" | "unregisterToggleCallback">>,
+		state: Partial<
+			Omit<
+				PlaybackState,
+				| "updatePlayback"
+				| "seekTo"
+				| "reset"
+				| "togglePlayback"
+				| "registerToggleCallback"
+				| "unregisterToggleCallback"
+			>
+		>,
 	) => void;
 	/** Seek callback - set by the player component */
 	seekTo: ((time: number) => void) | null;

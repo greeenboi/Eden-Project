@@ -100,7 +100,10 @@ export const authSuccess = (method: "login" | "signup") => {
 	customEvent("auth-success", { method });
 };
 
-export const authFailed = (method: "login" | "signup", errorMessage: string) => {
+export const authFailed = (
+	method: "login" | "signup",
+	errorMessage: string,
+) => {
 	customEvent("auth-failed", { method, errorMessage });
 };
 

@@ -10,13 +10,13 @@ import { useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { vexo } from 'vexo-analytics';
+import { vexo } from "vexo-analytics";
 import "../global.css";
 import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
 
 export {
 	// Catch any errors thrown by the Layout component.
-	ErrorBoundary
+	ErrorBoundary,
 } from "expo-router";
 
 export const unstable_settings = {

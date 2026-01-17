@@ -10,19 +10,19 @@ import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
 import {
-    type Artist,
-    type ArtistPagination,
-    type ArtistStatistics,
-    fetchArtistById,
-    fetchArtistStats,
-    fetchArtistTracks,
+	type Artist,
+	type ArtistPagination,
+	type ArtistStatistics,
+	fetchArtistById,
+	fetchArtistStats,
+	fetchArtistTracks,
 } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import type { Track } from "@/lib/actions/tracks";
 import {
-    artistViewed,
-    loadMoreTriggered,
-    trackPlayWithQueue,
+	artistViewed,
+	loadMoreTriggered,
+	trackPlayWithQueue,
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";

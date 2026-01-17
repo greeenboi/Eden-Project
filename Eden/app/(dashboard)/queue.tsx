@@ -5,7 +5,11 @@ import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
-import { queueCleared, queueTrackRemoved, trackPlayWithQueue } from "@/lib/analytics";
+import {
+	queueCleared,
+	queueTrackRemoved,
+	trackPlayWithQueue,
+} from "@/lib/analytics";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
@@ -13,10 +17,10 @@ import { useCallback, useMemo } from "react";
 import { Image, Pressable, useColorScheme } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
-    Extrapolation,
-    interpolate,
-    type SharedValue,
-    useAnimatedStyle,
+	Extrapolation,
+	interpolate,
+	type SharedValue,
+	useAnimatedStyle,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 

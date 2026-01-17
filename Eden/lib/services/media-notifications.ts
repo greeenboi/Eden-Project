@@ -41,7 +41,10 @@ export function initializeMediaNotifications(): void {
 		handleNotification: async (notification) => {
 			const categoryId = notification.request.content.categoryIdentifier;
 			const isMediaNotification = categoryId === MEDIA_CATEGORY_ID;
-			console.log("[MediaNotifications] handleNotification called, isMedia:", isMediaNotification);
+			console.log(
+				"[MediaNotifications] handleNotification called, isMedia:",
+				isMediaNotification,
+			);
 
 			return {
 				shouldPlaySound: false,
@@ -67,17 +70,24 @@ export async function setupMediaNotificationChannel(): Promise<void> {
 
 	console.log("[MediaNotifications] Setting up Android notification channel");
 	try {
-		const channel = await Notifications.setNotificationChannelAsync(MEDIA_CHANNEL_ID, {
-			name: "Media Playback",
-			description: "Controls for music playback",
-			importance: Notifications.AndroidImportance.LOW,
-			// Low importance = no sound, no vibration, but visible in shade
-			lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-			enableVibrate: false,
-			enableLights: false,
-			showBadge: false,
-		});
-		console.log("[MediaNotifications] Channel created:", JSON.stringify(channel));
+		const channel = await Notifications.setNotificationChannelAsync(
+			MEDIA_CHANNEL_ID,
+			{
+				name: "Media Playback",
+				description: "Controls for music playback",
+				importance: Notifications.AndroidImportance.LOW,
+				// Low importance = no sound, no vibration, but visible in shade
+				lockscreenVisibility:
+					Notifications.AndroidNotificationVisibility.PUBLIC,
+				enableVibrate: false,
+				enableLights: false,
+				showBadge: false,
+			},
+		);
+		console.log(
+			"[MediaNotifications] Channel created:",
+			JSON.stringify(channel),
+		);
 	} catch (error) {
 		console.error("[MediaNotifications] Failed to create channel:", error);
 	}
@@ -90,7 +100,10 @@ export async function setupMediaNotificationChannel(): Promise<void> {
 export async function setupMediaNotificationCategory(
 	isPlaying: boolean,
 ): Promise<void> {
-	console.log("[MediaNotifications] Setting up notification category, isPlaying:", isPlaying);
+	console.log(
+		"[MediaNotifications] Setting up notification category, isPlaying:",
+		isPlaying,
+	);
 	const actions: Notifications.NotificationAction[] = [
 		{
 			identifier: NOTIFICATION_ACTIONS.PREVIOUS,
@@ -102,7 +115,9 @@ export async function setupMediaNotificationCategory(
 			},
 		},
 		{
-			identifier: isPlaying ? NOTIFICATION_ACTIONS.PAUSE : NOTIFICATION_ACTIONS.PLAY,
+			identifier: isPlaying
+				? NOTIFICATION_ACTIONS.PAUSE
+				: NOTIFICATION_ACTIONS.PLAY,
 			buttonTitle: isPlaying ? "⏸ Pause" : "▶ Play",
 			options: {
 				opensAppToForeground: false,
@@ -122,12 +137,19 @@ export async function setupMediaNotificationCategory(
 	];
 
 	try {
-		const category = await Notifications.setNotificationCategoryAsync(MEDIA_CATEGORY_ID, actions, {
-			allowInCarPlay: true,
-			showTitle: true,
-			showSubtitle: true,
-		});
-		console.log("[MediaNotifications] Category created:", JSON.stringify(category));
+		const category = await Notifications.setNotificationCategoryAsync(
+			MEDIA_CATEGORY_ID,
+			actions,
+			{
+				allowInCarPlay: true,
+				showTitle: true,
+				showSubtitle: true,
+			},
+		);
+		console.log(
+			"[MediaNotifications] Category created:",
+			JSON.stringify(category),
+		);
 	} catch (error) {
 		console.error("[MediaNotifications] Failed to create category:", error);
 	}
@@ -141,7 +163,12 @@ export async function showMediaNotification(
 ): Promise<void> {
 	const { track, isPlaying, hasNext, hasPrevious } = state;
 	console.log("[MediaNotifications] showMediaNotification called");
-	console.log("[MediaNotifications] - track:", track.title, "by", track.artistName);
+	console.log(
+		"[MediaNotifications] - track:",
+		track.title,
+		"by",
+		track.artistName,
+	);
 	console.log("[MediaNotifications] - isPlaying:", isPlaying);
 	console.log("[MediaNotifications] - isSetupComplete:", isSetupComplete);
 	console.log("[MediaNotifications] - permissionsGranted:", permissionsGranted);
@@ -152,7 +179,9 @@ export async function showMediaNotification(
 	}
 
 	if (!permissionsGranted) {
-		console.error("[MediaNotifications] Permissions not granted, cannot show notification");
+		console.error(
+			"[MediaNotifications] Permissions not granted, cannot show notification",
+		);
 		return;
 	}
 
@@ -184,7 +213,10 @@ export async function showMediaNotification(
 		priority: "low", // Low priority = no sound/vibration
 	};
 
-	console.log("[MediaNotifications] Notification content:", JSON.stringify(notificationContent));
+	console.log(
+		"[MediaNotifications] Notification content:",
+		JSON.stringify(notificationContent),
+	);
 
 	try {
 		console.log("[MediaNotifications] Scheduling notification...");
@@ -198,7 +230,10 @@ export async function showMediaNotification(
 		// Debug: Check what's shown
 		await debugGetPresentedNotifications();
 	} catch (error) {
-		console.error("[MediaNotifications] Failed to schedule notification:", error);
+		console.error(
+			"[MediaNotifications] Failed to schedule notification:",
+			error,
+		);
 	}
 }
 
@@ -222,7 +257,8 @@ export async function dismissMediaNotification(): Promise<void> {
 export async function requestNotificationPermissions(): Promise<boolean> {
 	console.log("[MediaNotifications] Requesting permissions");
 	try {
-		const { status: existingStatus } = await Notifications.getPermissionsAsync();
+		const { status: existingStatus } =
+			await Notifications.getPermissionsAsync();
 		console.log("[MediaNotifications] Existing status:", existingStatus);
 
 		if (existingStatus === "granted") {
@@ -258,7 +294,10 @@ export function addMediaNotificationResponseListener(
 	return Notifications.addNotificationResponseReceivedListener((response) => {
 		const { actionIdentifier } = response;
 		const data = response.notification.request.content.data;
-		console.log("[MediaNotifications] Response received, action:", actionIdentifier);
+		console.log(
+			"[MediaNotifications] Response received, action:",
+			actionIdentifier,
+		);
 		console.log("[MediaNotifications] Response data:", JSON.stringify(data));
 
 		// Only handle media control notifications
@@ -301,9 +340,17 @@ export function addMediaNotificationResponseListener(
 export async function debugGetPresentedNotifications(): Promise<void> {
 	try {
 		const notifications = await Notifications.getPresentedNotificationsAsync();
-		console.log("[MediaNotifications] Currently presented:", notifications.length);
+		console.log(
+			"[MediaNotifications] Currently presented:",
+			notifications.length,
+		);
 		for (const n of notifications) {
-			console.log("[MediaNotifications] -", n.request.identifier, ":", n.request.content.title);
+			console.log(
+				"[MediaNotifications] -",
+				n.request.identifier,
+				":",
+				n.request.content.title,
+			);
 		}
 	} catch (error) {
 		console.error("[MediaNotifications] Failed to get presented:", error);
@@ -314,10 +361,16 @@ export async function debugGetPresentedNotifications(): Promise<void> {
  * Comprehensive setup function - call once at app startup.
  */
 export async function setupMediaNotifications(): Promise<boolean> {
-	console.log("[MediaNotifications] setupMediaNotifications called, isSetupComplete:", isSetupComplete);
+	console.log(
+		"[MediaNotifications] setupMediaNotifications called, isSetupComplete:",
+		isSetupComplete,
+	);
 
 	if (isSetupComplete) {
-		console.log("[MediaNotifications] Already set up, returning:", permissionsGranted);
+		console.log(
+			"[MediaNotifications] Already set up, returning:",
+			permissionsGranted,
+		);
 		return permissionsGranted;
 	}
 
@@ -335,7 +388,10 @@ export async function setupMediaNotifications(): Promise<boolean> {
 		permissionsGranted = await requestNotificationPermissions();
 
 		isSetupComplete = true;
-		console.log("[MediaNotifications] Setup complete, permissions:", permissionsGranted);
+		console.log(
+			"[MediaNotifications] Setup complete, permissions:",
+			permissionsGranted,
+		);
 		return permissionsGranted;
 	} catch (error) {
 		console.error("[MediaNotifications] Setup failed:", error);
