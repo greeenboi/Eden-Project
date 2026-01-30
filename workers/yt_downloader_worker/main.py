@@ -17,6 +17,14 @@ from starlette.concurrency import run_in_threadpool
 from dotenv import load_dotenv
 
 load_dotenv()
+
+API_BASE_DEFAULT = os.getenv(
+    "API_BASE_DEFAULT",
+)
+YTDLP_COOKIES_PATH = os.getenv("YTDLP_COOKIES_PATH")
+YTDLP_COOKIES_GIST_URL = os.getenv("YTDLP_COOKIES_GIST_URL")
+
+
 app = FastAPI()
 logging.basicConfig(
     level=logging.INFO,
@@ -61,12 +69,6 @@ def enqueue_cleanup(path: Path) -> None:
 start_cleanup_worker()
 
 
-API_BASE_DEFAULT = os.getenv(
-    "API_BASE_DEFAULT",
-)
-YTDLP_COOKIES_PATH = os.getenv("YTDLP_COOKIES_PATH")
-
-
 class ArtistInput(BaseModel):
     name: str
     bio: Optional[str] = None
@@ -95,11 +97,106 @@ class YoutubeToOggRequest(BaseModel):
     source: Optional[str] = None
 
 
+def fetch_cookies_from_gist() -> bool:
+    """Fetch latest cookies from a Gist and overwrite the local cookies file."""
+    if not YTDLP_COOKIES_GIST_URL:
+        logger.debug("[cookies] YTDLP_COOKIES_GIST_URL not set, skipping fetch.")
+        return False
+    if not YTDLP_COOKIES_PATH:
+        logger.error("[cookies] YTDLP_COOKIES_PATH not set, cannot save cookies.")
+        return False
+
+    logger.info("[cookies] fetching cookies from Gist: %s", YTDLP_COOKIES_GIST_URL)
+    try:
+        with httpx.Client(timeout=30.0, follow_redirects=True) as client:
+            response = client.get(YTDLP_COOKIES_GIST_URL)
+        response.raise_for_status()
+
+        cookie_path = Path(YTDLP_COOKIES_PATH)
+        cookie_path.write_text(response.text, encoding="utf-8")
+        logger.info("[cookies] successfully updated cookies file: %s", cookie_path)
+        return True
+    except httpx.RequestError as exc:
+        logger.error(
+            "[cookies] failed to fetch cookies from Gist: %s",
+            exc,
+            exc_info=True,
+        )
+    except Exception:
+        logger.exception("[cookies] unexpected error while fetching cookies")
+    return False
+
+
+def _run_ytdlp_attempts(
+    url: str,
+    base_cmd: List[str],
+    temp_dir: Path,
+    has_cookies: bool,
+) -> tuple[bool, dict[str, Any]]:
+    """Run yt-dlp with different client strategies."""
+    attempts: List[tuple[str, List[str]]] = []
+    if not has_cookies:
+        # Android client avoids some restrictions but does not support cookies.
+        attempts.append(("android-client", ["--extractor-args", "youtube:player_client=android"]))
+    # Default web client (works with cookies); placed last as fallback.
+    attempts.append(("default", []))
+
+    last_logs: List[str] = []
+    for attempt_name, extra_args in attempts:
+        cmd = base_cmd + extra_args + [url]
+        logger.info("[download] running yt-dlp attempt=%s", attempt_name)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=False, encoding="utf-8")
+        stdout_lines = result.stdout.splitlines()
+        stderr_lines = result.stderr.splitlines()
+        last_logs = stdout_lines + stderr_lines
+
+        if result.returncode != 0:
+            logger.warning("[download] yt-dlp attempt failed rc=%s attempt=%s", result.returncode, attempt_name)
+            continue
+
+        info: Optional[dict[str, Any]] = None
+        for line in reversed(stdout_lines):
+            if not line.strip():
+                continue
+            try:
+                parsed = json.loads(line)
+                if isinstance(parsed, dict):
+                    info = parsed
+                    break
+            except json.JSONDecodeError:
+                continue
+
+        if not info:
+            logger.warning("[download] yt-dlp JSON output missing attempt=%s", attempt_name)
+            continue
+
+        ogg_path = temp_dir / f"{info.get('id')}.ogg"
+        if not ogg_path.exists():
+            ogg_files = list(temp_dir.glob("*.ogg"))
+            if ogg_files:
+                ogg_path = ogg_files[0]
+        if not ogg_path.exists():
+            logger.warning("[download] expected OGG file not found attempt=%s", attempt_name)
+            continue
+
+        logger.info("[download] completed: %s", ogg_path)
+        return True, {
+            "video_id": info.get("id"),
+            "title": info.get("title"),
+            "output_path": str(ogg_path),
+            "tmp_dir": str(temp_dir),
+            "info": info,
+            "logs": last_logs,
+        }
+
+    return False, {"logs": last_logs}
+
+
 def download_ogg(url: str) -> dict[str, Any]:
     logger.info("[download] starting download: %s", url)
     temp_dir = Path(tempfile.mkdtemp(prefix="yt_ogg_"))
     output_template = str(temp_dir / "%(id)s.%(ext)s")
-    cmd_base: List[str] = [
+    base_cmd: List[str] = [
         "yt-dlp",
         "--no-playlist",
         "--restrict-filenames",
@@ -122,74 +219,51 @@ def download_ogg(url: str) -> dict[str, Any]:
         cookie_path = Path(YTDLP_COOKIES_PATH)
         if cookie_path.exists():
             has_cookies = True
-            cmd_base.extend(["--cookies", str(cookie_path)])
+            base_cmd.extend(["--cookies", str(cookie_path)])
             logger.info("[download] using cookies file: %s", cookie_path)
         else:
             logger.warning("[download] YTDLP_COOKIES_PATH set but file missing: %s", cookie_path)
 
-    attempts: List[tuple[str, List[str]]] = []
-    if not has_cookies:
-        # Android client avoids some restrictions but does not support cookies.
-        attempts.append(("android-client", ["--extractor-args", "youtube:player_client=android"]))
-    # Default web client (works with cookies); placed last as fallback.
-    attempts.append(("default", []))
-
     try:
-        last_logs: List[str] = []
-        for attempt_name, extra_args in attempts:
-            cmd = cmd_base + extra_args + [url]
-            logger.info("[download] running yt-dlp attempt=%s", attempt_name)
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            stdout_lines = result.stdout.splitlines()
-            stderr_lines = result.stderr.splitlines()
-            last_logs = stdout_lines + stderr_lines
+        # First attempt
+        success, result = _run_ytdlp_attempts(url, base_cmd, temp_dir, has_cookies)
 
-            if result.returncode != 0:
-                logger.warning("[download] yt-dlp attempt failed rc=%s attempt=%s", result.returncode, attempt_name)
-                continue
+        # If first attempt fails and we used cookies, try refreshing them
+        if not success and has_cookies:
+            stderr = "".join(result.get("logs", [])).lower()
+            # Basic check for common cookie-related error messages
+            is_cookie_error = (
+                "authentication" in stderr
+                or "consent" in stderr
+                or "429" in stderr
+                or "your country" in stderr
+            )
 
-            info: Optional[dict[str, Any]] = None
-            for line in reversed(stdout_lines):
-                if not line.strip():
-                    continue
-                try:
-                    parsed = json.loads(line)
-                    if isinstance(parsed, dict):
-                        info = parsed
-                        break
-                except json.JSONDecodeError:
-                    continue
+            if is_cookie_error:
+                logger.warning("[download] download failed with potential cookie error. Refreshing cookies from Gist.")
+                if fetch_cookies_from_gist():
+                    logger.info("[download] retrying download with refreshed cookies.")
+                    # We need a new command list because the old one is immutable
+                    refreshed_base_cmd = base_cmd[:]
+                    # Ensure the cookie param is correctly pointing to the file
+                    if "--cookies" not in refreshed_base_cmd:
+                        refreshed_base_cmd.extend(["--cookies", str(cookie_path)])
 
-            if not info:
-                logger.warning("[download] yt-dlp JSON output missing attempt=%s", attempt_name)
-                continue
+                    success, result = _run_ytdlp_attempts(url, refreshed_base_cmd, temp_dir, has_cookies)
 
-            ogg_path = temp_dir / f"{info.get('id')}.ogg"
-            if not ogg_path.exists():
-                ogg_files = list(temp_dir.glob("*.ogg"))
-                if ogg_files:
-                    ogg_path = ogg_files[0]
-            if not ogg_path.exists():
-                logger.warning("[download] expected OGG file not found attempt=%s", attempt_name)
-                continue
-
-            logger.info("[download] completed: %s", ogg_path)
-            return {
-                "video_id": info.get("id"),
-                "title": info.get("title"),
-                "output_path": str(ogg_path),
-                "tmp_dir": str(temp_dir),
-                "info": info,
-                "logs": last_logs,
-            }
-
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "message": "Failed to download audio via yt-dlp CLI",
-                "logs": last_logs,
-            },
-        )
+        if not success:
+            logger.error(
+                "[download] failed to download video after all attempts.",
+                extra={"logs": result.get("logs", [])},
+            )
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message": "Failed to download audio via yt-dlp CLI",
+                    "logs": result.get("logs", []),
+                },
+            )
+        return result
     except HTTPException:
         enqueue_cleanup(temp_dir)
         raise
@@ -200,6 +274,7 @@ def download_ogg(url: str) -> dict[str, Any]:
             status_code=500,
             detail={"message": f"Unexpected error while converting to OGG: {exc}"},
         ) from exc
+
 
 
 def get_api_base() -> str:
