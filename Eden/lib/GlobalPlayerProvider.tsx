@@ -33,6 +33,21 @@ import {
 	useState,
 } from "react";
 
+function withAlpha(hexColor: string, alpha: number): string {
+	const hex = hexColor.replace("#", "");
+	const normalized =
+		hex.length === 3
+			? hex
+					.split("")
+					.map((c) => `${c}${c}`)
+					.join("")
+			: hex;
+	const r = Number.parseInt(normalized.slice(0, 2), 16);
+	const g = Number.parseInt(normalized.slice(2, 4), 16);
+	const b = Number.parseInt(normalized.slice(4, 6), 16);
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
 	selectedTrackId: string | null;
@@ -143,6 +158,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
+	const activeTheme = isDark ? THEME.dark : THEME.light;
 	const isAndroid = process.env.EXPO_OS === "android";
 
 	const ComposeModalBottomSheet = useMemo(() => {
@@ -494,11 +510,9 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			{isAndroid && ComposeModalBottomSheet && isPlayerVisible ? (
 				<ComposeModalBottomSheet
 					onDismissRequest={handleSheetDismiss}
-					containerColor={
-						isDark ? THEME.dark.background : THEME.light.background
-					}
-					contentColor={isDark ? THEME.dark.primary : THEME.light.primary}
-					scrimColor={isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.35)"}
+					containerColor={activeTheme.background}
+					contentColor={activeTheme.primary}
+					scrimColor={withAlpha(activeTheme.foreground, isDark ? 0.55 : 0.25)}
 					showDragHandle
 					sheetGesturesEnabled
 				>
