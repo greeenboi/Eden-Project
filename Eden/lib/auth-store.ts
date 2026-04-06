@@ -60,9 +60,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 				const data = await response.json();
 				set({ user: data.user, isLoading: false });
 			} else {
-				// Token is invalid/expired, clear auth state
-				await setStorageItemAsync("auth-token", null);
-				set({ token: null, user: null, isLoading: false });
+				// Only clear persisted auth when backend explicitly reports unauthorized.
+				// For transient API failures (5xx, network edge issues), keep token so
+				// the user is not unexpectedly signed out on app relaunch.
+				if (response.status === 401 || response.status === 403) {
+					await setStorageItemAsync("auth-token", null);
+					set({ token: null, user: null, isLoading: false });
+				} else {
+					set({ isLoading: false });
+				}
 			}
 		} catch {
 			// Network error - keep token, user will be null but can retry

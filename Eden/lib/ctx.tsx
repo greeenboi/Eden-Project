@@ -1,4 +1,4 @@
-import { createContext, type PropsWithChildren, use, useEffect } from "react";
+import { type PropsWithChildren, createContext, use, useEffect } from "react";
 import type { User } from "./auth-store";
 import { useAuthStore } from "./auth-store";
 import { useStorageState } from "./useStorageState";
@@ -6,7 +6,7 @@ import { useStorageState } from "./useStorageState";
 interface AuthContextType {
 	signIn: (email: string, password: string) => Promise<void>;
 	signUp: (email: string, password: string, name: string) => Promise<void>;
-	signOut: () => void;
+	signOut: () => Promise<void>;
 	session?: string | null;
 	user: User | null;
 	isLoading: boolean;
@@ -17,7 +17,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({
 	signIn: async () => {},
 	signUp: async () => {},
-	signOut: () => null,
+	signOut: async () => {},
 	session: null,
 	user: null,
 	isLoading: false,
@@ -76,11 +76,11 @@ export function SessionProvider({ children }: PropsWithChildren) {
 				signUp: async (email: string, password: string, name: string) => {
 					await signup(email, password, name);
 				},
-				signOut: () => {
-					logout();
+				signOut: async () => {
+					await logout();
 					setSession(null);
 				},
-				session: token,
+				session: token ?? session,
 				user,
 				isLoading,
 				error,
