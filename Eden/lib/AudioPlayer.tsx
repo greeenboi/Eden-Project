@@ -1,9 +1,9 @@
 import type { AudioMode } from "expo-audio";
 import {
-	setAudioModeAsync,
-	setIsAudioActiveAsync,
-	useAudioPlayer,
-	useAudioPlayerStatus,
+    setAudioModeAsync,
+    setIsAudioActiveAsync,
+    useAudioPlayer,
+    useAudioPlayerStatus,
 } from "expo-audio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -26,6 +26,7 @@ type AudioStatusSnapshot = {
 	isBuffering: boolean;
 	isLoaded: boolean;
 	playing: boolean;
+	didJustFinish?: boolean;
 };
 
 const fallbackStatus: AudioStatusSnapshot = {
@@ -34,6 +35,7 @@ const fallbackStatus: AudioStatusSnapshot = {
 	isBuffering: false,
 	isLoaded: false,
 	playing: false,
+	didJustFinish: false,
 };
 
 const defaultBackgroundAudioMode: Partial<AudioMode> = {
@@ -197,14 +199,23 @@ export function useTrackAudioPlayer({
 	}, [trackId]);
 
 	useEffect(() => {
-		if (!status.isLoaded || !status.duration || status.duration <= 0) return;
+		if (!status.isLoaded) return;
 		if (hasTriggeredEndRef.current) return;
 		if (player.loop) return; // Don't trigger if looping
 
-		// Check if we're at the end (within 0.3s of duration) and not playing
-		// Use a tighter threshold to avoid false positives when pausing near end
-		const isAtEnd = status.currentTime >= status.duration - 0.3;
-		const hasFinished = isAtEnd && !status.playing && !status.isBuffering;
+		// Prefer native completion signal from expo-audio, which is more reliable
+		// than time math when the app is backgrounded.
+		const finishedFromNativeEvent = Boolean(status.didJustFinish);
+
+		// Keep a fallback for platforms/streams where didJustFinish is delayed.
+		const hasDuration = Boolean(status.duration && status.duration > 0);
+		const isAtEnd = hasDuration
+			? status.currentTime >= status.duration - 0.3
+			: false;
+		const finishedFromTimeHeuristic =
+			isAtEnd && !status.playing && !status.isBuffering;
+
+		const hasFinished = finishedFromNativeEvent || finishedFromTimeHeuristic;
 
 		if (hasFinished) {
 			hasTriggeredEndRef.current = true;
@@ -212,6 +223,7 @@ export function useTrackAudioPlayer({
 		}
 	}, [
 		status.isLoaded,
+		status.didJustFinish,
 		status.duration,
 		status.currentTime,
 		status.playing,
