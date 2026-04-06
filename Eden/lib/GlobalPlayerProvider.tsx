@@ -143,6 +143,21 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
+	const isAndroid = process.env.EXPO_OS === "android";
+
+	const ComposeModalBottomSheet = useMemo(() => {
+		if (!isAndroid) return null;
+		return require("@expo/ui/jetpack-compose")
+			.ModalBottomSheet as React.ComponentType<{
+			children: ReactNode;
+			onDismissRequest: () => void;
+			containerColor?: string;
+			contentColor?: string;
+			scrimColor?: string;
+			showDragHandle?: boolean;
+			sheetGesturesEnabled?: boolean;
+		}>;
+	}, [isAndroid]);
 
 	// Queue store integration
 	const queueStore = useQueueStore();
@@ -177,19 +192,22 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 	// Mount the sheet on first render so it's ready when needed
 	useEffect(() => {
+		if (isAndroid) return;
 		if (!isSheetMounted) {
 			bottomSheetRef.current?.present();
 			setIsSheetMounted(true);
 		}
-	}, [isSheetMounted]);
+	}, [isSheetMounted, isAndroid]);
 
 	const playTrack = useCallback(
 		(trackId: string) => {
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
+			setSheetIndex(FULL_SNAP_INDEX);
+			if (isAndroid) return;
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX],
+		[FULL_SNAP_INDEX, isAndroid],
 	);
 
 	const playTrackWithQueue = useCallback(
@@ -204,9 +222,11 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			// Then play the track
 			setSelectedTrackId(track.id);
 			setIsPlayerVisible(true);
+			setSheetIndex(FULL_SNAP_INDEX);
+			if (isAndroid) return;
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX, queueStore],
+		[FULL_SNAP_INDEX, queueStore, isAndroid],
 	);
 
 	const skipToNext = useCallback(() => {
@@ -259,9 +279,13 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setSelectedTrackId(nextTrack.id);
 		} else {
 			// Queue finished, collapse to mini player
+			if (isAndroid) {
+				setSheetIndex(MINI_SNAP_INDEX);
+				return;
+			}
 			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
 		}
-	}, [queueStore]);
+	}, [queueStore, isAndroid]);
 
 	const hasNext = queueStore.hasNext();
 	const hasPrevious = queueStore.hasPrevious();
@@ -359,22 +383,32 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [queueStore]);
 
 	const dismissPlayer = useCallback(() => {
-		bottomSheetRef.current?.dismiss();
+		if (!isAndroid) {
+			bottomSheetRef.current?.dismiss();
+		}
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
 		queueStore.clearQueue();
 		// Dismiss notification when player is dismissed
 		dismissMediaNotification().catch(() => {});
-	}, [queueStore]);
+	}, [queueStore, isAndroid]);
 
 	const expandPlayer = useCallback(() => {
+		if (isAndroid) {
+			setSheetIndex(FULL_SNAP_INDEX);
+			return;
+		}
 		bottomSheetRef.current?.expand();
-	}, []);
+	}, [FULL_SNAP_INDEX, isAndroid]);
 
 	const collapsePlayer = useCallback(() => {
+		if (isAndroid) {
+			setSheetIndex(MINI_SNAP_INDEX);
+			return;
+		}
 		bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
-	}, []);
+	}, [isAndroid]);
 
 	const togglePlayerExpand = useCallback(() => {
 		if (sheetIndex === FULL_SNAP_INDEX) {
@@ -456,55 +490,87 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 	return (
 		<GlobalPlayerContext.Provider value={contextValue}>
-			<BottomSheetModalProvider>
-				{children}
-				<BottomSheetModal
-					ref={bottomSheetRef}
-					snapPoints={snapPoints}
-					handleComponent={PlayerHandle}
-					index={-1}
-					overDragResistanceFactor={3}
-					enablePanDownToClose={false}
-					onChange={handleSheetChange}
-					onDismiss={handleSheetDismiss}
-					enableOverDrag={false}
-					backgroundStyle={{
-						backgroundColor: isDark
-							? THEME.dark.background
-							: THEME.light.background,
-					}}
-					handleIndicatorStyle={{
-						backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,
-					}}
-					animateOnMount
+			{children}
+			{isAndroid && ComposeModalBottomSheet && isPlayerVisible ? (
+				<ComposeModalBottomSheet
+					onDismissRequest={handleSheetDismiss}
+					containerColor={
+						isDark ? THEME.dark.background : THEME.light.background
+					}
+					contentColor={isDark ? THEME.dark.primary : THEME.light.primary}
+					scrimColor={isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.35)"}
+					showDragHandle
+					sheetGesturesEnabled
 				>
-					<BottomSheetScrollView contentContainerStyle={{ flexGrow: 1 }}>
-						{isPlayerVisible && (
-							<>
-								<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
-								<PlayingSongContent
-									trackId={selectedTrackId ?? undefined}
-									onClose={dismissPlayer}
-									onTrackEnd={onTrackEnd}
-									variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
-									onSkipNext={skipToNext}
-									onSkipPrevious={skipToPrevious}
-									onToggleShuffle={toggleShuffle}
-									onToggleRepeat={toggleRepeat}
-									onExpand={expandPlayer}
-									onCollapse={collapsePlayer}
-									hasNext={hasNext}
-									hasPrevious={hasPrevious}
-									isShuffled={shuffleMode === "on"}
-									repeatMode={repeatMode}
-									nextArtworkUrl={nextTrackArtwork}
-									previousArtworkUrl={previousTrackArtwork}
-								/>
-							</>
-						)}
-					</BottomSheetScrollView>
-				</BottomSheetModal>
-			</BottomSheetModalProvider>
+					<PlayingSongContent
+						trackId={selectedTrackId ?? undefined}
+						onClose={dismissPlayer}
+						onTrackEnd={onTrackEnd}
+						variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
+						onSkipNext={skipToNext}
+						onSkipPrevious={skipToPrevious}
+						onToggleShuffle={toggleShuffle}
+						onToggleRepeat={toggleRepeat}
+						onExpand={expandPlayer}
+						onCollapse={collapsePlayer}
+						hasNext={hasNext}
+						hasPrevious={hasPrevious}
+						isShuffled={shuffleMode === "on"}
+						repeatMode={repeatMode}
+						nextArtworkUrl={nextTrackArtwork}
+						previousArtworkUrl={previousTrackArtwork}
+					/>
+				</ComposeModalBottomSheet>
+			) : (
+				<BottomSheetModalProvider>
+					<BottomSheetModal
+						ref={bottomSheetRef}
+						snapPoints={snapPoints}
+						handleComponent={PlayerHandle}
+						index={-1}
+						overDragResistanceFactor={3}
+						enablePanDownToClose={false}
+						onChange={handleSheetChange}
+						onDismiss={handleSheetDismiss}
+						enableOverDrag={false}
+						backgroundStyle={{
+							backgroundColor: isDark
+								? THEME.dark.background
+								: THEME.light.background,
+						}}
+						handleIndicatorStyle={{
+							backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,
+						}}
+						animateOnMount
+					>
+						<BottomSheetScrollView contentContainerStyle={{ flexGrow: 1 }}>
+							{isPlayerVisible && (
+								<>
+									<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
+									<PlayingSongContent
+										trackId={selectedTrackId ?? undefined}
+										onClose={dismissPlayer}
+										onTrackEnd={onTrackEnd}
+										variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
+										onSkipNext={skipToNext}
+										onSkipPrevious={skipToPrevious}
+										onToggleShuffle={toggleShuffle}
+										onToggleRepeat={toggleRepeat}
+										onExpand={expandPlayer}
+										onCollapse={collapsePlayer}
+										hasNext={hasNext}
+										hasPrevious={hasPrevious}
+										isShuffled={shuffleMode === "on"}
+										repeatMode={repeatMode}
+										nextArtworkUrl={nextTrackArtwork}
+										previousArtworkUrl={previousTrackArtwork}
+									/>
+								</>
+							)}
+						</BottomSheetScrollView>
+					</BottomSheetModal>
+				</BottomSheetModalProvider>
+			)}
 		</GlobalPlayerContext.Provider>
 	);
 }

@@ -1,7 +1,7 @@
-import Slider from "@react-native-community/slider";
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
+import { type ComponentType, useEffect, useMemo, useRef } from "react";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -33,41 +33,116 @@ export function PlayerSlider({
 	onSlidingComplete,
 	variant = "full",
 }: PlayerSliderProps) {
+	const lastKnownValueRef = useRef(sliderValue);
+
+	useEffect(() => {
+		lastKnownValueRef.current = sliderValue;
+	}, [sliderValue]);
+
+	const handleValueChange = (value: number) => {
+		lastKnownValueRef.current = value;
+		onValueChange(value);
+	};
+
+	const isEditingRef = useRef(false);
+
+	const composeSlider =
+		process.env.EXPO_OS === "android"
+			? (require("@expo/ui/jetpack-compose").Slider as ComponentType<{
+					value?: number;
+					min?: number;
+					max?: number;
+					enabled?: boolean;
+					colors?: {
+						thumbColor?: string;
+						activeTrackColor?: string;
+						inactiveTrackColor?: string;
+					};
+					onValueChange?: (value: number) => void;
+					onValueChangeFinished?: () => void;
+					style?: { width: "100%"; height: number };
+			  }>)
+			: null;
+
+	const swiftSlider = useMemo(
+		() =>
+			process.env.EXPO_OS === "ios"
+				? (require("@expo/ui/swift-ui").Slider as ComponentType<{
+						value?: number;
+						min?: number;
+						max?: number;
+						onValueChange?: (value: number) => void;
+						onEditingChanged?: (isEditing: boolean) => void;
+						style?: { width: "100%"; height: number };
+				  }>)
+				: null,
+		[],
+	);
+
+	const renderNativeSlider = (height: number) => {
+		if (composeSlider) {
+			const ComposeSlider = composeSlider;
+			return (
+				<ComposeSlider
+					value={sliderValue}
+					min={0}
+					max={sliderMax}
+					enabled={isLoaded && !loadingStream}
+					colors={{
+						thumbColor: themeColors.primary,
+						activeTrackColor: themeColors.primary,
+						inactiveTrackColor: themeColors.muted,
+					}}
+					onValueChange={(value: number) => {
+						if (!isEditingRef.current) {
+							isEditingRef.current = true;
+							onSlidingStart(value);
+						}
+						handleValueChange(value);
+					}}
+					onValueChangeFinished={() => {
+						isEditingRef.current = false;
+						onSlidingComplete(lastKnownValueRef.current);
+					}}
+					style={{ width: "100%", height }}
+				/>
+			);
+		}
+
+		if (swiftSlider) {
+			const SwiftSlider = swiftSlider;
+			return (
+				<SwiftSlider
+					value={sliderValue}
+					min={0}
+					max={sliderMax}
+					onValueChange={handleValueChange}
+					onEditingChanged={(isEditing: boolean) => {
+						if (isEditing) {
+							onSlidingStart(lastKnownValueRef.current);
+							return;
+						}
+						onSlidingComplete(lastKnownValueRef.current);
+					}}
+					style={{ width: "100%", height }}
+				/>
+			);
+		}
+
+		return null;
+	};
+
 	if (variant === "mini") {
 		return (
-			<Slider
-				key={`slider-mini-${trackId ?? "none"}`}
-				style={{ width: "100%", height: 32 }}
-				minimumValue={0}
-				maximumValue={sliderMax}
-				value={sliderValue}
-				minimumTrackTintColor={themeColors.primary}
-				maximumTrackTintColor={themeColors.muted}
-				thumbTintColor={themeColors.primary}
-				onSlidingStart={onSlidingStart}
-				onValueChange={onValueChange}
-				onSlidingComplete={onSlidingComplete}
-				disabled={!isLoaded || loadingStream}
-			/>
+			<View key={`slider-mini-${trackId ?? "none"}`} style={{ width: "100%" }}>
+				{renderNativeSlider(32)}
+			</View>
 		);
 	}
 
 	return (
 		<View style={{ backgroundColor: "transparent" }} className="px-8 pb-6">
-			<Slider
-				key={`slider-full-${trackId ?? "none"}`}
-				style={{ width: "100%", height: 40 }}
-				minimumValue={0}
-				maximumValue={sliderMax}
-				value={sliderValue}
-				minimumTrackTintColor={themeColors.primary}
-				maximumTrackTintColor={themeColors.muted}
-				thumbTintColor={themeColors.primary}
-				onSlidingStart={onSlidingStart}
-				onValueChange={onValueChange}
-				onSlidingComplete={onSlidingComplete}
-				disabled={!isLoaded || loadingStream}
-			/>
+			<View key={`slider-full-${trackId ?? "none"}`}>{renderNativeSlider(40)}</View>
 			<View
 				style={{ backgroundColor: "transparent" }}
 				className="flex-row justify-between"
