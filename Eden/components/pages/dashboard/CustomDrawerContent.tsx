@@ -1,3 +1,7 @@
+import { View } from "@/components/Themed";
+import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 import {
 	type DrawerContentComponentProps,
 	DrawerContentScrollView,
@@ -6,10 +10,6 @@ import {
 import { router } from "expo-router";
 import { Music, Search, Settings, Users, X } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const isDark = useIsDark();
@@ -49,7 +49,7 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						Browse
 					</Text>
 					<DrawerItem
-						label="All Songs"
+						label="Home"
 						icon={({ size }) => (
 							<Music
 								size={size}
@@ -61,6 +61,29 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						focused={currentRoute === "index"}
 						onPress={() => {
 							router.push("/");
+							props.navigation.closeDrawer();
+						}}
+						activeTintColor={primaryColor}
+						inactiveTintColor={foregroundColor}
+						activeBackgroundColor={
+							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+						}
+						style={styles.drawerItem}
+						labelStyle={styles.drawerLabel}
+					/>
+					<DrawerItem
+						label="All Songs"
+						icon={({ size }) => (
+							<Music
+								size={size}
+								color={
+									currentRoute === "allsongs" ? primaryColor : foregroundColor
+								}
+							/>
+						)}
+						focused={currentRoute === "allsongs"}
+						onPress={() => {
+							router.push("/allsongs");
 							props.navigation.closeDrawer();
 						}}
 						activeTintColor={primaryColor}
