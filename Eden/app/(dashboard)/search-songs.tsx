@@ -26,6 +26,14 @@ import {
 	trackPlayWithQueue,
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
+import {
+	Host,
+	SegmentedButton,
+	SingleChoiceSegmentedButtonRow
+} from "@expo/ui/jetpack-compose";
+import {
+	width
+} from "@expo/ui/jetpack-compose/modifiers";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
@@ -383,37 +391,6 @@ export default function SearchSongsScreen() {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 	const { playTrackWithQueue } = useGlobalPlayer();
-	const isAndroid = process.env.EXPO_OS === "android";
-
-	const composeSearchBar = useMemo(() => {
-		if (!isAndroid) return null;
-		return require("@expo/ui/jetpack-compose").SearchBar as React.ComponentType<{
-			onSearch?: (searchText: string) => void;
-			children?: React.ReactNode;
-			Placeholder?: React.ComponentType<{ children: React.ReactNode }>;
-		}> & {
-			Placeholder: React.ComponentType<{ children: React.ReactNode }>;
-		};
-	}, [isAndroid]);
-
-	const composeSingleChoiceRow = useMemo(() => {
-		if (!isAndroid) return null;
-		return require("@expo/ui/jetpack-compose")
-			.SingleChoiceSegmentedButtonRow as React.ComponentType<{
-			children: React.ReactNode;
-		}>;
-	}, [isAndroid]);
-
-	const composeSegmentedButton = useMemo(() => {
-		if (!isAndroid) return null;
-		return require("@expo/ui/jetpack-compose").SegmentedButton as React.ComponentType<{
-			selected?: boolean;
-			onClick?: () => void;
-			children?: React.ReactNode;
-		}> & {
-			Label: React.ComponentType<{ children: React.ReactNode }>;
-		};
-	}, [isAndroid]);
 
 	// Search state
 	const [searchQuery, setSearchQuery] = useState("");
@@ -661,41 +638,27 @@ export default function SearchSongsScreen() {
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-4 py-3">
 					<View className="bg-transparent flex-row items-center gap-3">
-						<Search size={28} color={themeColors.tint} />
-						<Text className="text-2xl font-bold">Search</Text>
+						<Search size={32} color={themeColors.tint} />
+						<Text className="text-3xl font-bold">Search</Text>
 					</View>
 					<Pressable onPress={handleOpenDrawer}>
-						<Menu size={28} color={themeColors.text} />
+						<Menu size={32} color={themeColors.text} />
 					</Pressable>
 				</View>
 
 				{/* Large Search Bar */}
 				<View className="px-4 pb-3">
-					{isAndroid && composeSearchBar ? (
-						<View className="bg-transparent gap-2">
-							{(() => {
-								const ComposeSearchBar = composeSearchBar;
-								return (
-									<ComposeSearchBar
-										onSearch={(value: string) => {
-											handleSearchWithQuery(value);
-										}}
-									>
-										<ComposeSearchBar.Placeholder>
-											<Text>What do you want to listen to?</Text>
-										</ComposeSearchBar.Placeholder>
-									</ComposeSearchBar>
-								);
-							})()}
-							{isSearching && <ActivityIndicator size="small" color={themeColors.tint} />}
-						</View>
-					) : (
-						<View className="rounded-xl bg-muted/10 px-4 py-3">
-							<Text className="text-sm opacity-70">
-								This screen uses Android Expo UI components only.
-							</Text>
-						</View>
-					)}
+					<View className="bg-transparent gap-2">
+						<Input
+							placeholder="What do you want to listen to?"
+							value={searchQuery}
+							onChangeText={setSearchQuery}
+							onSubmitEditing={handleSearch}
+							returnKeyType="search"
+							className="h-20 border-none"
+						/>
+						{isSearching && <ActivityIndicator size="small" color={themeColors.tint} />}
+					</View>
 				</View>
 
 				{/* Advanced Settings Accordion */}
@@ -706,48 +669,61 @@ export default function SearchSongsScreen() {
 								<Text className="font-medium">Advanced Filters</Text>
 							</AccordionTrigger>
 							<AccordionContent>
-								<View className="py-2">
+								<View className="py-1">
 									{/* Search Type */}
 									<View className="gap-2 bg-transparent">
-										<Label className="text-sm opacity-70">Search In</Label>
-										{isAndroid && composeSingleChoiceRow && composeSegmentedButton ? (
-											(() => {
-												const SingleChoiceSegmentedButtonRow = composeSingleChoiceRow;
-												const SegmentedButton = composeSegmentedButton;
-												return (
-													<SingleChoiceSegmentedButtonRow>
-														<SegmentedButton
-															selected={searchType === "all"}
-															onClick={() => setSearchType("all")}
-														>
-															<SegmentedButton.Label>
-																<Text style={segmentedLabelStyle}>All</Text>
-															</SegmentedButton.Label>
-														</SegmentedButton>
-														<SegmentedButton
-															selected={searchType === "title"}
-															onClick={() => setSearchType("title")}
-														>
-															<SegmentedButton.Label>
-																<Text style={segmentedLabelStyle}>Tracks</Text>
-															</SegmentedButton.Label>
-														</SegmentedButton>
-														<SegmentedButton
-															selected={searchType === "artist"}
-															onClick={() => setSearchType("artist")}
-														>
-															<SegmentedButton.Label>
-																<Text style={segmentedLabelStyle}>Artists</Text>
-															</SegmentedButton.Label>
-														</SegmentedButton>
-													</SingleChoiceSegmentedButtonRow>
-												);
-											})()
-										) : (
-										<Text className="text-xs opacity-60">
-											Search type is available on Android only.
-										</Text>
-										)}
+										<Host matchContents>
+											<SingleChoiceSegmentedButtonRow modifiers={[width(320)]}>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "all"}
+													onClick={() => setSearchType("all")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>All</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "title"}
+													onClick={() => setSearchType("title")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>Tracks</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "artist"}
+													onClick={() => setSearchType("artist")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>Artists</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+											</SingleChoiceSegmentedButtonRow>
+										</Host>
 									</View>
 
 									{/* Genre Filter */}
@@ -931,7 +907,7 @@ export default function SearchSongsScreen() {
 
 					{/* Initial State */}
 					{!isSearching && !hasSearched && (
-						<EmptyState message="Search for your favorite songs and artists" color={themeColors.tint} />
+						<EmptyState message="Search for your favorite songs and artists" color={themeColors.accent} />
 					)}
 				</ScrollView>
 			</View>
