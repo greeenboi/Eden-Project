@@ -16,7 +16,7 @@ import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
 
 export {
 	// Catch any errors thrown by the Layout component.
-	ErrorBoundary,
+	ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -63,8 +63,6 @@ export default function RootLayout() {
 function RootLayoutNav() {
 	const colorScheme = useColorScheme();
 	const { session, isLoading } = useSession();
-	// console.log(session);
-	// console.log(!!session);
 
 	// Wait for auth initialization
 	if (isLoading) {

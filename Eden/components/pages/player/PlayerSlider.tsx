@@ -1,7 +1,8 @@
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
-import { type ComponentType, useEffect, useMemo, useRef } from "react";
+import { Host, Slider } from "@expo/ui/jetpack-compose";
+import { type ComponentType, type ReactNode, useEffect, useRef } from "react";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -33,7 +34,13 @@ export function PlayerSlider({
 	onSlidingComplete,
 	variant = "full",
 }: PlayerSliderProps) {
+	if (process.env.EXPO_OS !== "android") {
+		return null;
+	}
+
 	const lastKnownValueRef = useRef(sliderValue);
+	const safeMax = Math.max(0, sliderMax || 0);
+	const safeValue = Math.min(Math.max(sliderValue, 0), safeMax);
 
 	useEffect(() => {
 		lastKnownValueRef.current = sliderValue;
@@ -45,49 +52,19 @@ export function PlayerSlider({
 	};
 
 	const isEditingRef = useRef(false);
-
-	const composeSlider =
-		process.env.EXPO_OS === "android"
-			? (require("@expo/ui/jetpack-compose").Slider as ComponentType<{
-					value?: number;
-					min?: number;
-					max?: number;
-					enabled?: boolean;
-					colors?: {
-						thumbColor?: string;
-						activeTrackColor?: string;
-						inactiveTrackColor?: string;
-					};
-					onValueChange?: (value: number) => void;
-					onValueChangeFinished?: () => void;
-					style?: { width: "100%"; height: number };
-			  }>)
-			: null;
-
-	const swiftSlider = useMemo(
-		() =>
-			process.env.EXPO_OS === "ios"
-				? (require("@expo/ui/swift-ui").Slider as ComponentType<{
-						value?: number;
-						min?: number;
-						max?: number;
-						onValueChange?: (value: number) => void;
-						onEditingChanged?: (isEditing: boolean) => void;
-						style?: { width: "100%"; height: number };
-				  }>)
-				: null,
-		[],
-	);
+	const ComposeHost = Host as ComponentType<{
+		children?: ReactNode;
+		style?: { width?: "100%"; height?: number };
+	}>;
 
 	const renderNativeSlider = (height: number) => {
-		if (composeSlider) {
-			const ComposeSlider = composeSlider;
-			return (
-				<ComposeSlider
-					value={sliderValue}
+		return (
+			<ComposeHost style={{ width: "100%", height }}>
+				<Slider
+					value={safeValue}
 					min={0}
-					max={sliderMax}
-					enabled={isLoaded && !loadingStream}
+					max={safeMax}
+					enabled={isLoaded && !loadingStream && safeMax > 0}
 					colors={{
 						thumbColor: themeColors.primary,
 						activeTrackColor: themeColors.primary,
@@ -101,35 +78,15 @@ export function PlayerSlider({
 						handleValueChange(value);
 					}}
 					onValueChangeFinished={() => {
+						if (!isEditingRef.current) {
+							return;
+						}
 						isEditingRef.current = false;
 						onSlidingComplete(lastKnownValueRef.current);
 					}}
-					style={{ width: "100%", height }}
 				/>
-			);
-		}
-
-		if (swiftSlider) {
-			const SwiftSlider = swiftSlider;
-			return (
-				<SwiftSlider
-					value={sliderValue}
-					min={0}
-					max={sliderMax}
-					onValueChange={handleValueChange}
-					onEditingChanged={(isEditing: boolean) => {
-						if (isEditing) {
-							onSlidingStart(lastKnownValueRef.current);
-							return;
-						}
-						onSlidingComplete(lastKnownValueRef.current);
-					}}
-					style={{ width: "100%", height }}
-				/>
-			);
-		}
-
-		return null;
+			</ComposeHost>
+		);
 	};
 
 	if (variant === "mini") {
