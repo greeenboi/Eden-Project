@@ -1,8 +1,9 @@
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
-import { Host, Slider } from "@expo/ui/jetpack-compose";
-import { type ComponentType, type ReactNode, useEffect, useRef } from "react";
+import { Box, Host, Shape, Slider } from "@expo/ui/jetpack-compose";
+import { size, width } from "@expo/ui/jetpack-compose/modifiers";
+import { useEffect, useRef } from "react";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -14,6 +15,8 @@ interface PlayerSliderProps {
 	themeColors: {
 		primary: string;
 		muted: string;
+		tint: string;
+		accent: string;
 	};
 	onSlidingStart: (value: number) => void;
 	onValueChange: (value: number) => void;
@@ -52,40 +55,44 @@ export function PlayerSlider({
 	};
 
 	const isEditingRef = useRef(false);
-	const ComposeHost = Host as ComponentType<{
-		children?: ReactNode;
-		style?: { width?: "100%"; height?: number };
-	}>;
 
 	const renderNativeSlider = (height: number) => {
 		return (
-			<ComposeHost style={{ width: "100%", height }}>
-				<Slider
-					value={safeValue}
-					min={0}
-					max={safeMax}
-					enabled={isLoaded && !loadingStream && safeMax > 0}
-					colors={{
-						thumbColor: themeColors.primary,
-						activeTrackColor: themeColors.primary,
-						inactiveTrackColor: themeColors.muted,
-					}}
-					onValueChange={(value: number) => {
-						if (!isEditingRef.current) {
-							isEditingRef.current = true;
-							onSlidingStart(value);
-						}
-						handleValueChange(value);
-					}}
-					onValueChangeFinished={() => {
-						if (!isEditingRef.current) {
-							return;
-						}
-						isEditingRef.current = false;
-						onSlidingComplete(lastKnownValueRef.current);
-					}}
-				/>
-			</ComposeHost>
+			<Host matchContents>
+				<Box contentAlignment="center" modifiers={[width(280)]}>
+					<Slider
+						value={safeValue}
+						min={0}
+						max={safeMax}
+						enabled={isLoaded && !loadingStream && safeMax > 0}
+						colors={{
+							thumbColor: themeColors.primary,
+							activeTickColor: themeColors.primary,
+							inactiveTickColor: themeColors.muted,
+							activeTrackColor: themeColors.primary,
+							inactiveTrackColor: themeColors.muted,
+						}}
+						onValueChange={(value: number) => {
+							if (!isEditingRef.current) {
+								isEditingRef.current = true;
+								onSlidingStart(value);
+							}
+							handleValueChange(value);
+						}}
+						onValueChangeFinished={() => {
+							if (!isEditingRef.current) {
+								return;
+							}
+							isEditingRef.current = false;
+							onSlidingComplete(lastKnownValueRef.current);
+						}}
+					>
+						<Slider.Thumb>
+							<Shape.Circle radius={2} color={themeColors.primary} modifiers={[size(12, 12)]} />
+						</Slider.Thumb>
+					</Slider>
+				</Box>
+			</Host>
 		);
 	};
 

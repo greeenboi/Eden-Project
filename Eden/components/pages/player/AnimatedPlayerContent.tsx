@@ -1,3 +1,8 @@
+import { View } from "@/components/Themed";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import type { RepeatMode } from "@/lib/actions/queue";
 import {
 	ListMusic,
 	Music,
@@ -22,11 +27,6 @@ import Animated, {
 	useSharedValue,
 	withSpring,
 } from "react-native-reanimated";
-import { View } from "@/components/Themed";
-import { Card, CardContent } from "@/components/ui/card";
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Text } from "@/components/ui/text";
-import type { RepeatMode } from "@/lib/actions/queue";
 import { PlayerControls } from "./PlayerControls";
 import { PlayerSlider } from "./PlayerSlider";
 import { PlayerTrackInfo } from "./PlayerTrackInfo";
@@ -61,6 +61,7 @@ interface AnimatedPlayerContentProps {
 		primary: string;
 		muted: string;
 		tint: string;
+		accent: string;
 	};
 	hasNext?: boolean;
 	hasPrevious?: boolean;

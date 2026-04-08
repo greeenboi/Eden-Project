@@ -33,21 +33,6 @@ import {
 	useState,
 } from "react";
 
-function withAlpha(hexColor: string, alpha: number): string {
-	const hex = hexColor.replace("#", "");
-	const normalized =
-		hex.length === 3
-			? hex
-					.split("")
-					.map((c) => `${c}${c}`)
-					.join("")
-			: hex;
-	const r = Number.parseInt(normalized.slice(0, 2), 16);
-	const g = Number.parseInt(normalized.slice(2, 4), 16);
-	const b = Number.parseInt(normalized.slice(4, 6), 16);
-	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
 	selectedTrackId: string | null;
@@ -158,23 +143,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
-	const activeTheme = isDark ? THEME.dark : THEME.light;
-	const isAndroid = process.env.EXPO_OS === "android";
-
-	const ComposeModalBottomSheet = useMemo(() => {
-		if (!isAndroid) return null;
-		return require("@expo/ui/jetpack-compose")
-			.ModalBottomSheet as React.ComponentType<{
-			children: ReactNode;
-			onDismissRequest: () => void;
-			containerColor?: string;
-			contentColor?: string;
-			scrimColor?: string;
-			showDragHandle?: boolean;
-			sheetGesturesEnabled?: boolean;
-		}>;
-	}, [isAndroid]);
-
 	// Queue store integration
 	const queueStore = useQueueStore();
 
@@ -208,22 +176,20 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 	// Mount the sheet on first render so it's ready when needed
 	useEffect(() => {
-		if (isAndroid) return;
 		if (!isSheetMounted) {
 			bottomSheetRef.current?.present();
 			setIsSheetMounted(true);
 		}
-	}, [isSheetMounted, isAndroid]);
+	}, [isSheetMounted]);
 
 	const playTrack = useCallback(
 		(trackId: string) => {
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
-			if (isAndroid) return;
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX, isAndroid],
+		[FULL_SNAP_INDEX],
 	);
 
 	const playTrackWithQueue = useCallback(
@@ -239,10 +205,9 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setSelectedTrackId(track.id);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
-			if (isAndroid) return;
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX, queueStore, isAndroid],
+		[FULL_SNAP_INDEX, queueStore],
 	);
 
 	const skipToNext = useCallback(() => {
@@ -295,13 +260,9 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setSelectedTrackId(nextTrack.id);
 		} else {
 			// Queue finished, collapse to mini player
-			if (isAndroid) {
-				setSheetIndex(MINI_SNAP_INDEX);
-				return;
-			}
 			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
 		}
-	}, [queueStore, isAndroid]);
+	}, [queueStore]);
 
 	const hasNext = queueStore.hasNext();
 	const hasPrevious = queueStore.hasPrevious();
@@ -399,32 +360,21 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [queueStore]);
 
 	const dismissPlayer = useCallback(() => {
-		if (!isAndroid) {
-			bottomSheetRef.current?.dismiss();
-		}
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
 		queueStore.clearQueue();
 		// Dismiss notification when player is dismissed
 		dismissMediaNotification().catch(() => {});
-	}, [queueStore, isAndroid]);
+	}, [queueStore]);
 
 	const expandPlayer = useCallback(() => {
-		if (isAndroid) {
-			setSheetIndex(FULL_SNAP_INDEX);
-			return;
-		}
 		bottomSheetRef.current?.expand();
-	}, [FULL_SNAP_INDEX, isAndroid]);
+	}, []);
 
 	const collapsePlayer = useCallback(() => {
-		if (isAndroid) {
-			setSheetIndex(MINI_SNAP_INDEX);
-			return;
-		}
 		bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
-	}, [isAndroid]);
+	}, []);
 
 	const togglePlayerExpand = useCallback(() => {
 		if (sheetIndex === FULL_SNAP_INDEX) {
@@ -506,85 +456,55 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 	return (
 		<GlobalPlayerContext.Provider value={contextValue}>
-			{children}
-			{isAndroid && ComposeModalBottomSheet && isPlayerVisible ? (
-				<ComposeModalBottomSheet
-					onDismissRequest={handleSheetDismiss}
-					containerColor={activeTheme.background}
-					contentColor={activeTheme.primary}
-					scrimColor={withAlpha(activeTheme.foreground, isDark ? 0.55 : 0.25)}
-					showDragHandle
-					sheetGesturesEnabled
+			<BottomSheetModalProvider>
+				{children}
+				<BottomSheetModal
+					ref={bottomSheetRef}
+					snapPoints={snapPoints}
+					handleComponent={PlayerHandle}
+					index={-1}
+					overDragResistanceFactor={3}
+					enablePanDownToClose={false}
+					onChange={handleSheetChange}
+					onDismiss={handleSheetDismiss}
+					enableOverDrag={false}
+					backgroundStyle={{
+						backgroundColor: isDark
+							? THEME.dark.background
+							: THEME.light.background,
+					}}
+					handleIndicatorStyle={{
+						backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,
+					}}
+					animateOnMount
 				>
-					<PlayingSongContent
-						trackId={selectedTrackId ?? undefined}
-						onClose={dismissPlayer}
-						onTrackEnd={onTrackEnd}
-						variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
-						onSkipNext={skipToNext}
-						onSkipPrevious={skipToPrevious}
-						onToggleShuffle={toggleShuffle}
-						onToggleRepeat={toggleRepeat}
-						onExpand={expandPlayer}
-						onCollapse={collapsePlayer}
-						hasNext={hasNext}
-						hasPrevious={hasPrevious}
-						isShuffled={shuffleMode === "on"}
-						repeatMode={repeatMode}
-						nextArtworkUrl={nextTrackArtwork}
-						previousArtworkUrl={previousTrackArtwork}
-					/>
-				</ComposeModalBottomSheet>
-			) : (
-				<BottomSheetModalProvider>
-					<BottomSheetModal
-						ref={bottomSheetRef}
-						snapPoints={snapPoints}
-						handleComponent={PlayerHandle}
-						index={-1}
-						overDragResistanceFactor={3}
-						enablePanDownToClose={false}
-						onChange={handleSheetChange}
-						onDismiss={handleSheetDismiss}
-						enableOverDrag={false}
-						backgroundStyle={{
-							backgroundColor: isDark
-								? THEME.dark.background
-								: THEME.light.background,
-						}}
-						handleIndicatorStyle={{
-							backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,
-						}}
-						animateOnMount
-					>
-						<BottomSheetScrollView contentContainerStyle={{ flexGrow: 1 }}>
-							{isPlayerVisible && (
-								<>
-									<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
-									<PlayingSongContent
-										trackId={selectedTrackId ?? undefined}
-										onClose={dismissPlayer}
-										onTrackEnd={onTrackEnd}
-										variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
-										onSkipNext={skipToNext}
-										onSkipPrevious={skipToPrevious}
-										onToggleShuffle={toggleShuffle}
-										onToggleRepeat={toggleRepeat}
-										onExpand={expandPlayer}
-										onCollapse={collapsePlayer}
-										hasNext={hasNext}
-										hasPrevious={hasPrevious}
-										isShuffled={shuffleMode === "on"}
-										repeatMode={repeatMode}
-										nextArtworkUrl={nextTrackArtwork}
-										previousArtworkUrl={previousTrackArtwork}
-									/>
-								</>
-							)}
-						</BottomSheetScrollView>
-					</BottomSheetModal>
-				</BottomSheetModalProvider>
-			)}
+					<BottomSheetScrollView contentContainerStyle={{ flexGrow: 1 }}>
+						{isPlayerVisible && (
+							<>
+								<AutoExpandOnMount targetIndex={FULL_SNAP_INDEX} />
+								<PlayingSongContent
+									trackId={selectedTrackId ?? undefined}
+									onClose={dismissPlayer}
+									onTrackEnd={onTrackEnd}
+									variant={sheetIndex === MINI_SNAP_INDEX ? "mini" : "full"}
+									onSkipNext={skipToNext}
+									onSkipPrevious={skipToPrevious}
+									onToggleShuffle={toggleShuffle}
+									onToggleRepeat={toggleRepeat}
+									onExpand={expandPlayer}
+									onCollapse={collapsePlayer}
+									hasNext={hasNext}
+									hasPrevious={hasPrevious}
+									isShuffled={shuffleMode === "on"}
+									repeatMode={repeatMode}
+									nextArtworkUrl={nextTrackArtwork}
+									previousArtworkUrl={previousTrackArtwork}
+								/>
+							</>
+						)}
+					</BottomSheetScrollView>
+				</BottomSheetModal>
+			</BottomSheetModalProvider>
 		</GlobalPlayerContext.Provider>
 	);
 }

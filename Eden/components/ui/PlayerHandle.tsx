@@ -1,12 +1,15 @@
+import Colors from "@/constants/Colors";
+import { usePlaybackStore } from "@/lib/stores/playback";
+import { Host, Shape, Slider } from "@expo/ui/jetpack-compose";
+import { size } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
-import Slider from "@react-native-community/slider";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
 	type StyleProp,
 	StyleSheet,
-	useColorScheme,
 	type ViewStyle,
+	useColorScheme,
 } from "react-native";
 import Animated, {
 	Extrapolation,
@@ -14,8 +17,6 @@ import Animated, {
 	useAnimatedStyle,
 	useDerivedValue,
 } from "react-native-reanimated";
-import Colors from "@/constants/Colors";
-import { usePlaybackStore } from "@/lib/stores/playback";
 
 const toRad = (deg: number) => {
 	"worklet";
@@ -64,6 +65,8 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	// Local scrub state for smooth slider interaction
 	const [isScrubbing, setIsScrubbing] = useState(false);
 	const [scrubValue, setScrubValue] = useState(0);
+	const isEditingRef = useRef(false);
+	const lastKnownValueRef = useRef(0);
 
 	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
@@ -78,12 +81,14 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	}, [isScrubbing, scrubValue, currentTime, sliderMax]);
 
 	const handleSlidingStart = useCallback((value: number) => {
+		lastKnownValueRef.current = Number.isFinite(value) ? value : 0;
 		setIsScrubbing(true);
 		setScrubValue(Number.isFinite(value) ? value : 0);
 	}, []);
 
 	const handleValueChange = useCallback((value: number) => {
 		if (!Number.isFinite(value)) return;
+		lastKnownValueRef.current = value;
 		setScrubValue(value);
 	}, []);
 
@@ -191,25 +196,43 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 		>
 			{/* Slider - visible in mini mode */}
 			<Animated.View style={[styles.sliderContainer, sliderOpacityStyle]}>
-				<Slider
-					style={styles.slider}
-					value={sliderValue}
-					minimumValue={0}
-					maximumValue={sliderMax}
-					minimumTrackTintColor={themeColors.primary}
-					maximumTrackTintColor={themeColors.muted}
-					thumbTintColor={themeColors.primary}
-					onSlidingStart={handleSlidingStart}
-					onValueChange={handleValueChange}
-					onSlidingComplete={handleSlidingComplete}
-					disabled={!isLoaded || isLoading}
-				/>
+				<Host matchContents style={styles.sliderHost}>
+					<Slider
+						value={sliderValue}
+						min={0}
+						max={sliderMax}
+						enabled={isLoaded && !isLoading}
+						colors={{
+							thumbColor: themeColors.primary,
+							activeTickColor: themeColors.primary,
+							inactiveTickColor: themeColors.muted,
+							activeTrackColor: themeColors.primary,
+							inactiveTrackColor: themeColors.muted,
+						}}
+						onValueChange={(value: number) => {
+							if (!isEditingRef.current) {
+								isEditingRef.current = true;
+								handleSlidingStart(value);
+							}
+							handleValueChange(value);
+						}}
+						onValueChangeFinished={() => {
+							if (!isEditingRef.current) return;
+							isEditingRef.current = false;
+							handleSlidingComplete(lastKnownValueRef.current);
+						}}
+					>
+						<Slider.Thumb>
+							<Shape.Circle radius={2} color={themeColors.primary} modifiers={[size(12, 12)]} />
+						</Slider.Thumb>
+					</Slider>
+				</Host>
 			</Animated.View>
 
 			{/* Regular handle indicators - visible in expanded mode */}
 			<Animated.View
 				style={[styles.indicatorContainer, indicatorOpacityStyle]}
-			></Animated.View>
+			/>
 		</Animated.View>
 	);
 };
@@ -233,7 +256,7 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		justifyContent: "center",
 	},
-	slider: {
+	sliderHost: {
 		width: "100%",
 		height: 40,
 	},
