@@ -13,6 +13,7 @@ import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { StyleSheet, useColorScheme } from "react-native";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
+import { SwipeablePlayer } from "./player/SwipeablePlayer";
 
 type PlayingSongContentProps = {
 	trackId?: string;
@@ -125,6 +126,7 @@ export function PlayingSongContent({
 		if (!status.isLoaded) return; // Only set loop once track is loaded
 		const shouldLoop = repeatMode === "one";
 		if (player.loop !== shouldLoop) {
+			// eslint-disable-next-line react-compiler/react-compiler
 			player.loop = shouldLoop;
 		}
 	}, [repeatMode, player, status.isLoaded]);
@@ -151,11 +153,15 @@ export function PlayingSongContent({
 
 	// Register toggle playback callback for notification controls
 	useEffect(() => {
-		registerToggleCallback(togglePlayback);
+		const toggle = () => togglePlayback();
+		const playbackStore = usePlaybackStore.getState();
+		if (playbackStore.registerToggleCallback) {
+			playbackStore.registerToggleCallback(toggle);
+		}
 		return () => {
-			unregisterToggleCallback();
+			usePlaybackStore.getState().unregisterToggleCallback?.();
 		};
-	}, [togglePlayback, registerToggleCallback, unregisterToggleCallback]);
+	}, [togglePlayback]);
 
 	const pendingSeekRef = useRef<number | null>(null);
 
@@ -289,15 +295,15 @@ export function PlayingSongContent({
 			)}
 
 			{!isTrackLoading && currentTrack && (
-				// <SwipeablePlayer
-				// 	onSwipeRight={onSkipPrevious}
-				// 	onSwipeLeft={onSkipNext}
-				// 	hasPrevious={hasPrevious}
-				// 	hasNext={hasNext}
-				// 	iconColor={themeColors.tint}
-				// 	nextArtworkUrl={nextArtworkUrl}
-				// 	previousArtworkUrl={previousArtworkUrl}
-				// >
+				<SwipeablePlayer
+					onSwipeRight={onSkipPrevious}
+					onSwipeLeft={onSkipNext}
+					hasPrevious={hasPrevious}
+					hasNext={hasNext}
+					iconColor={themeColors.tint}
+					nextArtworkUrl={nextArtworkUrl}
+					previousArtworkUrl={previousArtworkUrl}
+				>
 					<AnimatedPlayerContent
 						variant={variant}
 						trackId={trackId}
@@ -333,7 +339,7 @@ export function PlayingSongContent({
 							router.push("/queue");
 						}}
 					/>
-				// </SwipeablePlayer>
+				</SwipeablePlayer>
 			)}
 
 			{!isTrackLoading && !currentTrack && !error && (
@@ -344,7 +350,7 @@ export function PlayingSongContent({
 					<AlertCircle size={64} className="opacity-30 mb-4" />
 					<Text className="text-xl font-semibold mb-2">Track Not Found</Text>
 					<Text className="text-center opacity-70 mb-6">
-						The track you're looking for doesn't exist or has been removed.
+						The track you&apos;re looking for doesn&apos;t exist or has been removed.
 					</Text>
 					<Button onPress={handleClose}>
 						<Text>Go Back</Text>
