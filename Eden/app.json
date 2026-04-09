@@ -61,7 +61,8 @@
       "@rnrepo/expo-config-plugin"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {},
