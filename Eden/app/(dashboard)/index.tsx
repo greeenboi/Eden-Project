@@ -1,23 +1,28 @@
 import Colors from "@/constants/Colors";
 import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { type Artist, fetchArtists } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { trackPlayWithQueue } from "@/lib/analytics";
-import { Box, Host, RNHostView } from "@expo/ui/jetpack-compose";
-import { Shapes, clip, size } from "@expo/ui/jetpack-compose/modifiers";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
 import {
-	Menu,
-	Play
-} from "lucide-react-native";
-import { useEffect, useMemo } from "react";
+	Box,
+	HorizontalCenteredHeroCarousel,
+	Host,
+	RNHostView,
+} from "@expo/ui/jetpack-compose";
+import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifiers";
+import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { router } from "expo-router";
+import { Menu, Play } from "lucide-react-native";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Dimensions,
 	Image,
 	Pressable,
+	ScrollView,
 	Text,
 	View,
-	useColorScheme
+	useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,10 +34,6 @@ const scale = (value: number) => (SCREEN_WIDTH / DESIGN_WIDTH) * value;
 type CollageTrack = {
 	id?: string;
 	artworkUrl?: string | null;
-};
-
-type ThemePalette = {
-	accent: string;
 };
 
 type PositionValue = number | `${number}%`;
@@ -155,7 +156,6 @@ const AdaptiveCollage = ({
 	handleTrackPress,
 }: {
 	featuredTracks: CollageTrack[];
-	themeColors: ThemePalette;
 	handleTrackPress: (trackId: string) => void;
 }) => {
 	const collageHeight = scale(400);
@@ -196,6 +196,8 @@ export default function HomeScreen() {
 	const navigation = useNavigation();
 	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
 	const { tracks, isLoading, fetchTracks, clearTracks } = useTrackStore();
+	const [topArtists, setTopArtists] = useState<Artist[]>([]);
+	const [isArtistsLoading, setIsArtistsLoading] = useState(false);
 
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
@@ -206,6 +208,29 @@ export default function HomeScreen() {
 			clearTracks();
 		};
 	}, [fetchTracks, clearTracks]);
+
+	useEffect(() => {
+		const controller = new AbortController();
+		setIsArtistsLoading(true);
+
+		fetchArtists(1, 20, null, controller.signal)
+			.then((data) => {
+				setTopArtists(data.artists.slice(0, 10));
+			})
+			.catch((err) => {
+				if (err instanceof Error && err.name === "AbortError") {
+					return;
+				}
+				setTopArtists([]);
+			})
+			.finally(() => {
+				setIsArtistsLoading(false);
+			});
+
+		return () => {
+			controller.abort();
+		};
+	}, []);
 
 	const queueTracks: QueueTrack[] = useMemo(() => {
 		return tracks.map((track) => ({
@@ -243,9 +268,56 @@ export default function HomeScreen() {
 		playTrack(trackId);
 	};
 
+	const handleArtistPress = (artistId: string) => {
+		router.push(`/artist-detail?id=${artistId}`);
+	};
+
+	const renderTopArtists = () => {
+		if (isArtistsLoading) {
+			return <Text style={{ color: themeColors.tint }}>Loading artists...</Text>;
+		}
+
+		if (topArtists.length === 0) {
+			return <Text style={{ color: themeColors.tint }}>No artists available.</Text>;
+		}
+
+		return (
+			<Host matchContents>
+				<HorizontalCenteredHeroCarousel
+					maxItemWidth={220}
+					maxSmallItemWidth={120}
+					minSmallItemWidth={90}
+					itemSpacing={12}
+					contentPadding={{ start: 0, top: 0, end: 8, bottom: 0 }}
+					flingBehavior="noSnap"
+				>
+					{topArtists.map((artist) => (
+						<Box
+							key={artist.id}
+							modifiers={[size(220, 230), clip(Shapes.RoundedCorner(12)), clickable(() => handleArtistPress(artist.id))]}
+						>
+							<RNHostView matchContents>
+								<Image
+									// biome-ignore lint/style/noNonNullAssertion: always present
+									source={{ uri: artist.avatarUrl! }}
+									style={{ width: "100%", height: 200, backgroundColor: themeColors.muted }}
+									resizeMode="cover"
+								/>
+							</RNHostView>
+						</Box>
+					))}
+				</HorizontalCenteredHeroCarousel>
+			</Host>
+		);
+	};
+
 	return (
 		<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-			<View style={{ flex: 1, backgroundColor: themeColors.background, paddingBottom: 230, paddingHorizontal: 16 }} >
+			<ScrollView
+				style={{ flex: 1, backgroundColor: themeColors.background }}
+				contentContainerStyle={{ paddingBottom: 130, paddingHorizontal: 16 }}
+				showsVerticalScrollIndicator={false}
+			>
 				<View className="flex-row items-center justify-end px-4 py-3">
 					<Pressable onPress={handleOpenDrawer}>
 						<Menu size={32} color={themeColors.text} />
@@ -259,7 +331,9 @@ export default function HomeScreen() {
 							>
 								Your{"\n"}Mix
 							</Text>
-							<Text style={{ color: themeColors.tint, fontSize: 44/2, fontWeight: "500", marginTop: 10 }}>
+							<Text
+								style={{ color: themeColors.tint, fontSize: 44 / 2, fontWeight: "500", marginTop: 10 }}
+							>
 								Today's Mix for you
 							</Text>
 						</View>
@@ -278,11 +352,27 @@ export default function HomeScreen() {
 						</Pressable>
 					</View>
 
-					<AdaptiveCollage featuredTracks={featuredTracks} themeColors={themeColors} handleTrackPress={handleTrackPress} />
-					
-					{isLoading && <Text style={{ color: themeColors.tint, marginTop: 10 }}>Loading songs...</Text>}
+					<AdaptiveCollage
+						featuredTracks={featuredTracks}
+						handleTrackPress={handleTrackPress}
+					/>
+
+					<View style={{ marginTop: 14 }}>
+						<Text
+							style={{ color: themeColors.text, fontSize: 26, fontWeight: "700", marginBottom: 10 }}
+						>
+							Top Artists
+						</Text>
+						{renderTopArtists()}
+					</View>
+
+					{isLoading && (
+						<Text style={{ color: themeColors.tint, marginTop: 10 }}>
+							Loading songs...
+						</Text>
+					)}
 				</View>
-			</View>
+			</ScrollView>
 		</SafeAreaView>
 	);
 }
