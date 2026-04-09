@@ -1,7 +1,7 @@
 {
 	"name": "eden",
 	"main": "expo-router/entry",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"scripts": {
 		"start": "expo start",
 		"android": "expo run:android",
@@ -30,6 +30,7 @@
 		"@rn-primitives/switch": "^1.2.0",
 		"@rn-primitives/toggle": "^1.2.0",
 		"@rn-primitives/toggle-group": "^1.2.0",
+		"@rnrepo/expo-config-plugin": "^0.3.0-beta.2",
 		"@shopify/flash-list": "2.0.2",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
@@ -72,9 +73,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.7",
+		"@rozenite/expo-atlas-plugin": "^1.6.0",
+		"@rozenite/metro": "^1.6.0",
+		"@rozenite/react-navigation-plugin": "^1.6.0",
+		"@rozenite/require-profiler-plugin": "^1.6.0",
 		"@types/react": "~19.2.10",
 		"prettier-plugin-tailwindcss": "0.5.11",
 		"react-test-renderer": "19.1.0",
+		"rozenite": "^1.6.0",
 		"tailwindcss": "3.4.17",
 		"typescript": "~5.9.2"
 	},
