@@ -1,7 +1,7 @@
 import Colors from "@/constants/Colors";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import { Shapes, background, clip, size, width } from "@expo/ui/jetpack-compose/modifiers";
+import {Shapes, background, clip, size, width, fillMaxWidth} from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
 import type React from "react";
 import { useCallback, useMemo } from "react";
@@ -178,7 +178,7 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 			{/* Slider - visible in mini mode */}
 			<Animated.View style={[styles.sliderContainer, sliderOpacityStyle]}>
 				<Host matchContents style={styles.sliderHost}>
-					<Box contentAlignment="center" modifiers={[width(340)]}>
+					<Box contentAlignment="center" modifiers={[fillMaxWidth(0.95)]}>
 						<Slider
 							value={sliderValue}
 							min={0}

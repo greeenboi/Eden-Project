@@ -2,7 +2,7 @@ import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import { Shapes, background, clip, size, width } from "@expo/ui/jetpack-compose/modifiers";
+import {Shapes, background, clip, size, width, fillMaxWidth} from "@expo/ui/jetpack-compose/modifiers";
 import { useMemo } from "react";
 
 interface PlayerSliderProps {
@@ -47,8 +47,7 @@ export function PlayerSlider({
 	const renderNativeSlider = (height: number) => {
 		return (
 			<Host matchContents style={{ width: "100%", height }}>
-				<Box contentAlignment="center" modifiers={[width(300)]}>
-
+				<Box contentAlignment="center" modifiers={[fillMaxWidth(0.8)]}>
 					<Slider
 						value={safeValue}
 						min={0}
