@@ -73,6 +73,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.3.7",
+		"@react-native/metro-config": "^0.85.0",
 		"@rozenite/expo-atlas-plugin": "^1.6.0",
 		"@rozenite/metro": "^1.6.0",
 		"@rozenite/react-navigation-plugin": "^1.6.0",
