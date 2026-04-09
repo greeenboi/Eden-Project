@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "rozenite-agent": {
+      "source": "callstackincubator/rozenite",
+      "sourceType": "github",
+      "computedHash": "992a54e234bb62257ab84b2112329aa66dca7a47eed8e9d33251080d0e3ec0d7"
+    }
+  }
+}

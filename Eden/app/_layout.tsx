@@ -3,8 +3,10 @@ import { SplashScreenController } from "@/lib/splash";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
+import { useReactNavigationDevTools } from '@rozenite/react-navigation-plugin';
+import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin';
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
@@ -42,6 +44,14 @@ export default function RootLayout() {
 		Merriweather: require("../assets/fonts/Merriweather-VariableFont_opsz,wdth,wght.ttf"),
 		...FontAwesome.font,
 	});
+
+	const navigationRef = useNavigationContainerRef();
+
+	// Enable React Navigation DevTools in development
+	useReactNavigationDevTools({ ref: navigationRef });
+
+	// Enable Require Profiler DevTools
+	useRequireProfilerDevTools();
 
 	// Expo Router uses Error Boundaries to catch errors in the navigation tree.
 	useEffect(() => {
