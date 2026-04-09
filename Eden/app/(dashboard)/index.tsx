@@ -160,7 +160,7 @@ const AdaptiveCollage = ({
 }) => {
 	const collageHeight = scale(400);
 
-	const songsToShow: Array<CollageTrack | null> = [...featuredTracks.slice(0, 6)];
+	const songsToShow: (CollageTrack | null)[] = [...featuredTracks.slice(0, 6)];
 	while (songsToShow.length < 6) songsToShow.push(null);
 
 	const topTracks = songsToShow.slice(0, 3);
@@ -290,7 +290,7 @@ export default function HomeScreen() {
 					itemSpacing={12}
 					contentPadding={{ start: 0, top: 10, end: 0, bottom: 0 }}
 					modifiers={[size(SCREEN_WIDTH, 220)]}
-					flingBehavior="noSnap"
+					flingBehavior="singleAdvance"
 				>
 					{topArtists.map((artist) => (
 						<Box
@@ -335,7 +335,7 @@ export default function HomeScreen() {
 							<Text
 								style={{ color: themeColors.tint, fontSize: 44 / 2, fontWeight: "500", marginTop: 10 }}
 							>
-								Today's Mix for you
+								Today&apos;s Mix for you
 							</Text>
 						</View>
 
