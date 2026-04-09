@@ -1,10 +1,10 @@
 import Colors from "@/constants/Colors";
 import { usePlaybackStore } from "@/lib/stores/playback";
-import { Host, Shape, Slider } from "@expo/ui/jetpack-compose";
-import { size } from "@expo/ui/jetpack-compose/modifiers";
+import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
+import { Shapes, background, clip, size, width } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
 import type React from "react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
 	type StyleProp,
 	StyleSheet,
@@ -62,12 +62,6 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	const { currentTime, duration, isLoaded, isLoading, seekTo } =
 		usePlaybackStore();
 
-	// Local scrub state for smooth slider interaction
-	const [isScrubbing, setIsScrubbing] = useState(false);
-	const [scrubValue, setScrubValue] = useState(0);
-	const isEditingRef = useRef(false);
-	const lastKnownValueRef = useRef(0);
-
 	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
 		if (!Number.isFinite(duration) || duration <= 0) return 1;
@@ -75,26 +69,13 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	}, [duration]);
 
 	const sliderValue = useMemo(() => {
-		const value = isScrubbing ? scrubValue : currentTime;
+		const value = currentTime;
 		if (!Number.isFinite(value)) return 0;
 		return Math.min(sliderMax, Math.max(0, value));
-	}, [isScrubbing, scrubValue, currentTime, sliderMax]);
-
-	const handleSlidingStart = useCallback((value: number) => {
-		lastKnownValueRef.current = Number.isFinite(value) ? value : 0;
-		setIsScrubbing(true);
-		setScrubValue(Number.isFinite(value) ? value : 0);
-	}, []);
-
-	const handleValueChange = useCallback((value: number) => {
-		if (!Number.isFinite(value)) return;
-		lastKnownValueRef.current = value;
-		setScrubValue(value);
-	}, []);
+	}, [currentTime, sliderMax]);
 
 	const handleSlidingComplete = useCallback(
 		(value: number) => {
-			setIsScrubbing(false);
 			if (!isLoaded || !Number.isFinite(value) || !seekTo) return;
 			seekTo(Math.min(sliderMax, Math.max(0, value)));
 		},
@@ -197,35 +178,33 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 			{/* Slider - visible in mini mode */}
 			<Animated.View style={[styles.sliderContainer, sliderOpacityStyle]}>
 				<Host matchContents style={styles.sliderHost}>
-					<Slider
-						value={sliderValue}
-						min={0}
-						max={sliderMax}
-						enabled={isLoaded && !isLoading}
-						colors={{
-							thumbColor: themeColors.primary,
-							activeTickColor: themeColors.primary,
-							inactiveTickColor: themeColors.muted,
-							activeTrackColor: themeColors.primary,
-							inactiveTrackColor: themeColors.muted,
-						}}
-						onValueChange={(value: number) => {
-							if (!isEditingRef.current) {
-								isEditingRef.current = true;
-								handleSlidingStart(value);
-							}
-							handleValueChange(value);
-						}}
-						onValueChangeFinished={() => {
-							if (!isEditingRef.current) return;
-							isEditingRef.current = false;
-							handleSlidingComplete(lastKnownValueRef.current);
-						}}
-					>
-						<Slider.Thumb>
-							<Shape.Circle radius={2} color={themeColors.primary} modifiers={[size(12, 12)]} />
-						</Slider.Thumb>
-					</Slider>
+					<Box contentAlignment="center" modifiers={[width(340)]}>
+						<Slider
+							value={sliderValue}
+							min={0}
+							max={sliderMax}
+							enabled={isLoaded && !isLoading}
+							colors={{
+								thumbColor: themeColors.primary,
+								activeTickColor: themeColors.primary,
+								inactiveTickColor: themeColors.muted,
+								activeTrackColor: themeColors.primary,
+								inactiveTrackColor: themeColors.muted,
+							}}
+							onValueChange={() => {}}
+							onValueChangeFinished={(value?: number) => {
+								const finalValue =
+									typeof value === "number" && Number.isFinite(value)
+										? value
+										: sliderValue;
+								handleSlidingComplete(finalValue);
+							}}
+						>
+							<Slider.Thumb>
+								<Box modifiers={[size(20, 20), clip(Shapes.Circle), background(themeColors.primary)]} />
+							</Slider.Thumb>
+						</Slider>
+					</Box>
 				</Host>
 			</Animated.View>
 
