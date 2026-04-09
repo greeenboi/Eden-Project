@@ -1,5 +1,4 @@
 import { View } from "@/components/Themed";
-import { SwipeablePlayer } from "@/components/ui/SwipeablePlayer";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +10,7 @@ import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { StyleSheet, useColorScheme } from "react-native";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 
@@ -158,18 +157,11 @@ export function PlayingSongContent({
 		};
 	}, [togglePlayback, registerToggleCallback, unregisterToggleCallback]);
 
-	const [scrubValue, setScrubValue] = useState(0);
-	const [isScrubbing, setIsScrubbing] = useState(false);
-
-	useEffect(() => {
-		if (!isScrubbing) {
-			setScrubValue(status.currentTime ?? 0);
-		}
-	}, [status.currentTime, isScrubbing]);
+	const pendingSeekRef = useRef<number | null>(null);
 
 	const sliderValue = useMemo(() => {
-		return isScrubbing ? scrubValue : (status.currentTime ?? 0);
-	}, [isScrubbing, scrubValue, status.currentTime]);
+		return status.currentTime ?? 0;
+	}, [status.currentTime]);
 
 	const sliderMax = useMemo(() => {
 		return status.duration && status.duration > 0 ? status.duration : 1;
@@ -185,21 +177,18 @@ export function PlayingSongContent({
 		return Math.min(safeSliderMax, Math.max(0, sliderValue));
 	}, [safeSliderMax, sliderValue]);
 
-	const handleSlidingStart = (value: number) => {
-		setIsScrubbing(true);
-		setScrubValue(Number.isFinite(value) ? value : 0);
-	};
-
-	const handleValueChange = (value: number) => {
-		if (!Number.isFinite(value)) return;
-		setScrubValue(value);
-	};
-
-	const handleSlidingComplete = (value: number) => {
-		setIsScrubbing(false);
+	const handleSlidingComplete = useCallback((value: number) => {
 		if (!status.isLoaded || !Number.isFinite(value)) return;
-		player.seekTo(Math.min(safeSliderMax, Math.max(0, value)));
-	};
+
+		const clampedValue = Math.min(safeSliderMax, Math.max(0, value));
+
+		// Commit seek once at thumb release; ignore duplicate release events.
+		if (pendingSeekRef.current === clampedValue) {
+			return;
+		}
+		pendingSeekRef.current = clampedValue;
+		player.seekTo(clampedValue);
+	}, [player, safeSliderMax, status.isLoaded]);
 
 	// Localize loading to this track so list fetches elsewhere don't block the player UI
 	const isTrackLoading =
@@ -277,7 +266,7 @@ export function PlayingSongContent({
 					style={{ backgroundColor: "transparent" }}
 					className="flex-1 px-8"
 				>
-					<Skeleton className="w-full aspect-square max-w-sm mx-auto mb-8" />
+					<Skeleton className="w-full aspect-square max-w-sm mx-auto mb-8 mt-8" />
 					<Skeleton className="h-8 w-3/4 mb-2" />
 					<Skeleton className="h-6 w-1/2 mb-4" />
 					<Skeleton className="h-4 w-full mb-2" />
@@ -300,15 +289,15 @@ export function PlayingSongContent({
 			)}
 
 			{!isTrackLoading && currentTrack && (
-				<SwipeablePlayer
-					onSwipeRight={onSkipPrevious}
-					onSwipeLeft={onSkipNext}
-					hasPrevious={hasPrevious}
-					hasNext={hasNext}
-					iconColor={themeColors.tint}
-					nextArtworkUrl={nextArtworkUrl}
-					previousArtworkUrl={previousArtworkUrl}
-				>
+				// <SwipeablePlayer
+				// 	onSwipeRight={onSkipPrevious}
+				// 	onSwipeLeft={onSkipNext}
+				// 	hasPrevious={hasPrevious}
+				// 	hasNext={hasNext}
+				// 	iconColor={themeColors.tint}
+				// 	nextArtworkUrl={nextArtworkUrl}
+				// 	previousArtworkUrl={previousArtworkUrl}
+				// >
 					<AnimatedPlayerContent
 						variant={variant}
 						trackId={trackId}
@@ -338,15 +327,13 @@ export function PlayingSongContent({
 						onToggleMute={toggleMute}
 						onSkipNext={onSkipNext}
 						onSkipPrevious={onSkipPrevious}
-						onSlidingStart={handleSlidingStart}
-						onValueChange={handleValueChange}
 						onSlidingComplete={handleSlidingComplete}
 						onQueuePress={() => {
 							onCollapse?.();
 							router.push("/queue");
 						}}
 					/>
-				</SwipeablePlayer>
+				// </SwipeablePlayer>
 			)}
 
 			{!isTrackLoading && !currentTrack && !error && (

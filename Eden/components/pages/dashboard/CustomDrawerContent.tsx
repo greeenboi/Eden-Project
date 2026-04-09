@@ -45,19 +45,8 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 				contentContainerStyle={styles.scrollContent}
 			>
 				<View style={styles.section}>
-					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
-						Browse
-					</Text>
 					<DrawerItem
-						label="Home"
-						icon={({ size }) => (
-							<Music
-								size={size}
-								color={
-									currentRoute === "index" ? primaryColor : foregroundColor
-								}
-							/>
-						)}
+						label="Your Mix"
 						focused={currentRoute === "index"}
 						onPress={() => {
 							router.push("/");
@@ -71,6 +60,10 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 						style={styles.drawerItem}
 						labelStyle={styles.drawerLabel}
 					/>
+					<View style={[styles.separator, { backgroundColor: mutedColor }]} />
+					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
+						Browse
+					</Text>
 					<DrawerItem
 						label="All Songs"
 						icon={({ size }) => (

@@ -1,5 +1,5 @@
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
-import PlayerHandle from "@/components/ui/PlayerHandle";
+import PlayerHandle from "@/components/pages/player/PlayerHandle";
 import {
 	type QueueSource,
 	type QueueTrack,

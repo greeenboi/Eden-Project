@@ -16,9 +16,8 @@ function NativeOnlyAnimatedView(
 ) {
 	if (Platform.OS === "web") {
 		return <>{props.children as React.ReactNode}</>;
-	} else {
-		return <Animated.View {...props} />;
 	}
+	return <Animated.View {...props} />;
 }
 
 export { NativeOnlyAnimatedView };

@@ -1,9 +1,9 @@
 import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
-import { Box, Host, Shape, Slider } from "@expo/ui/jetpack-compose";
-import { size, width } from "@expo/ui/jetpack-compose/modifiers";
-import { useEffect, useRef } from "react";
+import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
+import { Shapes, background, clip, size, width } from "@expo/ui/jetpack-compose/modifiers";
+import { useMemo } from "react";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -18,8 +18,6 @@ interface PlayerSliderProps {
 		tint: string;
 		accent: string;
 	};
-	onSlidingStart: (value: number) => void;
-	onValueChange: (value: number) => void;
 	onSlidingComplete: (value: number) => void;
 	variant?: "full" | "mini";
 }
@@ -32,8 +30,6 @@ export function PlayerSlider({
 	isLoaded,
 	loadingStream,
 	themeColors,
-	onSlidingStart,
-	onValueChange,
 	onSlidingComplete,
 	variant = "full",
 }: PlayerSliderProps) {
@@ -41,25 +37,18 @@ export function PlayerSlider({
 		return null;
 	}
 
-	const lastKnownValueRef = useRef(sliderValue);
 	const safeMax = Math.max(0, sliderMax || 0);
-	const safeValue = Math.min(Math.max(sliderValue, 0), safeMax);
-
-	useEffect(() => {
-		lastKnownValueRef.current = sliderValue;
-	}, [sliderValue]);
-
-	const handleValueChange = (value: number) => {
-		lastKnownValueRef.current = value;
-		onValueChange(value);
-	};
-
-	const isEditingRef = useRef(false);
+	const safeValue = useMemo(
+		() => Math.min(Math.max(sliderValue, 0), safeMax),
+		[sliderValue, safeMax],
+	);
+	const log = (...args: unknown[]) => console.log("[PlayerSlider]", ...args);
 
 	const renderNativeSlider = (height: number) => {
 		return (
-			<Host matchContents>
-				<Box contentAlignment="center" modifiers={[width(280)]}>
+			<Host matchContents style={{ width: "100%", height }}>
+				<Box contentAlignment="center" modifiers={[width(300)]}>
+
 					<Slider
 						value={safeValue}
 						min={0}
@@ -72,23 +61,18 @@ export function PlayerSlider({
 							activeTrackColor: themeColors.primary,
 							inactiveTrackColor: themeColors.muted,
 						}}
-						onValueChange={(value: number) => {
-							if (!isEditingRef.current) {
-								isEditingRef.current = true;
-								onSlidingStart(value);
-							}
-							handleValueChange(value);
-						}}
-						onValueChangeFinished={() => {
-							if (!isEditingRef.current) {
-								return;
-							}
-							isEditingRef.current = false;
-							onSlidingComplete(lastKnownValueRef.current);
+						onValueChange={() => {}}
+						onValueChangeFinished={(value?: number) => {
+							const finalValue =
+								typeof value === "number" && Number.isFinite(value)
+									? Math.min(safeMax, Math.max(0, value))
+									: safeValue;
+							log("touch end", { trackId, finalValue });
+							onSlidingComplete(finalValue);
 						}}
 					>
 						<Slider.Thumb>
-							<Shape.Circle radius={2} color={themeColors.primary} modifiers={[size(12, 12)]} />
+							<Box modifiers={[size(22, 22), clip(Shapes.Circle), background(themeColors.primary)]} />
 						</Slider.Thumb>
 					</Slider>
 				</Box>
