@@ -32,6 +32,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { BackHandler } from "react-native";
 
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
@@ -173,6 +174,47 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const snapPoints = useMemo(() => ["20%", "98%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 	const MINI_SNAP_INDEX = 0;
+
+	const handleHardwareBackPress = useCallback(() => {
+		if (!isPlayerVisible) {
+			// Let React Navigation/default Android back behavior run.
+			return false;
+		}
+
+		if (sheetIndex === FULL_SNAP_INDEX) {
+			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+			return true;
+		}
+
+		if (sheetIndex === MINI_SNAP_INDEX) {
+			// Alert.alert("Hold on!", "Do you want to exit the app?", [
+			// 	{
+			// 		text: "Cancel",
+			// 		onPress: () => null,
+			// 		style: "cancel",
+			// 	},
+			// 	{ text: "YES", onPress: () => BackHandler.exitApp() },
+			// ]);
+			// replace with something else later
+			return false;
+		}
+
+		bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+		return true;
+	}, [
+		isPlayerVisible,
+		sheetIndex,
+		FULL_SNAP_INDEX,
+	]);
+
+	useEffect(() => {
+		const backHandler = BackHandler.addEventListener(
+			"hardwareBackPress",
+			handleHardwareBackPress,
+		);
+
+		return () => backHandler.remove();
+	}, [handleHardwareBackPress]);
 
 	// Mount the sheet on first render so it's ready when needed
 	useEffect(() => {
