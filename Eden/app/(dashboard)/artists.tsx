@@ -1,32 +1,54 @@
-import { FlashList } from "@shopify/flash-list";
-import { router } from "expo-router";
-import { AlertCircle, LayoutGrid, LayoutList } from "lucide-react-native";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { View } from "@/components/Themed";
 import {
 	ArtistCard,
 	ArtistsHeader,
 	ArtistsSearchBar,
 } from "@/components/pages/artists";
-import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { Toggle, ToggleIcon } from "@/components/ui/toggle";
+import Colors from "@/constants/Colors";
 import {
 	type Artist,
 	type ArtistPagination,
 	fetchArtists,
 	searchArtists,
 } from "@/lib/actions/artists";
+import { Host, Icon, SegmentedButton, SingleChoiceSegmentedButtonRow } from "@expo/ui/jetpack-compose";
+import { width } from "@expo/ui/jetpack-compose/modifiers";
+import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { AlertCircle } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RefreshControl, useColorScheme } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistsScreen() {
 	const [searchQuery, setSearchQuery] = useState("");
 	const [isSearchMode, setIsSearchMode] = useState(false);
 	const [showNames, setShowNames] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
+	const colorScheme = useColorScheme()
+	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
+	const segmentedButtonColors = useMemo(
+		() => ({
+			activeBorderColor: themeColors.primary,
+			activeContainerColor: themeColors.primary,
+			activeContentColor: themeColors.primaryForeground,
+			disabledActiveBorderColor: themeColors.border,
+			disabledActiveContainerColor: themeColors.muted,
+			disabledActiveContentColor: themeColors.mutedForeground,
+			disabledInactiveBorderColor: themeColors.border,
+			disabledInactiveContainerColor: themeColors.card,
+			disabledInactiveContentColor: themeColors.mutedForeground,
+			inactiveBorderColor: themeColors.border,
+			inactiveContainerColor: themeColors.card,
+			inactiveContentColor: themeColors.text,
+		}),
+		[themeColors],
+	);
+
 
 	// Local state instead of store
 	const [artists, setArtists] = useState<Artist[]>([]);
@@ -172,15 +194,38 @@ export default function ArtistsScreen() {
 								? `${displayArtists.length} result${displayArtists.length !== 1 ? "s" : ""}`
 								: `${pagination?.total ?? displayArtists.length} artists`}
 						</Text>
-						<Toggle
-							aria-label="Toggle view mode"
-							pressed={showNames}
-							onPressedChange={setShowNames}
-							variant="outline"
-							size="sm"
-						>
-							<ToggleIcon as={showNames ? LayoutList : LayoutGrid} size={18} />
-						</Toggle>
+						<Host matchContents>
+							<SingleChoiceSegmentedButtonRow modifiers={[width(108)]}>
+								<SegmentedButton
+									colors={segmentedButtonColors}
+									selected={!showNames}
+									onClick={() => setShowNames(false)}
+								>
+									<SegmentedButton.Label>
+										<Icon
+											source={require("../../assets/icons/grid.xml")}
+											size={18}
+											tint={showNames ? themeColors.text : themeColors.primaryForeground}
+											contentDescription="Grid view"
+										/>
+									</SegmentedButton.Label>
+								</SegmentedButton>
+								<SegmentedButton
+									colors={segmentedButtonColors}
+									selected={showNames}
+									onClick={() => setShowNames(true)}
+								>
+									<SegmentedButton.Label>
+										<Icon
+											source={require("../../assets/icons/list.xml")}
+											size={18}
+											tint={showNames ? themeColors.primaryForeground : themeColors.text}
+											contentDescription="List view"
+										/>
+									</SegmentedButton.Label>
+								</SegmentedButton>
+							</SingleChoiceSegmentedButtonRow>
+						</Host>
 					</View>
 				)}
 			</View>
@@ -194,6 +239,9 @@ export default function ArtistsScreen() {
 			displayArtists.length,
 			pagination?.total,
 			showNames,
+			segmentedButtonColors,
+			themeColors.primaryForeground,
+			themeColors.text,
 		],
 	);
 
