@@ -1,3 +1,8 @@
+import { View } from "@/components/Themed";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import type { RepeatMode } from "@/lib/actions/queue";
 import {
 	ListMusic,
 	Music,
@@ -15,18 +20,12 @@ import {
 	useWindowDimensions,
 } from "react-native";
 import Animated, {
-	Easing,
 	Extrapolation,
 	interpolate,
 	useAnimatedStyle,
 	useSharedValue,
 	withSpring,
 } from "react-native-reanimated";
-import { View } from "@/components/Themed";
-import { Card, CardContent } from "@/components/ui/card";
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Text } from "@/components/ui/text";
-import type { RepeatMode } from "@/lib/actions/queue";
 import { PlayerControls } from "./PlayerControls";
 import { PlayerSlider } from "./PlayerSlider";
 import { PlayerTrackInfo } from "./PlayerTrackInfo";
@@ -36,12 +35,6 @@ const SPRING_CONFIG = {
 	stiffness: 200,
 	mass: 0.8,
 };
-
-const TIMING_CONFIG = {
-	duration: 280,
-	easing: Easing.bezier(0.4, 0, 0.2, 1),
-};
-
 interface AnimatedPlayerContentProps {
 	variant: "full" | "mini";
 	trackId?: string;
@@ -61,6 +54,7 @@ interface AnimatedPlayerContentProps {
 		primary: string;
 		muted: string;
 		tint: string;
+		accent: string;
 	};
 	hasNext?: boolean;
 	hasPrevious?: boolean;
@@ -75,13 +69,10 @@ interface AnimatedPlayerContentProps {
 	onToggleMute?: () => void;
 	onSkipNext?: () => void;
 	onSkipPrevious?: () => void;
-	onSlidingStart: (value: number) => void;
-	onValueChange: (value: number) => void;
 	onSlidingComplete: (value: number) => void;
 	onQueuePress?: () => void;
 }
 
-const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /**
  * Animated player content that smoothly morphs between mini and full player modes.
@@ -116,8 +107,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 	onToggleMute,
 	onSkipNext,
 	onSkipPrevious,
-	onSlidingStart,
-	onValueChange,
 	onSlidingComplete,
 	onQueuePress,
 }: AnimatedPlayerContentProps) {
@@ -388,8 +377,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 						isLoaded={isLoaded}
 						loadingStream={loadingStream}
 						themeColors={themeColors}
-						onSlidingStart={onSlidingStart}
-						onValueChange={onValueChange}
 						onSlidingComplete={onSlidingComplete}
 					/>
 

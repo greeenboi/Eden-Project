@@ -1,12 +1,15 @@
+import Colors from "@/constants/Colors";
+import { usePlaybackStore } from "@/lib/stores/playback";
+import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
+import {Shapes, background, clip, size, width, fillMaxWidth} from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
-import Slider from "@react-native-community/slider";
 import type React from "react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
 	type StyleProp,
 	StyleSheet,
-	useColorScheme,
 	type ViewStyle,
+	useColorScheme,
 } from "react-native";
 import Animated, {
 	Extrapolation,
@@ -14,8 +17,6 @@ import Animated, {
 	useAnimatedStyle,
 	useDerivedValue,
 } from "react-native-reanimated";
-import Colors from "@/constants/Colors";
-import { usePlaybackStore } from "@/lib/stores/playback";
 
 const toRad = (deg: number) => {
 	"worklet";
@@ -61,10 +62,6 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	const { currentTime, duration, isLoaded, isLoading, seekTo } =
 		usePlaybackStore();
 
-	// Local scrub state for smooth slider interaction
-	const [isScrubbing, setIsScrubbing] = useState(false);
-	const [scrubValue, setScrubValue] = useState(0);
-
 	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
 		if (!Number.isFinite(duration) || duration <= 0) return 1;
@@ -72,24 +69,13 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	}, [duration]);
 
 	const sliderValue = useMemo(() => {
-		const value = isScrubbing ? scrubValue : currentTime;
+		const value = currentTime;
 		if (!Number.isFinite(value)) return 0;
 		return Math.min(sliderMax, Math.max(0, value));
-	}, [isScrubbing, scrubValue, currentTime, sliderMax]);
-
-	const handleSlidingStart = useCallback((value: number) => {
-		setIsScrubbing(true);
-		setScrubValue(Number.isFinite(value) ? value : 0);
-	}, []);
-
-	const handleValueChange = useCallback((value: number) => {
-		if (!Number.isFinite(value)) return;
-		setScrubValue(value);
-	}, []);
+	}, [currentTime, sliderMax]);
 
 	const handleSlidingComplete = useCallback(
 		(value: number) => {
-			setIsScrubbing(false);
 			if (!isLoaded || !Number.isFinite(value) || !seekTo) return;
 			seekTo(Math.min(sliderMax, Math.max(0, value)));
 		},
@@ -191,25 +177,41 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 		>
 			{/* Slider - visible in mini mode */}
 			<Animated.View style={[styles.sliderContainer, sliderOpacityStyle]}>
-				<Slider
-					style={styles.slider}
-					value={sliderValue}
-					minimumValue={0}
-					maximumValue={sliderMax}
-					minimumTrackTintColor={themeColors.primary}
-					maximumTrackTintColor={themeColors.muted}
-					thumbTintColor={themeColors.primary}
-					onSlidingStart={handleSlidingStart}
-					onValueChange={handleValueChange}
-					onSlidingComplete={handleSlidingComplete}
-					disabled={!isLoaded || isLoading}
-				/>
+				<Host matchContents style={styles.sliderHost}>
+					<Box contentAlignment="center" modifiers={[fillMaxWidth(0.95)]}>
+						<Slider
+							value={sliderValue}
+							min={0}
+							max={sliderMax}
+							enabled={isLoaded && !isLoading}
+							colors={{
+								thumbColor: themeColors.primary,
+								activeTickColor: themeColors.primary,
+								inactiveTickColor: themeColors.muted,
+								activeTrackColor: themeColors.primary,
+								inactiveTrackColor: themeColors.muted,
+							}}
+							onValueChange={() => {}}
+							onValueChangeFinished={(value?: number) => {
+								const finalValue =
+									typeof value === "number" && Number.isFinite(value)
+										? value
+										: sliderValue;
+								handleSlidingComplete(finalValue);
+							}}
+						>
+							<Slider.Thumb>
+								<Box modifiers={[size(20, 20), clip(Shapes.Circle), background(themeColors.primary)]} />
+							</Slider.Thumb>
+						</Slider>
+					</Box>
+				</Host>
 			</Animated.View>
 
 			{/* Regular handle indicators - visible in expanded mode */}
 			<Animated.View
 				style={[styles.indicatorContainer, indicatorOpacityStyle]}
-			></Animated.View>
+			/>
 		</Animated.View>
 	);
 };
@@ -233,7 +235,7 @@ const styles = StyleSheet.create({
 		bottom: 0,
 		justifyContent: "center",
 	},
-	slider: {
+	sliderHost: {
 		width: "100%",
 		height: 40,
 	},

@@ -1,5 +1,5 @@
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
-import PlayerHandle from "@/components/ui/PlayerHandle";
+import PlayerHandle from "@/components/pages/player/PlayerHandle";
 import {
 	type QueueSource,
 	type QueueTrack,
@@ -32,6 +32,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { BackHandler } from "react-native";
 
 interface GlobalPlayerContextValue {
 	/** Currently selected track ID */
@@ -143,7 +144,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
-
 	// Queue store integration
 	const queueStore = useQueueStore();
 
@@ -175,6 +175,47 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 	const MINI_SNAP_INDEX = 0;
 
+	const handleHardwareBackPress = useCallback(() => {
+		if (!isPlayerVisible) {
+			// Let React Navigation/default Android back behavior run.
+			return false;
+		}
+
+		if (sheetIndex === FULL_SNAP_INDEX) {
+			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+			return true;
+		}
+
+		if (sheetIndex === MINI_SNAP_INDEX) {
+			// Alert.alert("Hold on!", "Do you want to exit the app?", [
+			// 	{
+			// 		text: "Cancel",
+			// 		onPress: () => null,
+			// 		style: "cancel",
+			// 	},
+			// 	{ text: "YES", onPress: () => BackHandler.exitApp() },
+			// ]);
+			// replace with something else later
+			return false;
+		}
+
+		bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+		return true;
+	}, [
+		isPlayerVisible,
+		sheetIndex,
+		FULL_SNAP_INDEX,
+	]);
+
+	useEffect(() => {
+		const backHandler = BackHandler.addEventListener(
+			"hardwareBackPress",
+			handleHardwareBackPress,
+		);
+
+		return () => backHandler.remove();
+	}, [handleHardwareBackPress]);
+
 	// Mount the sheet on first render so it's ready when needed
 	useEffect(() => {
 		if (!isSheetMounted) {
@@ -187,6 +228,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		(trackId: string) => {
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
+			setSheetIndex(FULL_SNAP_INDEX);
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
 		[FULL_SNAP_INDEX],
@@ -204,6 +246,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			// Then play the track
 			setSelectedTrackId(track.id);
 			setIsPlayerVisible(true);
+			setSheetIndex(FULL_SNAP_INDEX);
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
 		[FULL_SNAP_INDEX, queueStore],
@@ -359,7 +402,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [queueStore]);
 
 	const dismissPlayer = useCallback(() => {
-		bottomSheetRef.current?.dismiss();
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);

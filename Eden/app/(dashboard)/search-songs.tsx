@@ -7,11 +7,9 @@ import {
 } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
@@ -24,11 +22,18 @@ import type { Track } from "@/lib/actions/tracks";
 import {
 	albumViewed,
 	artistViewed,
-	searchCleared,
 	searchPerformed,
 	trackPlayWithQueue,
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
+import {
+	Host,
+	SegmentedButton,
+	SingleChoiceSegmentedButtonRow
+} from "@expo/ui/jetpack-compose";
+import {
+	width
+} from "@expo/ui/jetpack-compose/modifiers";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import {
@@ -39,7 +44,6 @@ import {
 	Library,
 	Menu,
 	Search,
-	X,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -47,7 +51,7 @@ import {
 	Image,
 	Pressable,
 	ScrollView,
-	StyleSheet,
+	type TextStyle,
 	useColorScheme,
 	useWindowDimensions,
 } from "react-native";
@@ -371,10 +375,10 @@ function AlbumsSkeleton() {
 }
 
 // === Empty State ===
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ message, color }: { message: string, color: string }) {
 	return (
 		<View className="flex-1 items-center justify-center py-20 px-8">
-			<Search size={48} className="opacity-20" />
+			<Search size={48} className="opacity-20" color={color} />
 			<Text className="text-lg opacity-50 mt-4 text-center">{message}</Text>
 		</View>
 	);
@@ -418,12 +422,15 @@ export default function SearchSongsScreen() {
 		[screenWidth],
 	);
 
-	const handleSearch = useCallback(async () => {
-		const query = searchQuery.trim();
+	const handleSearchWithQuery = useCallback(
+		async (queryInput: string) => {
+			const query = queryInput.trim();
 		if (!query) {
 			setError("Please enter a search query");
 			return;
 		}
+
+			setSearchQuery(query);
 
 		// Cancel previous request
 		abortControllerRef.current?.abort();
@@ -503,10 +510,16 @@ export default function SearchSongsScreen() {
 			setTracks([]);
 			setAlbums([]);
 			setRelatedTracks([]);
-		} finally {
-			setIsSearching(false);
-		}
-	}, [searchQuery, searchType]);
+			} finally {
+				setIsSearching(false);
+			}
+		},
+		[searchType],
+	);
+
+	const handleSearch = useCallback(async () => {
+		await handleSearchWithQuery(searchQuery);
+	}, [handleSearchWithQuery, searchQuery]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -600,17 +613,6 @@ export default function SearchSongsScreen() {
 		[queueTracks, playTrackWithQueue, searchSource],
 	);
 
-	const handleClearSearch = useCallback(() => {
-		searchCleared();
-		setSearchQuery("");
-		setArtists([]);
-		setTracks([]);
-		setAlbums([]);
-		setRelatedTracks([]);
-		setHasSearched(false);
-		setError(null);
-	}, []);
-
 	const handleOpenDrawer = () => {
 		navigation.dispatch(DrawerActions.openDrawer());
 	};
@@ -625,49 +627,38 @@ export default function SearchSongsScreen() {
 		albums.length > 0 ||
 		filteredRelatedTracks.length > 0;
 
+	const segmentedLabelStyle: TextStyle = {
+		fontSize: 13,
+		fontWeight: "600",
+	};
+
 	return (
 		<SafeAreaView className="flex-1">
 			<View className="flex-1">
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-4 py-3">
 					<View className="bg-transparent flex-row items-center gap-3">
-						<Search size={28} color={themeColors.tint} />
-						<Text className="text-2xl font-bold">Search</Text>
+						<Search size={32} color={themeColors.tint} />
+						<Text className="text-3xl font-bold">Search</Text>
 					</View>
 					<Pressable onPress={handleOpenDrawer}>
-						<Menu size={28} color={themeColors.text} />
+						<Menu size={32} color={themeColors.text} />
 					</Pressable>
 				</View>
 
 				{/* Large Search Bar */}
-				<View className="flex-row items-center px-4 pb-3">
-					<View className="flex-1 flex-row items-center bg-muted/10 rounded-xl h-[52px]">
+				<View className="px-4 pb-3">
+					<View className="bg-transparent gap-2">
 						<Input
 							placeholder="What do you want to listen to?"
 							value={searchQuery}
 							onChangeText={setSearchQuery}
 							onSubmitEditing={handleSearch}
 							returnKeyType="search"
-							className="flex-1 border-0 bg-transparent text-lg pl-8"
+							className="h-20 border-none"
 						/>
-						{searchQuery.length > 0 && (
-							<Pressable onPress={handleClearSearch} className="p-2">
-								<X size={20} color={themeColors.muted} />
-							</Pressable>
-						)}
+						{isSearching && <ActivityIndicator size="small" color={themeColors.tint} />}
 					</View>
-					<Button
-						onPress={handleSearch}
-						disabled={isSearching || !searchQuery.trim()}
-						size="icon"
-						className="ml-3"
-					>
-						{isSearching ? (
-							<ActivityIndicator size="small" color={themeColors.background} />
-						) : (
-							<Search size={20} color={themeColors.background} />
-						)}
-					</Button>
 				</View>
 
 				{/* Advanced Settings Accordion */}
@@ -678,35 +669,61 @@ export default function SearchSongsScreen() {
 								<Text className="font-medium">Advanced Filters</Text>
 							</AccordionTrigger>
 							<AccordionContent>
-								<View className="py-2">
+								<View className="py-1">
 									{/* Search Type */}
 									<View className="gap-2 bg-transparent">
-										<Label className="text-sm opacity-70">Search In</Label>
-										<RadioGroup
-											value={searchType}
-											onValueChange={(val) => setSearchType(val as SearchType)}
-										>
-											<View className="flex-row flex-wrap gap-4 bg-transparent">
-												<View className="flex-row items-center gap-2 bg-transparent">
-													<RadioGroupItem value="all" aria-labelledby="all" />
-													<Label nativeID="all">All</Label>
-												</View>
-												<View className="flex-row items-center gap-2 bg-transparent">
-													<RadioGroupItem
-														value="title"
-														aria-labelledby="title"
-													/>
-													<Label nativeID="title">Tracks</Label>
-												</View>
-												<View className="flex-row items-center gap-2 bg-transparent">
-													<RadioGroupItem
-														value="artist"
-														aria-labelledby="artist"
-													/>
-													<Label nativeID="artist">Artists</Label>
-												</View>
-											</View>
-										</RadioGroup>
+										<Host matchContents>
+											<SingleChoiceSegmentedButtonRow modifiers={[width(320)]}>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "all"}
+													onClick={() => setSearchType("all")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>All</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "title"}
+													onClick={() => setSearchType("title")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>Tracks</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+												<SegmentedButton
+													colors={{
+														activeBorderColor: themeColors.primary,
+														activeContainerColor: themeColors.accent,
+														activeContentColor: themeColors.primaryForeground,
+														inactiveBorderColor: themeColors.border,
+														inactiveContainerColor: themeColors.card,
+														inactiveContentColor: themeColors.text,
+													}}
+													selected={searchType === "artist"}
+													onClick={() => setSearchType("artist")}
+												>
+													<SegmentedButton.Label>
+														<Text style={segmentedLabelStyle}>Artists</Text>
+													</SegmentedButton.Label>
+												</SegmentedButton>
+											</SingleChoiceSegmentedButtonRow>
+										</Host>
 									</View>
 
 									{/* Genre Filter */}
@@ -776,7 +793,7 @@ export default function SearchSongsScreen() {
 					{!isSearching && hasSearched && (
 						<>
 							{!hasResults && (
-								<EmptyState message="No results found. Try a different search term." />
+								<EmptyState message="No results found. Try a different search term." color={themeColors.tint} />
 							)}
 
 							{/* Artists Section - Horizontal */}
@@ -890,7 +907,7 @@ export default function SearchSongsScreen() {
 
 					{/* Initial State */}
 					{!isSearching && !hasSearched && (
-						<EmptyState message="Search for your favorite songs and artists" />
+						<EmptyState message="Search for your favorite songs and artists" color={themeColors.accent} />
 					)}
 				</ScrollView>
 			</View>
@@ -898,134 +915,3 @@ export default function SearchSongsScreen() {
 	);
 }
 
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	header: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingHorizontal: 16,
-		paddingVertical: 12,
-	},
-	searchContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingBottom: 12,
-	},
-	searchInputWrapper: {
-		flex: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		backgroundColor: "rgba(128, 128, 128, 0.1)",
-		borderRadius: 12,
-		height: 52,
-	},
-	searchIcon: {
-		position: "absolute",
-		left: 14,
-		zIndex: 1,
-	},
-	searchInput: {
-		paddingLeft: 32,
-	},
-	clearButton: {
-		padding: 8,
-	},
-	accordionContainer: {
-		paddingHorizontal: 16,
-		marginBottom: 8,
-	},
-	filtersContent: {
-		paddingVertical: 8,
-	},
-	resultsContainer: {
-		flex: 1,
-	},
-	resultsContent: {
-		paddingBottom: 100,
-	},
-	section: {
-		marginBottom: 24,
-	},
-	sectionHeader: {
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		marginBottom: 12,
-	},
-	horizontalList: {
-		flexDirection: "row",
-		paddingHorizontal: 12,
-		gap: 12,
-	},
-	horizontalListContent: {
-		paddingHorizontal: 16,
-	},
-	artistCard: {
-		alignItems: "center",
-		marginRight: 12,
-	},
-	verifiedBadge: {
-		position: "absolute",
-		top: 0,
-		right: 0,
-		width: 20,
-		height: 20,
-		borderRadius: 10,
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	trackCard: {
-		marginRight: 12,
-	},
-	trackArtwork: {
-		borderRadius: 8,
-		overflow: "hidden",
-	},
-	albumCard: {
-		marginRight: 12,
-	},
-	albumArtwork: {
-		borderRadius: 8,
-		overflow: "hidden",
-	},
-	trackListItem: {
-		flexDirection: "row",
-		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingVertical: 8,
-		gap: 12,
-	},
-	trackListArtwork: {
-		width: 56,
-		height: 56,
-		borderRadius: 6,
-		overflow: "hidden",
-	},
-	trackListInfo: {
-		flex: 1,
-		justifyContent: "center",
-		gap: 2,
-	},
-	emptyState: {
-		flex: 1,
-		alignItems: "center",
-		justifyContent: "center",
-		paddingVertical: 80,
-		paddingHorizontal: 32,
-	},
-	errorContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		padding: 16,
-		marginHorizontal: 16,
-		marginBottom: 16,
-		backgroundColor: "rgba(239, 68, 68, 0.1)",
-		borderRadius: 8,
-	},
-});

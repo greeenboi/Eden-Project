@@ -40,6 +40,14 @@ export default function AppLayout() {
 				<Drawer.Screen
 					name="index"
 					options={{
+						drawerLabel: "Home",
+						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
+						lazy: false,
+					}}
+				/>
+				<Drawer.Screen
+					name="allsongs"
+					options={{
 						drawerLabel: "All Songs",
 						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
 						lazy: false,

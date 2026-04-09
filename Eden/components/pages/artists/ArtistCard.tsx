@@ -1,10 +1,10 @@
-import { BadgeCheck } from "lucide-react-native";
-import { Pressable, useColorScheme } from "react-native";
 import { View } from "@/components/Themed";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
 import type { Artist } from "@/lib/actions/artists";
+import { Host, Icon } from "@expo/ui/jetpack-compose";
+import { Pressable, useColorScheme } from "react-native";
 
 interface ArtistCardProps {
 	artist: Artist;
@@ -53,12 +53,9 @@ export function ArtistCard({
 						{artist.name}
 					</Text>
 					{artist.verified && (
-						<View
-							style={{ backgroundColor: themeColors.success }}
-							className="rounded-full w-5 h-5 items-center justify-center"
-						>
-							<BadgeCheck size={14} color={themeColors.successForeground} />
-						</View>
+						<Host matchContents>
+							<Icon tint={themeColors.success} size={14} source={require("../../../assets/icons/verified.xml")} contentDescription="Verification-Badge" />
+						</Host>
 					)}
 				</View>
 			</Pressable>
@@ -81,12 +78,9 @@ export function ArtistCard({
 				</AvatarFallback>
 			</Avatar>
 			{artist.verified && (
-				<View
-					style={{ backgroundColor: themeColors.success }}
-					className="absolute bottom-2 right-2 rounded-full w-5 h-5 items-center justify-center"
-				>
-					<BadgeCheck size={14} color={themeColors.successForeground} />
-				</View>
+				<Host matchContents >
+					<Icon tint={themeColors.success} size={16} source={require("../../../assets/icons/verified.xml")} contentDescription="Verification-Badge" />
+				</Host>
 			)}
 		</Pressable>
 	);

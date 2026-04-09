@@ -1,3 +1,7 @@
+import { View } from "@/components/Themed";
+import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 import {
 	type DrawerContentComponentProps,
 	DrawerContentScrollView,
@@ -6,10 +10,6 @@ import {
 import { router } from "expo-router";
 import { Music, Search, Settings, Users, X } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const isDark = useIsDark();
@@ -45,6 +45,22 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 				contentContainerStyle={styles.scrollContent}
 			>
 				<View style={styles.section}>
+					<DrawerItem
+						label="Your Mix"
+						focused={currentRoute === "index"}
+						onPress={() => {
+							router.push("/");
+							props.navigation.closeDrawer();
+						}}
+						activeTintColor={primaryColor}
+						inactiveTintColor={foregroundColor}
+						activeBackgroundColor={
+							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+						}
+						style={styles.drawerItem}
+						labelStyle={styles.drawerLabel}
+					/>
+					<View style={[styles.separator, { backgroundColor: mutedColor }]} />
 					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
 						Browse
 					</Text>
@@ -54,13 +70,13 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 							<Music
 								size={size}
 								color={
-									currentRoute === "index" ? primaryColor : foregroundColor
+									currentRoute === "allsongs" ? primaryColor : foregroundColor
 								}
 							/>
 						)}
-						focused={currentRoute === "index"}
+						focused={currentRoute === "allsongs"}
 						onPress={() => {
-							router.push("/");
+							router.push("/allsongs");
 							props.navigation.closeDrawer();
 						}}
 						activeTintColor={primaryColor}

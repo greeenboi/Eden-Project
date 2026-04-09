@@ -3,8 +3,10 @@ import { SplashScreenController } from "@/lib/splash";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { ThemeProvider } from "@react-navigation/native";
 import { PortalHost } from "@rn-primitives/portal";
+import { useReactNavigationDevTools } from '@rozenite/react-navigation-plugin';
+import { useRequireProfilerDevTools } from '@rozenite/require-profiler-plugin';
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { Stack, useNavigationContainerRef } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useColorScheme } from "react-native";
@@ -16,7 +18,7 @@ import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
 
 export {
 	// Catch any errors thrown by the Layout component.
-	ErrorBoundary,
+	ErrorBoundary
 } from "expo-router";
 
 export const unstable_settings = {
@@ -43,6 +45,14 @@ export default function RootLayout() {
 		...FontAwesome.font,
 	});
 
+	const navigationRef = useNavigationContainerRef();
+
+	// Enable React Navigation DevTools in development
+	useReactNavigationDevTools({ ref: navigationRef });
+
+	// Enable Require Profiler DevTools
+	useRequireProfilerDevTools();
+
 	// Expo Router uses Error Boundaries to catch errors in the navigation tree.
 	useEffect(() => {
 		if (error) throw error;
@@ -63,8 +73,6 @@ export default function RootLayout() {
 function RootLayoutNav() {
 	const colorScheme = useColorScheme();
 	const { session, isLoading } = useSession();
-	// console.log(session);
-	// console.log(!!session);
 
 	// Wait for auth initialization
 	if (isLoading) {
