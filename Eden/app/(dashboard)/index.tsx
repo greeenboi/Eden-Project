@@ -56,24 +56,24 @@ const COSMIC_SWIRL_CONFIGS: CollageConfig[] = [
 	{
 		width: scale(240),
 		height: scale(240),
-		top: "15%",
-		left: "18%",
+		top: "14%",
+		left: "14%",
 		zIndex: 10,
 		shape: "Pill",
-		rotate: "20deg",
-	},
-	{
-		width: scale(90),
-		height: scale(90),
-		top: scale(10),
-		left: scale(10),
-		zIndex: 20,
-		shape: "Circle",
 		rotate: "0deg",
 	},
 	{
-		width: scale(90),
-		height: scale(90),
+		width: scale(110),
+		height: scale(110),
+		top: scale(10),
+		left: scale(-10),
+		zIndex: 20,
+		shape: "Circle",
+		rotate: "10deg",
+	},
+	{
+		width: scale(100),
+		height: scale(100),
 		top: scale(20),
 		right: scale(10),
 		zIndex: 20,
@@ -83,16 +83,16 @@ const COSMIC_SWIRL_CONFIGS: CollageConfig[] = [
 	{
 		width: scale(130),
 		height: scale(130),
-		top: scale(2),
+		top: scale(10),
 		left: scale(-10),
-		zIndex: 5,
+		zIndex: 20,
 		shape: "RoundedCornerShape",
 		rotate: "-20deg",
 	},
 	{
 		width: scale(210),
 		height: scale(210),
-		bottom: -60,
+		bottom: -40,
 		right: scale(-30),
 		zIndex: 15,
 		shape: "Star",
@@ -288,19 +288,20 @@ export default function HomeScreen() {
 					maxSmallItemWidth={120}
 					minSmallItemWidth={90}
 					itemSpacing={12}
-					contentPadding={{ start: 0, top: 0, end: 8, bottom: 0 }}
+					contentPadding={{ start: 0, top: 10, end: 0, bottom: 0 }}
+					modifiers={[size(SCREEN_WIDTH, 220)]}
 					flingBehavior="noSnap"
 				>
 					{topArtists.map((artist) => (
 						<Box
 							key={artist.id}
-							modifiers={[size(220, 230), clip(Shapes.RoundedCorner(12)), clickable(() => handleArtistPress(artist.id))]}
+							modifiers={[size(220, 220), clip(Shapes.RoundedCorner(12)), clickable(() => handleArtistPress(artist.id))]}
 						>
 							<RNHostView matchContents>
 								<Image
 									// biome-ignore lint/style/noNonNullAssertion: always present
 									source={{ uri: artist.avatarUrl! }}
-									style={{ width: "100%", height: 200, backgroundColor: themeColors.muted }}
+									style={{ width: "100%", height: 250, backgroundColor: themeColors.muted }}
 									resizeMode="cover"
 								/>
 							</RNHostView>
@@ -315,7 +316,7 @@ export default function HomeScreen() {
 		<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
 			<ScrollView
 				style={{ flex: 1, backgroundColor: themeColors.background }}
-				contentContainerStyle={{ paddingBottom: 130, paddingHorizontal: 16 }}
+				contentContainerStyle={{ paddingHorizontal: 16 }}
 				showsVerticalScrollIndicator={false}
 			>
 				<View className="flex-row items-center justify-end px-4 py-3">
@@ -323,7 +324,7 @@ export default function HomeScreen() {
 						<Menu size={32} color={themeColors.text} />
 					</Pressable>
 				</View>
-				<View className="pt-3">
+				<View className="mt-3">
 					<View className="flex-row items-end justify-between">
 						<View>
 							<Text
@@ -357,12 +358,7 @@ export default function HomeScreen() {
 						handleTrackPress={handleTrackPress}
 					/>
 
-					<View style={{ marginTop: 14 }}>
-						<Text
-							style={{ color: themeColors.text, fontSize: 26, fontWeight: "700", marginBottom: 10 }}
-						>
-							Top Artists
-						</Text>
+					<View style={{ marginTop:30, paddingBottom: 24 }}>
 						{renderTopArtists()}
 					</View>
 
