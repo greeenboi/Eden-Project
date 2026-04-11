@@ -497,7 +497,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	);
 
 	return (
-		<GlobalPlayerContext.Provider value={contextValue}>
+		<GlobalPlayerContext value={contextValue}>
 			<BottomSheetModalProvider>
 				{children}
 				<BottomSheetModal
@@ -547,6 +547,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 					</BottomSheetScrollView>
 				</BottomSheetModal>
 			</BottomSheetModalProvider>
-		</GlobalPlayerContext.Provider>
+		</GlobalPlayerContext>
 	);
 }

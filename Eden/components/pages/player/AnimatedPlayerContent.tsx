@@ -197,18 +197,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 		};
 	});
 
-	// Full mode content opacity
-	const fullContentStyle = useAnimatedStyle(() => {
-		return {
-			opacity: interpolate(
-				progress.value,
-				[0.5, 1],
-				[0, 1],
-				Extrapolation.CLAMP,
-			),
-		};
-	});
-
 	// Mini controls style
 	const miniControlsStyle = useAnimatedStyle(() => {
 		return {
@@ -220,14 +208,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 			),
 		};
 	});
-
-	const handlePress = () => {
-		if (isFull) {
-			onCollapse?.();
-		} else {
-			onExpand?.();
-		}
-	};
 
 	return (
 		<View style={styles.container}>

@@ -98,8 +98,6 @@ export function PlayingSongContent({
 		updatePlayback,
 		registerSeekCallback,
 		unregisterSeekCallback,
-		registerToggleCallback,
-		unregisterToggleCallback,
 		reset: resetPlayback,
 	} = usePlaybackStore();
 
