@@ -1,10 +1,12 @@
+/* global it, expect */
+
 import * as React from "react";
 import renderer from "react-test-renderer";
 
-import { MonoText } from "../StyledText";
+import { Text } from "../Themed";
 
-it(`renders correctly`, () => {
-	const tree = renderer.create(<MonoText>Snapshot test!</MonoText>).toJSON();
+it("renders correctly", () => {
+	const tree = renderer.create(<Text>Snapshot test!</Text>).toJSON();
 
 	expect(tree).toMatchSnapshot();
 });
