@@ -14,7 +14,7 @@ import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifier
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
 import { Menu, Play } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	Dimensions,
 	Image,
@@ -29,6 +29,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const TRACK_STATUS_FILTER = "published";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DESIGN_WIDTH = 375;
+const ALL_SONGS_SOURCE: QueueSource = { type: "all-songs" };
 const scale = (value: number) => (SCREEN_WIDTH / DESIGN_WIDTH) * value;
 
 type CollageTrack = {
@@ -243,13 +244,12 @@ export default function HomeScreen() {
 	}, [tracks]);
 
 	const featuredTracks = useMemo(() => tracks.slice(0, 10), [tracks]);
-	const allSongsSource: QueueSource = useMemo(() => ({ type: "all-songs" }), []);
 
 	const handleOpenDrawer = () => {
 		navigation.dispatch(DrawerActions.openDrawer());
 	};
 
-	const handleTrackPress = (trackId: string) => {
+	const handleTrackPress = useCallback((trackId: string) => {
 		const trackIndex = queueTracks.findIndex((track) => track.id === trackId);
 		const selectedTrack = queueTracks[trackIndex];
 
@@ -261,16 +261,16 @@ export default function HomeScreen() {
 				queueTracks.length,
 				trackIndex,
 			);
-			playTrackWithQueue(selectedTrack, queueTracks, trackIndex, allSongsSource);
+			playTrackWithQueue(selectedTrack, queueTracks, trackIndex, ALL_SONGS_SOURCE);
 			return;
 		}
 
 		playTrack(trackId);
-	};
+	}, [playTrack, playTrackWithQueue, queueTracks]);
 
-	const handleArtistPress = (artistId: string) => {
+	const handleArtistPress = useCallback((artistId: string) => {
 		router.push(`/artist-detail?id=${artistId}`);
-	};
+	}, []);
 
 	const renderTopArtists = () => {
 		if (isArtistsLoading) {

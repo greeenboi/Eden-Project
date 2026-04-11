@@ -559,11 +559,6 @@ export default function SearchSongsScreen() {
 		}));
 	}, [allTracks]);
 
-	const searchSource: QueueSource = useMemo(
-		() => ({ type: "search", query: searchQuery }),
-		[searchQuery],
-	);
-
 	const handleArtistPress = useCallback(
 		(artistId: string) => {
 			// Find artist name for analytics
@@ -606,11 +601,11 @@ export default function SearchSongsScreen() {
 					selectedTrack,
 					queueTracks,
 					trackIndex,
-					searchSource,
+					{ type: "search", query: searchQuery } as QueueSource,
 				);
 			}
 		},
-		[queueTracks, playTrackWithQueue, searchSource],
+		[queueTracks, playTrackWithQueue, searchQuery],
 	);
 
 	const handleOpenDrawer = () => {

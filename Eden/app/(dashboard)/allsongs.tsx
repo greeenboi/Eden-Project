@@ -1,10 +1,10 @@
 import { View } from "@/components/Themed";
 import {
-    DashboardHeader,
-    EmptyTrackList,
-    LoadingMoreTracks,
-    LoadingSkeleton,
-    TrackCard,
+	DashboardHeader,
+	EmptyTrackList,
+	LoadingMoreTracks,
+	LoadingSkeleton,
+	TrackCard,
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Colors from "@/constants/Colors";
@@ -12,26 +12,27 @@ import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import {
-    loadMoreTriggered,
-    trackPlayWithQueue,
-    tracksRefreshed,
+	loadMoreTriggered,
+	trackPlayWithQueue,
+	tracksRefreshed,
 } from "@/lib/analytics";
 import { FlashList } from "@shopify/flash-list";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    Animated,
-    Easing,
-    type NativeScrollEvent,
-    type NativeSyntheticEvent,
-    RefreshControl,
-    useColorScheme,
+	Animated,
+	Easing,
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	RefreshControl,
+	useColorScheme,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
 const NAV_COLLAPSE_THRESHOLD = 4;
+const ALL_SONGS_SOURCE: QueueSource = { type: "all-songs" };
 
 interface MasonryTrack extends Track {
 	span: number;
@@ -98,13 +99,10 @@ export default function AllSongsScreen() {
 	const handleListScroll = useCallback(
 		(event: NativeSyntheticEvent<NativeScrollEvent>) => {
 			const offsetY = event?.nativeEvent?.contentOffset?.y ?? 0;
-			if (offsetY > NAV_COLLAPSE_THRESHOLD && !navCollapsed) {
-				setNavCollapsed(true);
-			} else if (offsetY <= NAV_COLLAPSE_THRESHOLD && navCollapsed) {
-				setNavCollapsed(false);
-			}
+			const shouldCollapse = offsetY > NAV_COLLAPSE_THRESHOLD;
+			setNavCollapsed((prev) => (prev === shouldCollapse ? prev : shouldCollapse));
 		},
-		[navCollapsed],
+		[],
 	);
 
 	useEffect(() => {
@@ -126,8 +124,6 @@ export default function AllSongsScreen() {
 		}));
 	}, [tracks]);
 
-	const allSongsSource: QueueSource = useMemo(() => ({ type: "all-songs" }), []);
-
 	const handleSongPress = useCallback(
 		(songId: string) => {
 			const trackIndex = queueTracks.findIndex((t) => t.id === songId);
@@ -142,12 +138,12 @@ export default function AllSongsScreen() {
 					trackIndex,
 				);
 
-				playTrackWithQueue(selectedTrack, queueTracks, trackIndex, allSongsSource);
+				playTrackWithQueue(selectedTrack, queueTracks, trackIndex, ALL_SONGS_SOURCE);
 			} else {
 				playTrack(songId);
 			}
 		},
-		[queueTracks, playTrackWithQueue, playTrack, allSongsSource],
+		[queueTracks, playTrackWithQueue, playTrack],
 	);
 
 	const handleLoadMore = useCallback(() => {

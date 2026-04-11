@@ -146,7 +146,7 @@ export default function ArtistDetailScreen() {
 			);
 			setCurrentArtistTracks((prev) => [...prev, ...data.tracks]);
 			setTracksPagination(data.pagination);
-		} catch (err) {
+		} catch {
 			// Ignore errors for load more
 		} finally {
 			setIsLoadingTracks(false);

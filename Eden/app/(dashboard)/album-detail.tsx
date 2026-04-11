@@ -78,15 +78,13 @@ export default function AlbumDetailScreen() {
 	}, [id, albumInfo?.title]);
 
 	// Convert tracks to queue format for album playback
-	const queueTracks: QueueTrack[] = useMemo(() => {
-		return tracks.map((track) => ({
-			id: track.id,
-			title: track.title,
-			artistName: artistInfo?.name ?? "Loading...",
-			artworkUrl: track.artworkUrl,
-			duration: track.duration,
-		}));
-	}, [tracks, artistInfo?.name]);
+	const queueTracks: QueueTrack[] = tracks.map((track) => ({
+		id: track.id,
+		title: track.title,
+		artistName: artistInfo?.name ?? "Loading...",
+		artworkUrl: track.artworkUrl,
+		duration: track.duration,
+	}));
 
 	// Queue source locked to this album
 	const albumQueueSource: QueueSource | null = useMemo(() => {
@@ -358,7 +356,7 @@ export default function AlbumDetailScreen() {
 						<Music size={64} className="opacity-30 mb-4" />
 						<Text className="text-xl font-semibold mb-2">No Tracks Found</Text>
 						<Text className="text-center opacity-70">
-							This album doesn't have any tracks yet.
+							This album doesn&apos;t have any tracks yet.
 						</Text>
 					</View>
 				)}
