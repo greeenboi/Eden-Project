@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerState } from "@/lib/GlobalPlayerProvider";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import {
 	queueCleared,
@@ -177,7 +177,7 @@ export default function QueueScreen() {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	const { queue, currentIndex } = useGlobalPlayer();
+	const { queue, currentIndex } = useGlobalPlayerState();
 	const queueStore = useQueueStore();
 
 	// Check if currently playing (you'd need to get this from playback state)

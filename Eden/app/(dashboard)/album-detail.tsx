@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import {
@@ -36,7 +36,7 @@ export default function AlbumDetailScreen() {
 		fetchTrackById,
 		clearTracks,
 	} = useTrackStore();
-	const { playTrackWithQueue } = useGlobalPlayer();
+	const { playTrackWithQueue } = useGlobalPlayerActions();
 
 	useEffect(() => {
 		if (id) {

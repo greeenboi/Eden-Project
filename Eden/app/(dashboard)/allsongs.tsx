@@ -8,7 +8,7 @@ import {
 } from "@/components/pages/dashboard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import {
@@ -43,7 +43,7 @@ export default function AllSongsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [navCollapsed, setNavCollapsed] = useState(false);
 	const navAnim = useRef(new Animated.Value(0)).current;
-	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
+	const { playTrack, playTrackWithQueue } = useGlobalPlayerActions();
 	const { tracks, pagination, isLoading, error, fetchTracks, clearTracks } =
 		useTrackStore();
 	const colorScheme = useColorScheme();

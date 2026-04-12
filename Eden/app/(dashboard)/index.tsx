@@ -1,5 +1,5 @@
 import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import { type Artist, fetchArtists } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
@@ -195,7 +195,7 @@ const AdaptiveCollage = ({
 export default function HomeScreen() {
 	const colorScheme = useColorScheme();
 	const navigation = useNavigation();
-	const { playTrack, playTrackWithQueue } = useGlobalPlayer();
+	const { playTrack, playTrackWithQueue } = useGlobalPlayerActions();
 	const { tracks, isLoading, fetchTracks, clearTracks } = useTrackStore();
 	const [topArtists, setTopArtists] = useState<Artist[]>([]);
 	const [isArtistsLoading, setIsArtistsLoading] = useState(false);
