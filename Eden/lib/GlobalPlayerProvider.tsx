@@ -5,6 +5,14 @@ import {
 	type QueueTrack,
 	type RepeatMode,
 	type ShuffleMode,
+	selectCurrentIndex,
+	selectCurrentTrackId,
+	selectHasNext,
+	selectHasPrevious,
+	selectQueue,
+	selectQueueSource,
+	selectRepeatMode,
+	selectShuffleMode,
 	useQueueStore,
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
@@ -34,13 +42,7 @@ import {
 } from "react";
 import { BackHandler } from "react-native";
 
-interface GlobalPlayerContextValue {
-	/** Currently selected track ID */
-	selectedTrackId: string | null;
-	/** Current sheet snap index (0 = mini, 1 = full) */
-	sheetIndex: number;
-	/** Whether the player is visible */
-	isPlayerVisible: boolean;
+interface GlobalPlayerActionsContextValue {
 	/** Play a track by ID - opens the player sheet (single track, no queue) */
 	playTrack: (trackId: string) => void;
 	/** Play a track with queue context */
@@ -72,12 +74,21 @@ interface GlobalPlayerContextValue {
 	collapsePlayer: () => void;
 	/** Toggle between mini and full view */
 	togglePlayerExpand: () => void;
+	/** Handle track end - for auto-advancement */
+	onTrackEnd: () => void;
+}
+
+interface GlobalPlayerStateContextValue {
+	/** Currently selected track ID */
+	selectedTrackId: string | null;
+	/** Current sheet snap index (0 = mini, 1 = full) */
+	sheetIndex: number;
+	/** Whether the player is visible */
+	isPlayerVisible: boolean;
 	/** Check if there's a next track */
 	hasNext: boolean;
 	/** Check if there's a previous track */
 	hasPrevious: boolean;
-	/** Handle track end - for auto-advancement */
-	onTrackEnd: () => void;
 	/** Current queue of tracks */
 	queue: QueueTrack[];
 	/** Current index in queue */
@@ -92,19 +103,48 @@ interface GlobalPlayerContextValue {
 	queueSource: QueueSource | null;
 }
 
-const GlobalPlayerContext = createContext<GlobalPlayerContextValue | null>(
-	null,
-);
+type GlobalPlayerContextValue = GlobalPlayerActionsContextValue &
+	GlobalPlayerStateContextValue;
+
+const GlobalPlayerActionsContext =
+	createContext<GlobalPlayerActionsContextValue | null>(null);
+const GlobalPlayerStateContext =
+	createContext<GlobalPlayerStateContextValue | null>(null);
 
 /**
  * Hook to access the global player context
  * Must be used within a GlobalPlayerProvider
  */
 export function useGlobalPlayer() {
-	const context = useContext(GlobalPlayerContext);
-	if (!context) {
+	const actions = useContext(GlobalPlayerActionsContext);
+	const state = useContext(GlobalPlayerStateContext);
+	if (!actions || !state) {
 		throw new Error(
 			"useGlobalPlayer must be used within a GlobalPlayerProvider",
+		);
+	}
+
+	return useMemo(
+		() => ({ ...actions, ...state }),
+		[actions, state],
+	);
+}
+
+export function useGlobalPlayerActions() {
+	const context = useContext(GlobalPlayerActionsContext);
+	if (!context) {
+		throw new Error(
+			"useGlobalPlayerActions must be used within a GlobalPlayerProvider",
+		);
+	}
+	return context;
+}
+
+export function useGlobalPlayerState() {
+	const context = useContext(GlobalPlayerStateContext);
+	if (!context) {
+		throw new Error(
+			"useGlobalPlayerState must be used within a GlobalPlayerProvider",
 		);
 	}
 	return context;
@@ -115,7 +155,10 @@ export function useGlobalPlayer() {
  * Use this when you're not sure if you're in a provider context
  */
 export function useGlobalPlayerSafe() {
-	return useContext(GlobalPlayerContext);
+	const actions = useContext(GlobalPlayerActionsContext);
+	const state = useContext(GlobalPlayerStateContext);
+	if (!actions || !state) return null;
+	return { ...actions, ...state };
 }
 
 interface GlobalPlayerProviderProps {
@@ -144,11 +187,30 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
-	// Queue store integration
-	const queueStore = useQueueStore();
 
-	// Playback store for notification state
-	const { isPlaying } = usePlaybackStore();
+	const setQueue = useQueueStore((state) => state.setQueue);
+	const skipToNextInQueue = useQueueStore((state) => state.skipToNext);
+	const skipToPreviousInQueue = useQueueStore((state) => state.skipToPrevious);
+	const addTrackToQueue = useQueueStore((state) => state.addToQueue);
+	const addTrackNext = useQueueStore((state) => state.addNext);
+	const removeFromQueueById = useQueueStore(
+		(state) => state.removeFromQueueById,
+	);
+	const toggleQueueShuffle = useQueueStore((state) => state.toggleShuffle);
+	const toggleQueueRepeat = useQueueStore((state) => state.toggleRepeatMode);
+	const clearQueue = useQueueStore((state) => state.clearQueue);
+
+	const hasNext = useQueueStore(selectHasNext);
+	const hasPrevious = useQueueStore(selectHasPrevious);
+	const queue = useQueueStore(selectQueue);
+	const currentIndex = useQueueStore(selectCurrentIndex);
+	const repeatMode = useQueueStore(selectRepeatMode);
+	const shuffleMode = useQueueStore(selectShuffleMode);
+	const queueSource = useQueueStore(selectQueueSource);
+	const currentTrackId = useQueueStore(selectCurrentTrackId);
+
+	// Playback store subscription scoped to isPlaying only
+	const isPlaying = usePlaybackStore((state) => state.isPlaying);
 
 	// Track if notifications are set up
 	const notificationsSetupRef = useRef(false);
@@ -242,78 +304,74 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			source?: QueueSource,
 		) => {
 			// Set the queue first with source context
-			queueStore.setQueue(queue, startIndex, source);
+			setQueue(queue, startIndex, source);
 			// Then play the track
 			setSelectedTrackId(track.id);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
-		[FULL_SNAP_INDEX, queueStore],
+		[FULL_SNAP_INDEX, setQueue],
 	);
 
 	const skipToNext = useCallback(() => {
-		const nextTrack = queueStore.skipToNext();
+		const nextTrack = skipToNextInQueue();
 		if (nextTrack) {
 			setSelectedTrackId(nextTrack.id);
 		}
-	}, [queueStore]);
+	}, [skipToNextInQueue]);
 
 	const skipToPrevious = useCallback(() => {
-		const prevTrack = queueStore.skipToPrevious();
+		const prevTrack = skipToPreviousInQueue();
 		if (prevTrack) {
 			setSelectedTrackId(prevTrack.id);
 		}
-	}, [queueStore]);
+	}, [skipToPreviousInQueue]);
 
 	const addToQueue = useCallback(
 		(track: QueueTrack) => {
-			queueStore.addToQueue(track);
+			addTrackToQueue(track);
 		},
-		[queueStore],
+		[addTrackToQueue],
 	);
 
 	const addNext = useCallback(
 		(track: QueueTrack) => {
-			queueStore.addNext(track);
+			addTrackNext(track);
 		},
-		[queueStore],
+		[addTrackNext],
 	);
 
 	const removeFromQueue = useCallback(
 		(trackId: string) => {
-			queueStore.removeFromQueueById(trackId);
+			removeFromQueueById(trackId);
 		},
-		[queueStore],
+		[removeFromQueueById],
 	);
 
 	const toggleShuffle = useCallback(() => {
-		queueStore.toggleShuffle();
-	}, [queueStore]);
+		toggleQueueShuffle();
+	}, [toggleQueueShuffle]);
 
 	const toggleRepeat = useCallback(() => {
-		queueStore.toggleRepeatMode();
-	}, [queueStore]);
+		toggleQueueRepeat();
+	}, [toggleQueueRepeat]);
 
 	const onTrackEnd = useCallback(() => {
 		// Auto-advance to next track when current track ends
-		const nextTrack = queueStore.skipToNext();
+		const nextTrack = skipToNextInQueue();
 		if (nextTrack) {
 			setSelectedTrackId(nextTrack.id);
 		} else {
 			// Queue finished, collapse to mini player
 			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
 		}
-	}, [queueStore]);
+	}, [skipToNextInQueue]);
 
-	const hasNext = queueStore.hasNext();
-	const hasPrevious = queueStore.hasPrevious();
-	const queue = queueStore.queue;
-	const currentIndex = queueStore.currentIndex;
-	const upcomingTracks = queueStore.getUpcoming();
-	const repeatMode = queueStore.repeatMode;
-	const shuffleMode = queueStore.shuffleMode;
-	const queueSource = queueStore.queueSource;
+	const upcomingTracks = useMemo(
+		() => queue.slice(currentIndex + 1),
+		[queue, currentIndex],
+	);
 
 	// Get next/previous track artwork for swipe preview
 	const nextTrackArtwork =
@@ -326,7 +384,15 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			: null;
 
 	// Current track for notifications
-	const currentTrack = queue[currentIndex] ?? null;
+	const currentTrack =
+		currentIndex >= 0 && currentIndex < queue.length
+			? queue[currentIndex]
+			: null;
+
+	const notificationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
+	const lastNotificationSignatureRef = useRef<string | null>(null);
 
 	// Update notification when track or playback state changes
 	useEffect(() => {
@@ -342,25 +408,62 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 		if (!isPlayerVisible || !currentTrack) {
 			console.log("[GlobalPlayer] No player or track, dismissing notification");
+			if (notificationDebounceRef.current) {
+				clearTimeout(notificationDebounceRef.current);
+				notificationDebounceRef.current = null;
+			}
+			lastNotificationSignatureRef.current = null;
 			// Dismiss notification when player is hidden
 			dismissMediaNotification().catch(() => {});
 			return;
 		}
 
-		console.log("[GlobalPlayer] Showing notification for:", currentTrack.title);
-		showMediaNotification({
-			track: currentTrack,
-			isPlaying,
-			hasNext,
-			hasPrevious,
-		})
-			.then(() => {
-				console.log("[GlobalPlayer] showMediaNotification completed");
+		const signature = [
+			currentTrackId,
+			isPlaying ? "1" : "0",
+			hasNext ? "1" : "0",
+			hasPrevious ? "1" : "0",
+		].join("|");
+
+		if (signature === lastNotificationSignatureRef.current) {
+			return;
+		}
+
+		if (notificationDebounceRef.current) {
+			clearTimeout(notificationDebounceRef.current);
+		}
+
+		notificationDebounceRef.current = setTimeout(() => {
+			console.log("[GlobalPlayer] Showing notification for:", currentTrack.title);
+			showMediaNotification({
+				track: currentTrack,
+				isPlaying,
+				hasNext,
+				hasPrevious,
 			})
-			.catch((err) => {
-				console.warn("[GlobalPlayer] Failed to show notification:", err);
-			});
-	}, [currentTrack, isPlaying, hasNext, hasPrevious, isPlayerVisible]);
+				.then(() => {
+					lastNotificationSignatureRef.current = signature;
+					console.log("[GlobalPlayer] showMediaNotification completed");
+				})
+				.catch((err) => {
+					console.warn("[GlobalPlayer] Failed to show notification:", err);
+				});
+		}, 300);
+
+		return () => {
+			if (notificationDebounceRef.current) {
+				clearTimeout(notificationDebounceRef.current);
+				notificationDebounceRef.current = null;
+			}
+		};
+	}, [
+		currentTrackId,
+		isPlaying,
+		hasNext,
+		hasPrevious,
+		isPlayerVisible,
+		currentTrack,
+	]);
 
 	// Listen for notification action responses (play/pause/next/previous)
 	useEffect(() => {
@@ -376,8 +479,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 					break;
 				case "NEXT": {
 					console.log("[GlobalPlayer] Skipping to next");
-					queueStore.skipToNext();
-					const nextTrack = queueStore.getCurrentTrack();
+					skipToNextInQueue();
+					const nextTrack = useQueueStore.getState().getCurrentTrack();
 					if (nextTrack) {
 						setSelectedTrackId(nextTrack.id);
 					}
@@ -385,8 +488,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 				}
 				case "PREVIOUS": {
 					console.log("[GlobalPlayer] Skipping to previous");
-					queueStore.skipToPrevious();
-					const prevTrack = queueStore.getCurrentTrack();
+					skipToPreviousInQueue();
+					const prevTrack = useQueueStore.getState().getCurrentTrack();
 					if (prevTrack) {
 						setSelectedTrackId(prevTrack.id);
 					}
@@ -399,16 +502,16 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			console.log("[GlobalPlayer] Removing notification response listener");
 			subscription.remove();
 		};
-	}, [queueStore]);
+	}, [skipToNextInQueue, skipToPreviousInQueue]);
 
 	const dismissPlayer = useCallback(() => {
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
-		queueStore.clearQueue();
+		clearQueue();
 		// Dismiss notification when player is dismissed
 		dismissMediaNotification().catch(() => {});
-	}, [queueStore]);
+	}, [clearQueue]);
 
 	const expandPlayer = useCallback(() => {
 		bottomSheetRef.current?.expand();
@@ -439,11 +542,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		setSheetIndex(0);
 	}, []);
 
-	const contextValue = useMemo<GlobalPlayerContextValue>(
+	const actionsValue = useMemo<GlobalPlayerActionsContextValue>(
 		() => ({
-			selectedTrackId,
-			sheetIndex,
-			isPlayerVisible,
 			playTrack,
 			playTrackWithQueue,
 			skipToNext,
@@ -457,9 +557,33 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			expandPlayer,
 			collapsePlayer,
 			togglePlayerExpand,
+			onTrackEnd,
+		}),
+		[
+			playTrack,
+			playTrackWithQueue,
+			skipToNext,
+			skipToPrevious,
+			addToQueue,
+			addNext,
+			removeFromQueue,
+			toggleShuffle,
+			toggleRepeat,
+			dismissPlayer,
+			expandPlayer,
+			collapsePlayer,
+			togglePlayerExpand,
+			onTrackEnd,
+		],
+	);
+
+	const stateValue = useMemo<GlobalPlayerStateContextValue>(
+		() => ({
+			selectedTrackId,
+			sheetIndex,
+			isPlayerVisible,
 			hasNext,
 			hasPrevious,
-			onTrackEnd,
 			queue,
 			currentIndex,
 			upcomingTracks,
@@ -471,22 +595,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			selectedTrackId,
 			sheetIndex,
 			isPlayerVisible,
-			playTrack,
-			playTrackWithQueue,
-			skipToNext,
-			skipToPrevious,
-			addToQueue,
-			addNext,
-			removeFromQueue,
-			toggleShuffle,
-			toggleRepeat,
-			dismissPlayer,
-			expandPlayer,
-			collapsePlayer,
-			togglePlayerExpand,
 			hasNext,
 			hasPrevious,
-			onTrackEnd,
 			queue,
 			currentIndex,
 			upcomingTracks,
@@ -497,7 +607,8 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	);
 
 	return (
-		<GlobalPlayerContext.Provider value={contextValue}>
+		<GlobalPlayerActionsContext value={actionsValue}>
+			<GlobalPlayerStateContext value={stateValue}>
 			<BottomSheetModalProvider>
 				{children}
 				<BottomSheetModal
@@ -547,6 +658,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 					</BottomSheetScrollView>
 				</BottomSheetModal>
 			</BottomSheetModalProvider>
-		</GlobalPlayerContext.Provider>
+			</GlobalPlayerStateContext>
+		</GlobalPlayerActionsContext>
 	);
 }

@@ -40,7 +40,7 @@ import {
 	Volume2,
 	Wifi,
 } from "lucide-react-native";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Pressable, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -64,9 +64,8 @@ export default function SettingsScreen() {
 		navigation.dispatch(DrawerActions.openDrawer());
 	};
 
-	const gradientColors = useMemo(
-		() => generateGradientColors(user?.email || user?.name || "default"),
-		[user?.email, user?.name],
+	const gradientColors = generateGradientColors(
+		user?.email || user?.name || "default",
 	);
 
 	const handleBugReport = async () => {

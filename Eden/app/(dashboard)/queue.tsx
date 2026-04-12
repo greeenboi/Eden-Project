@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerState } from "@/lib/GlobalPlayerProvider";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import {
 	queueCleared,
@@ -13,7 +13,7 @@ import {
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { Image, Pressable, useColorScheme } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
@@ -177,21 +177,15 @@ export default function QueueScreen() {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	const { selectedTrackId, skipToNext, queue, currentIndex } =
-		useGlobalPlayer();
+	const { queue, currentIndex } = useGlobalPlayerState();
 	const queueStore = useQueueStore();
 
 	// Check if currently playing (you'd need to get this from playback state)
 	// For now we'll just show the current track indicator
 	const isPlaying = true; // This should come from actual playback state
 
-	const currentTrack = useMemo(() => {
-		return queue[currentIndex] ?? null;
-	}, [queue, currentIndex]);
-
-	const upcomingTracks = useMemo(() => {
-		return queue.slice(currentIndex + 1);
-	}, [queue, currentIndex]);
+	const currentTrack = queue[currentIndex] ?? null;
+	const upcomingTracks = queue.slice(currentIndex + 1);
 
 	const handlePlayTrack = useCallback(
 		(index: number) => {

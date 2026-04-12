@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import type { Album } from "@/lib/actions/albums";
 import type { Artist } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
@@ -390,7 +390,7 @@ export default function SearchSongsScreen() {
 	const { width: screenWidth } = useWindowDimensions();
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
-	const { playTrackWithQueue } = useGlobalPlayer();
+	const { playTrackWithQueue } = useGlobalPlayerActions();
 
 	// Search state
 	const [searchQuery, setSearchQuery] = useState("");
@@ -559,11 +559,6 @@ export default function SearchSongsScreen() {
 		}));
 	}, [allTracks]);
 
-	const searchSource: QueueSource = useMemo(
-		() => ({ type: "search", query: searchQuery }),
-		[searchQuery],
-	);
-
 	const handleArtistPress = useCallback(
 		(artistId: string) => {
 			// Find artist name for analytics
@@ -606,11 +601,11 @@ export default function SearchSongsScreen() {
 					selectedTrack,
 					queueTracks,
 					trackIndex,
-					searchSource,
+					{ type: "search", query: searchQuery } as QueueSource,
 				);
 			}
 		},
-		[queueTracks, playTrackWithQueue, searchSource],
+		[queueTracks, playTrackWithQueue, searchQuery],
 	);
 
 	const handleOpenDrawer = () => {

@@ -68,7 +68,7 @@ export function SessionProvider({ children }: PropsWithChildren) {
 	const isLoading = isLoadingStorage || isAuthLoading;
 
 	return (
-		<AuthContext.Provider
+		<AuthContext
 			value={{
 				signIn: async (email: string, password: string) => {
 					await login(email, password);
@@ -88,6 +88,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
 			}}
 		>
 			{children}
-		</AuthContext.Provider>
+		</AuthContext>
 	);
 }

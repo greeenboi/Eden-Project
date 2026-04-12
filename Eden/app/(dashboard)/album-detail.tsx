@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import {
@@ -36,7 +36,7 @@ export default function AlbumDetailScreen() {
 		fetchTrackById,
 		clearTracks,
 	} = useTrackStore();
-	const { playTrackWithQueue } = useGlobalPlayer();
+	const { playTrackWithQueue } = useGlobalPlayerActions();
 
 	useEffect(() => {
 		if (id) {
@@ -78,15 +78,13 @@ export default function AlbumDetailScreen() {
 	}, [id, albumInfo?.title]);
 
 	// Convert tracks to queue format for album playback
-	const queueTracks: QueueTrack[] = useMemo(() => {
-		return tracks.map((track) => ({
-			id: track.id,
-			title: track.title,
-			artistName: artistInfo?.name ?? "Loading...",
-			artworkUrl: track.artworkUrl,
-			duration: track.duration,
-		}));
-	}, [tracks, artistInfo?.name]);
+	const queueTracks: QueueTrack[] = tracks.map((track) => ({
+		id: track.id,
+		title: track.title,
+		artistName: artistInfo?.name ?? "Loading...",
+		artworkUrl: track.artworkUrl,
+		duration: track.duration,
+	}));
 
 	// Queue source locked to this album
 	const albumQueueSource: QueueSource | null = useMemo(() => {
@@ -358,7 +356,7 @@ export default function AlbumDetailScreen() {
 						<Music size={64} className="opacity-30 mb-4" />
 						<Text className="text-xl font-semibold mb-2">No Tracks Found</Text>
 						<Text className="text-center opacity-70">
-							This album doesn't have any tracks yet.
+							This album doesn&apos;t have any tracks yet.
 						</Text>
 					</View>
 				)}

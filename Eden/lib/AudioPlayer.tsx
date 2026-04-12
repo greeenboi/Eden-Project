@@ -1,9 +1,9 @@
 import type { AudioMode } from "expo-audio";
 import {
-    setAudioModeAsync,
-    setIsAudioActiveAsync,
-    useAudioPlayer,
-    useAudioPlayerStatus,
+	setAudioModeAsync,
+	setIsAudioActiveAsync,
+	useAudioPlayer,
+	useAudioPlayerStatus,
 } from "expo-audio";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -44,6 +44,8 @@ const defaultBackgroundAudioMode: Partial<AudioMode> = {
 	interruptionModeAndroid: "duckOthers",
 	interruptionMode: "mixWithOthers",
 };
+
+const NEAR_END_THRESHOLD_SECONDS = 5;
 
 export function useTrackAudioPlayer({
 	trackId,
@@ -94,8 +96,15 @@ export function useTrackAudioPlayer({
 	const [loadingStream, setLoadingStream] = useState(false);
 	const [streamError, setStreamError] = useState<unknown>(null);
 	const [audioSessionReady, setAudioSessionReady] = useState(false);
+	const [volume, setVolumeState] = useState(1);
 	// Track whether we've actually loaded audio to avoid pausing an unused player
 	const hasLoadedAudio = useRef(false);
+
+	useEffect(() => {
+		// expo-audio controls volume via imperative player property.
+		// eslint-disable-next-line react-compiler/react-compiler
+		player.volume = volume;
+	}, [player, volume]);
 
 	useEffect(() => {
 		if (!enabled || audioSessionReady) return;
@@ -199,31 +208,30 @@ export function useTrackAudioPlayer({
 	}, [trackId]);
 
 	useEffect(() => {
-		if (!status.isLoaded) return;
+		if (!status.didJustFinish) return;
 		if (hasTriggeredEndRef.current) return;
-		if (player.loop) return; // Don't trigger if looping
+		if (player.loop) return;
 
-		// Prefer native completion signal from expo-audio, which is more reliable
-		// than time math when the app is backgrounded.
-		const finishedFromNativeEvent = Boolean(status.didJustFinish);
+		hasTriggeredEndRef.current = true;
+		onTrackEndRef.current?.();
+	}, [status.didJustFinish, player.loop]);
 
-		// Keep a fallback for platforms/streams where didJustFinish is delayed.
-		const hasDuration = Boolean(status.duration && status.duration > 0);
-		const isAtEnd = hasDuration
-			? status.currentTime >= status.duration - 0.3
-			: false;
-		const finishedFromTimeHeuristic =
-			isAtEnd && !status.playing && !status.isBuffering;
+	useEffect(() => {
+		if (!status.isLoaded) return;
+		if (!status.duration || status.duration <= 0) return;
+		if (hasTriggeredEndRef.current) return;
+		if (player.loop) return;
 
-		const hasFinished = finishedFromNativeEvent || finishedFromTimeHeuristic;
+		const timeRemaining = status.duration - status.currentTime;
+		if (timeRemaining > NEAR_END_THRESHOLD_SECONDS) return;
 
-		if (hasFinished) {
+		const isAtEnd = status.currentTime >= status.duration - 0.3;
+		if (isAtEnd && !status.playing && !status.isBuffering) {
 			hasTriggeredEndRef.current = true;
 			onTrackEndRef.current?.();
 		}
 	}, [
 		status.isLoaded,
-		status.didJustFinish,
 		status.duration,
 		status.currentTime,
 		status.playing,
@@ -245,10 +253,6 @@ export function useTrackAudioPlayer({
 		}
 	}, [status.isLoaded, status.playing, player]);
 
-	const toggleLoop = useCallback(() => {
-		player.loop = !player.loop;
-	}, [player]);
-
 	const seekForward = useCallback(
 		(seconds = skipSeconds) => {
 			if (!status.duration || status.duration <= 0) return;
@@ -268,15 +272,15 @@ export function useTrackAudioPlayer({
 	);
 
 	const toggleMute = useCallback(() => {
-		player.volume = player.volume > 0 ? 0 : 1;
-	}, [player]);
+		setVolumeState((prev) => (prev > 0 ? 0 : 1));
+	}, []);
 
 	const setVolume = useCallback(
 		(value: number) => {
 			const clamped = Math.max(0, Math.min(1, value));
-			player.volume = clamped;
+			setVolumeState(clamped);
 		},
-		[player],
+		[],
 	);
 
 	return {
@@ -290,9 +294,8 @@ export function useTrackAudioPlayer({
 		seekForward,
 		seekBackward,
 		togglePlayback,
-		toggleLoop,
 		toggleMute,
 		setVolume,
-		isMuted: player.volume === 0,
+		isMuted: volume === 0,
 	};
 }

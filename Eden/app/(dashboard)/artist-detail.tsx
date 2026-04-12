@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
-import { useGlobalPlayer } from "@/lib/GlobalPlayerProvider";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
 import {
 	type Artist,
@@ -53,7 +53,7 @@ export default function ArtistDetailScreen() {
 		isLoading: isLoadingAlbums,
 		fetchAlbums,
 	} = useAlbumStore();
-	const { playTrackWithQueue } = useGlobalPlayer();
+	const { playTrackWithQueue } = useGlobalPlayerActions();
 
 	useEffect(() => {
 		if (!artistId) return;
@@ -146,7 +146,7 @@ export default function ArtistDetailScreen() {
 			);
 			setCurrentArtistTracks((prev) => [...prev, ...data.tracks]);
 			setTracksPagination(data.pagination);
-		} catch (err) {
+		} catch {
 			// Ignore errors for load more
 		} finally {
 			setIsLoadingTracks(false);

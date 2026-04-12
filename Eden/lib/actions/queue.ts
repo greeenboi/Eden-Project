@@ -89,6 +89,26 @@ interface QueueState {
 	getQueueSource: () => QueueSource | null;
 }
 
+export const selectQueue = (state: QueueState) => state.queue;
+export const selectCurrentIndex = (state: QueueState) => state.currentIndex;
+export const selectRepeatMode = (state: QueueState) => state.repeatMode;
+export const selectShuffleMode = (state: QueueState) => state.shuffleMode;
+export const selectQueueSource = (state: QueueState) => state.queueSource;
+export const selectCurrentTrackId = (state: QueueState) => {
+	if (state.currentIndex < 0 || state.currentIndex >= state.queue.length) {
+		return null;
+	}
+	return state.queue[state.currentIndex]?.id ?? null;
+};
+export const selectHasNext = (state: QueueState) => {
+	if (state.repeatMode === "one" || state.repeatMode === "all") return true;
+	return state.currentIndex < state.queue.length - 1;
+};
+export const selectHasPrevious = (state: QueueState) => {
+	if (state.repeatMode === "all") return true;
+	return state.currentIndex > 0;
+};
+
 /**
  * Fisher-Yates shuffle algorithm
  */

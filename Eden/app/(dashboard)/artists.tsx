@@ -20,7 +20,7 @@ import { width } from "@expo/ui/jetpack-compose/modifiers";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { AlertCircle } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RefreshControl, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -29,25 +29,22 @@ export default function ArtistsScreen() {
 	const [isSearchMode, setIsSearchMode] = useState(false);
 	const [showNames, setShowNames] = useState(false);
 	const [isRefreshing, setIsRefreshing] = useState(false);
-	const colorScheme = useColorScheme()
+	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
-	const segmentedButtonColors = useMemo(
-		() => ({
-			activeBorderColor: themeColors.primary,
-			activeContainerColor: themeColors.primary,
-			activeContentColor: themeColors.primaryForeground,
-			disabledActiveBorderColor: themeColors.border,
-			disabledActiveContainerColor: themeColors.muted,
-			disabledActiveContentColor: themeColors.mutedForeground,
-			disabledInactiveBorderColor: themeColors.border,
-			disabledInactiveContainerColor: themeColors.card,
-			disabledInactiveContentColor: themeColors.mutedForeground,
-			inactiveBorderColor: themeColors.border,
-			inactiveContainerColor: themeColors.card,
-			inactiveContentColor: themeColors.text,
-		}),
-		[themeColors],
-	);
+ 	const segmentedButtonColors = {
+		activeBorderColor: themeColors.primary,
+		activeContainerColor: themeColors.primary,
+		activeContentColor: themeColors.primaryForeground,
+		disabledActiveBorderColor: themeColors.border,
+		disabledActiveContainerColor: themeColors.muted,
+		disabledActiveContentColor: themeColors.mutedForeground,
+		disabledInactiveBorderColor: themeColors.border,
+		disabledInactiveContainerColor: themeColors.card,
+		disabledInactiveContentColor: themeColors.mutedForeground,
+		inactiveBorderColor: themeColors.border,
+		inactiveContainerColor: themeColors.card,
+		inactiveContentColor: themeColors.text,
+	};
 
 
 	// Local state instead of store
@@ -167,8 +164,7 @@ export default function ArtistsScreen() {
 		[handleArtistPress, showNames],
 	);
 
-	const renderHeader = useCallback(
-		() => (
+	const renderHeader = () => (
 			<View className="bg-transparent py-2">
 				{/* Error Alert */}
 				{error && (
@@ -229,23 +225,9 @@ export default function ArtistsScreen() {
 					</View>
 				)}
 			</View>
-		),
-		[
-			error,
-			searchQuery,
-			handleClearSearch,
-			isSearchMode,
-			isLoading,
-			displayArtists.length,
-			pagination?.total,
-			showNames,
-			segmentedButtonColors,
-			themeColors.primaryForeground,
-			themeColors.text,
-		],
-	);
+		);
 
-	const renderFooter = useCallback(() => {
+	const renderFooter = () => {
 		if (isLoading && displayArtists.length > 0) {
 			return (
 				<View className="flex-row justify-center py-4 gap-3">
@@ -270,15 +252,9 @@ export default function ArtistsScreen() {
 		}
 
 		return null;
-	}, [
-		isLoading,
-		displayArtists.length,
-		isSearchMode,
-		pagination,
-		handleLoadMore,
-	]);
+	};
 
-	const renderEmpty = useCallback(() => {
+	const renderEmpty = () => {
 		if (isLoading) {
 			return (
 				<View className="flex-row flex-wrap px-1.5 gap-3">
@@ -307,7 +283,7 @@ export default function ArtistsScreen() {
 				</Text>
 			</View>
 		);
-	}, [isLoading, searchQuery]);
+	};
 
 	return (
 		<SafeAreaView className="flex-1">

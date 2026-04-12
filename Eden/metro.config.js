@@ -3,9 +3,7 @@
 const { mergeConfig } = require("@react-native/metro-config");
 const { withRozenite } = require("@rozenite/metro");
 const { withRozeniteExpoAtlasPlugin } = require("@rozenite/expo-atlas-plugin");
-const {
-	withRozeniteRequireProfiler,
-} = require("@rozenite/require-profiler-plugin/metro");
+const {	withRozeniteRequireProfiler } = require("@rozenite/require-profiler-plugin/metro");
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
 

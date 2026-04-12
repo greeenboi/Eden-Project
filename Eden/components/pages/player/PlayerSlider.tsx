@@ -2,8 +2,7 @@ import { View } from "@/components/Themed";
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import {Shapes, background, clip, size, width, fillMaxWidth} from "@expo/ui/jetpack-compose/modifiers";
-import { useMemo } from "react";
+import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
 
 interface PlayerSliderProps {
 	trackId?: string;
@@ -38,10 +37,7 @@ export function PlayerSlider({
 	}
 
 	const safeMax = Math.max(0, sliderMax || 0);
-	const safeValue = useMemo(
-		() => Math.min(Math.max(sliderValue, 0), safeMax),
-		[sliderValue, safeMax],
-	);
+	const safeValue = Math.min(Math.max(sliderValue, 0), safeMax);
 	const log = (...args: unknown[]) => console.log("[PlayerSlider]", ...args);
 
 	const renderNativeSlider = (height: number) => {

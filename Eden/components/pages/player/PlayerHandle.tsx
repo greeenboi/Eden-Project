@@ -1,46 +1,21 @@
 import Colors from "@/constants/Colors";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import {Shapes, background, clip, size, width, fillMaxWidth} from "@expo/ui/jetpack-compose/modifiers";
+import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import {
-	type StyleProp,
-	StyleSheet,
-	type ViewStyle,
-	useColorScheme,
+    type StyleProp,
+    StyleSheet,
+    type ViewStyle,
+    useColorScheme,
 } from "react-native";
 import Animated, {
-	Extrapolation,
-	interpolate,
-	useAnimatedStyle,
-	useDerivedValue,
+    Extrapolation,
+    interpolate,
+    useAnimatedStyle,
 } from "react-native-reanimated";
-
-const toRad = (deg: number) => {
-	"worklet";
-	return (deg * Math.PI) / 180;
-};
-
-const transformOrigin = (
-	{ x, y }: { x: number; y: number },
-	...transformations: {
-		rotate?: string;
-		translateX?: number;
-		translateY?: number;
-		scale?: number;
-	}[]
-): ViewStyle["transform"] => {
-	"worklet";
-	return [
-		{ translateX: x },
-		{ translateY: y },
-		...transformations,
-		{ translateX: x * -1 },
-		{ translateY: y * -1 },
-	] as ViewStyle["transform"];
-};
 
 interface PlayerHandleProps extends BottomSheetHandleProps {
 	style?: StyleProp<ViewStyle>;
@@ -59,8 +34,11 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	// Playback state from shared store
-	const { currentTime, duration, isLoaded, isLoading, seekTo } =
-		usePlaybackStore();
+	const currentTime = usePlaybackStore((state) => state.currentTime);
+	const duration = usePlaybackStore((state) => state.duration);
+	const isLoaded = usePlaybackStore((state) => state.isLoaded);
+	const isLoading = usePlaybackStore((state) => state.isLoading);
+	const seekTo = usePlaybackStore((state) => state.seekTo);
 
 	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
@@ -83,15 +61,6 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	);
 
 	// Animated styles for the regular handle
-	const indicatorTransformOriginY = useDerivedValue(() =>
-		interpolate(
-			animatedIndex.value,
-			[0, 1, 2],
-			[-1, 0, 1],
-			Extrapolation.CLAMP,
-		),
-	);
-
 	const containerAnimatedStyle = useAnimatedStyle(() => {
 		const borderTopRadius = interpolate(
 			animatedIndex.value,
@@ -124,38 +93,6 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 			Extrapolation.CLAMP,
 		);
 		return { opacity };
-	});
-
-	const leftIndicatorAnimatedStyle = useAnimatedStyle(() => {
-		const leftIndicatorRotate = interpolate(
-			animatedIndex.value,
-			[0, 1, 2],
-			[toRad(-30), 0, toRad(30)],
-			Extrapolation.CLAMP,
-		);
-		return {
-			transform: transformOrigin(
-				{ x: 0, y: indicatorTransformOriginY.value },
-				{ rotate: `${leftIndicatorRotate}rad` },
-				{ translateX: -5 },
-			),
-		};
-	});
-
-	const rightIndicatorAnimatedStyle = useAnimatedStyle(() => {
-		const rightIndicatorRotate = interpolate(
-			animatedIndex.value,
-			[0, 1, 2],
-			[toRad(30), 0, toRad(-30)],
-			Extrapolation.CLAMP,
-		);
-		return {
-			transform: transformOrigin(
-				{ x: 0, y: indicatorTransformOriginY.value },
-				{ rotate: `${rightIndicatorRotate}rad` },
-				{ translateX: 5 },
-			),
-		};
 	});
 
 	const containerStyle = useMemo(
