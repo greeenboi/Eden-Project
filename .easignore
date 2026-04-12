@@ -1,7 +1,7 @@
-# Monorepo: upload only the Expo app project for EAS builds
-/*
-!/Eden/
-!/Eden/**
-
-# Keep this file itself in the upload context
-!/.easignore
+.agents
+.github
+.idea
+.vscode
+eden-garden
+eden-server
+workers

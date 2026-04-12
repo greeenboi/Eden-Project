@@ -22,7 +22,13 @@
         "backgroundColor": "#180518"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.greenarcade.Eden"
+      "package": "com.greenarcade.Eden",
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "bundler": "metro",
