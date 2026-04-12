@@ -1,0 +1,8 @@
+# Exclude local and generated files from EAS upload
+node_modules/
+.expo/
+dist/
+web-build/
+android/build/
+android/.gradle/
+*.log
