@@ -1,20 +1,20 @@
 import Colors from "@/constants/Colors";
 import { usePlaybackStore } from "@/lib/stores/playback";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import {Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
+import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import {
-	type StyleProp,
-	StyleSheet,
-	type ViewStyle,
-	useColorScheme,
+    type StyleProp,
+    StyleSheet,
+    type ViewStyle,
+    useColorScheme,
 } from "react-native";
 import Animated, {
-	Extrapolation,
-	interpolate,
-	useAnimatedStyle,
+    Extrapolation,
+    interpolate,
+    useAnimatedStyle,
 } from "react-native-reanimated";
 
 interface PlayerHandleProps extends BottomSheetHandleProps {
@@ -34,8 +34,11 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	// Playback state from shared store
-	const { currentTime, duration, isLoaded, isLoading, seekTo } =
-		usePlaybackStore();
+	const currentTime = usePlaybackStore((state) => state.currentTime);
+	const duration = usePlaybackStore((state) => state.duration);
+	const isLoaded = usePlaybackStore((state) => state.isLoaded);
+	const isLoading = usePlaybackStore((state) => state.isLoading);
+	const seekTo = usePlaybackStore((state) => state.seekTo);
 
 	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
