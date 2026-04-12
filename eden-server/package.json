@@ -12,23 +12,23 @@
 		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
-		"@cloudflare/vitest-pool-workers": "^0.10.9",
-		"@hono/standard-validator": "^0.2.0",
+		"@cloudflare/vitest-pool-workers": "^0.10.15",
+		"@hono/standard-validator": "^0.2.2",
 		"@hono/zod-openapi": "^1.1.5",
 		"@scalar/hono-api-reference": "^0.9.24",
 		"aws4fetch": "^1.0.20",
 		"drizzle-orm": "^0.45.2",
 		"drizzle-zod": "^0.8.3",
-		"hono": "^4.10.6",
+		"hono": "^4.12.12",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.2.3",
+		"@cloudflare/vite-plugin": "^1.31.2",
 		"@types/node": "^24.10.1",
-		"drizzle-kit": "^0.31.7",
-		"vite": "^6.3.5",
-		"vite-ssr-components": "^0.5.1",
+		"drizzle-kit": "^0.31.10",
+		"vite": "^6.4.2",
+		"vite-ssr-components": "^0.5.2",
 		"vitest": "~3.2.0",
-		"wrangler": "^4.17.0"
+		"wrangler": "^4.81.1"
 	}
 }
