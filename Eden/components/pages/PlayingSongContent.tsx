@@ -94,12 +94,14 @@ export function PlayingSongContent({
 		});
 
 	// Sync playback state to shared store for handle slider
-	const {
-		updatePlayback,
-		registerSeekCallback,
-		unregisterSeekCallback,
-		reset: resetPlayback,
-	} = usePlaybackStore();
+	const updatePlayback = usePlaybackStore((state) => state.updatePlayback);
+	const registerSeekCallback = usePlaybackStore(
+		(state) => state.registerSeekCallback,
+	);
+	const unregisterSeekCallback = usePlaybackStore(
+		(state) => state.unregisterSeekCallback,
+	);
+	const resetPlayback = usePlaybackStore((state) => state.reset);
 
 	useEffect(() => {
 		updatePlayback({
