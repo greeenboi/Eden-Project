@@ -5,3 +5,10 @@
 eden-garden
 eden-server
 workers
+node_modules/
+.expo/
+dist/
+web-build/
+android/build/
+android/.gradle/
+*.log
