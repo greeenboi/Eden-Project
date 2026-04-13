@@ -11,6 +11,29 @@ type ResponseBody =
     }
   | null
 
+function isYouTubeWatchUrl(rawUrl?: string) {
+  if (!rawUrl) {
+    return false
+  }
+
+  try {
+    const url = new URL(rawUrl)
+    const host = url.hostname.toLowerCase()
+
+    if (host === "youtu.be") {
+      return url.pathname.length > 1
+    }
+
+    if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+      return url.pathname === "/watch" && url.searchParams.has("v")
+    }
+
+    return false
+  } catch {
+    return false
+  }
+}
+
 async function tryGetVideoFromContent(tabId: number) {
   try {
     return await chrome.tabs.sendMessage(tabId, { type: "eden-get-video-info" })
@@ -44,7 +67,7 @@ const handler: PlasmoMessaging.MessageHandler<RequestBody, ResponseBody> = async
     return
   }
 
-  if (!tab.url || !tab.url.includes('youtube.com/watch')) {
+  if (!isYouTubeWatchUrl(tab.url)) {
     console.warn('[Eden BG] active tab is not a YouTube watch page', tab.url)
     res.send(null)
     return

@@ -2,10 +2,7 @@
 module.exports = {
   mode: "jit",
   darkMode: "class",
-  content: [
-    "./*.vue",
-    "./src/**/*.{vue,js,ts,jsx,tsx}",
-  ],
+  content: ["./*.{ts,tsx}", "./react-app/**/*.{ts,tsx}", "./contents/**/*.ts"],
   theme: {
     extend: {},
   },

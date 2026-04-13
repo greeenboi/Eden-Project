@@ -1,12 +1,12 @@
 {
   "extends": "plasmo/templates/tsconfig.base",
   "exclude": ["node_modules"],
-  "include": [".plasmo/index.d.ts", "./**/*.ts", "./**/*.vue"],
+  "include": [".plasmo/index.d.ts", "./**/*.ts", "./**/*.tsx"],
   "compilerOptions": {
     "paths": {
       "~*": ["./*"]
     },
-    "types": ["vue"],
+    "types": ["react", "react-dom"],
     "baseUrl": "."
   }
 }
