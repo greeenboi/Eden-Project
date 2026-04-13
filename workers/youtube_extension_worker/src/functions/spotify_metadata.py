@@ -166,22 +166,39 @@ async def search_spotify_api(query: str, env, *, limit: int = 3) -> List[Tuple[D
     client_id = env.SPOTIFY_CLIENT_ID
     client_secret = env.SPOTIFY_CLIENT_SECRET
 
+    print(
+        f"[trace][spotify] start query={query!r} limit={limit} "
+        f"has_client_id={bool(client_id)} has_client_secret={bool(client_secret)}"
+    )
+
     if not client_id or not client_secret:
         detail = "Missing Spotify credentials (SPOTIFY_CLIENT_ID/SECRET)"
         print(f"[search_spotify_api] {detail}")
         raise HTTPException(status_code=500, detail=detail)
 
     token = await get_spotify_token(client_id, client_secret)
+    print("[trace][spotify] token acquired")
 
     tracks = await search_spotify_tracks(query, token, limit)
+    print(f"[trace][spotify] tracks fetched count={len(tracks)}")
     if not tracks:
+        print("[trace][spotify] no track matches")
         return []
 
     results: List[Tuple[Dict[str, Any], Dict[str, Any] | None]] = []
     for track_data in tracks:
         artist_data = None
         if track_data.get("artist_id"):
-            artist_data = await get_spotify_artist(track_data["artist_id"], token)
+            artist_id = track_data["artist_id"]
+            print(f"[trace][spotify] fetching artist artist_id={artist_id}")
+            artist_data = await get_spotify_artist(artist_id, token)
+            print(
+                f"[trace][spotify] artist fetched artist_id={artist_id} "
+                f"has_artist_data={bool(artist_data)}"
+            )
+        else:
+            print("[trace][spotify] skipping artist fetch (missing artist_id)")
         results.append((track_data, artist_data))
 
+    print(f"[trace][spotify] complete result_pairs={len(results)}")
     return results

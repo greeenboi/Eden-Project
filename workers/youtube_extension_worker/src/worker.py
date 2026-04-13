@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, HTTPException, Request
 from functions.spotify_metadata import search_spotify_api
 from functions.soundcloud_metadata import search_soundcloud_api
@@ -115,7 +116,7 @@ def _build_soundcloud_response(track_data, artist_data, query: str) -> dict:
 
 
 @app.post("/metadata")
-async def metadata(req: Request, payload: dict):
+async def metadata(req: Request):
     """
     Search for track metadata from Spotify and SoundCloud.
     
@@ -128,16 +129,49 @@ async def metadata(req: Request, payload: dict):
         - soundcloud: List of SoundCloud results
     """
     env = req.scope["env"]
+    trace: list[str] = []
+
+    def add_trace(message: str):
+        trace.append(message)
+        print(f"[trace][metadata] {message}")
+
+    add_trace("/metadata request received")
+
+    try:
+        payload = await req.json()
+        add_trace(f"payload parsed payload_type={type(payload).__name__}")
+    except Exception as exc:
+        add_trace(f"invalid json body error={exc}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Invalid JSON body. Ensure keys and strings use double quotes.",
+                "trace": trace,
+            },
+        ) from exc
     
     # Validate request
     if not isinstance(payload, dict) or not payload.get("query"):
-        raise HTTPException(status_code=400, detail="Field 'query' is required")
+        add_trace("validation failed: missing query")
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Field 'query' is required", "trace": trace},
+        )
 
     query = payload.get("query")
-    limit = min(int(payload.get("limit", DEFAULT_LIMIT)), MAX_LIMIT)
+    try:
+        limit = min(int(payload.get("limit", DEFAULT_LIMIT)), MAX_LIMIT)
+    except Exception as exc:
+        add_trace(f"validation failed: invalid limit error={exc}")
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "Field 'limit' must be a valid integer",
+                "trace": trace,
+            },
+        ) from exc
 
-    # Fetch from both sources concurrently
-    import asyncio
+    add_trace(f"query={query!r} limit={limit}")
     
     spotify_task = search_spotify_api(query, env, limit=limit)
     soundcloud_task = search_soundcloud_api(query, env, limit=limit)
@@ -147,6 +181,20 @@ async def metadata(req: Request, payload: dict):
         soundcloud_task,
         return_exceptions=True
     )
+
+    provider_errors: dict[str, str] = {}
+
+    if isinstance(spotify_results, Exception):
+        provider_errors["spotify"] = str(spotify_results)
+        add_trace(f"spotify task exception={spotify_results}")
+    else:
+        add_trace(f"spotify task success count={len(spotify_results)}")
+
+    if isinstance(soundcloud_results, Exception):
+        provider_errors["soundcloud"] = str(soundcloud_results)
+        add_trace(f"soundcloud task exception={soundcloud_results}")
+    else:
+        add_trace(f"soundcloud task success count={len(soundcloud_results)}")
 
     # Build Spotify response
     spotify_enriched = []
@@ -162,7 +210,20 @@ async def metadata(req: Request, payload: dict):
 
     # Return combined results
     if not spotify_enriched and not soundcloud_enriched:
-        raise HTTPException(status_code=404, detail="No tracks found on Spotify or SoundCloud")
+        add_trace("no enriched results from both providers")
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": "No tracks found on Spotify or SoundCloud",
+                "trace": trace,
+                "providerErrors": provider_errors,
+            },
+        )
+
+    add_trace(
+        f"success spotify={len(spotify_enriched)} "
+        f"soundcloud={len(soundcloud_enriched)}"
+    )
 
     return {
         "spotify": spotify_enriched,
