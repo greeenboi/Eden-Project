@@ -1,7 +1,9 @@
 import asyncio
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request
 from functions.spotify_metadata import search_spotify_api
 from functions.soundcloud_metadata import search_soundcloud_api
+from functions.youtube_metadata import search_youtube_api
+from pydantic import BaseModel, Field
 from workers import WorkerEntrypoint
 
 
@@ -10,6 +12,16 @@ app = FastAPI()
 
 DEFAULT_LIMIT = 5
 MAX_LIMIT = 10
+
+
+class MetadataRequest(BaseModel):
+    query: str = Field(..., description="Search query (for example, track title)")
+    limit: int = Field(
+        DEFAULT_LIMIT,
+        ge=1,
+        le=MAX_LIMIT,
+        description="Number of results per source",
+    )
 
 
 @app.get("/")
@@ -115,10 +127,205 @@ def _build_soundcloud_response(track_data, artist_data, query: str) -> dict:
     }
 
 
-@app.post("/metadata")
-async def metadata(req: Request):
+def _build_youtube_response(track_data, artist_data, query: str) -> dict:
+    """Build a standardized response object from YouTube data."""
+    artist_name = (
+        (artist_data or {}).get("name")
+        or track_data.get("channel_title")
+        or "Unknown Artist"
+    )
+    track_image = track_data.get("image") or (artist_data or {}).get("avatar_url")
+
+    duration_seconds = None
+    if track_data.get("duration_ms") is not None:
+        duration_seconds = track_data["duration_ms"] / 1000.0
+
+    return {
+        "source": "youtube",
+        "track": {
+            "title": track_data.get("title") or query,
+            "duration": duration_seconds,
+            "explicit": False,
+            "genre": None,
+            "isrc": None,
+            "image": track_image,
+            "albumImageUrl": track_image,
+            "album": None,
+            "youtubeVideoId": track_data.get("youtube_video_id"),
+            "youtubeUrl": track_data.get("youtube_url"),
+            "viewCount": track_data.get("view_count"),
+            "likeCount": track_data.get("like_count"),
+        },
+        "artist": {
+            "name": artist_name,
+            "email": None,
+            "avatarUrl": (artist_data or {}).get("avatar_url"),
+            "bio": (artist_data or {}).get("bio"),
+            "profile": (artist_data or {}).get("profile"),
+            "genres": [],
+            "youtubeChannelId": (artist_data or {}).get("youtube_channel_id"),
+            "youtubeChannelUrl": (artist_data or {}).get("youtube_channel_url"),
+            "followers": (artist_data or {}).get("subscriber_count"),
+            "channelViews": (artist_data or {}).get("channel_view_count"),
+        },
+    }
+
+
+@app.post(
+    "/metadata",
+    summary="Fetch metadata from Spotify, SoundCloud, and YouTube",
+    responses={
+        200: {
+            "description": "Metadata found from one or more providers",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "success": {
+                            "summary": "Successful metadata response",
+                            "value": {
+                                "spotify": [
+                                    {
+                                        "source": "spotify",
+                                        "track": {
+                                            "title": "One More Time",
+                                            "duration": 320.2,
+                                            "explicit": False,
+                                            "genre": "French House",
+                                            "isrc": "FRZ123456789",
+                                            "image": "https://i.scdn.co/image/example",
+                                            "albumImageUrl": "https://i.scdn.co/image/example",
+                                            "album": "Discovery",
+                                            "spotifyTrackId": "0DiWol3AO6WpXZgp0goxAV",
+                                            "spotifyUri": "spotify:track:0DiWol3AO6WpXZgp0goxAV",
+                                        },
+                                        "artist": {
+                                            "name": "Daft Punk",
+                                            "avatarUrl": "https://i.scdn.co/image/artist-example",
+                                            "bio": "Daft Punk has 10000000 Spotify followers",
+                                            "genres": ["French House", "Electronic"],
+                                            "spotifyUri": "spotify:artist:4tZwfgrHOc3mvqYlEYSvVi",
+                                            "followers": 10000000,
+                                            "popularity": 90,
+                                        },
+                                    }
+                                ],
+                                "soundcloud": [],
+                                "youtube": [
+                                    {
+                                        "source": "youtube",
+                                        "track": {
+                                            "title": "Daft Punk - One More Time",
+                                            "duration": 320.0,
+                                            "explicit": False,
+                                            "genre": None,
+                                            "isrc": None,
+                                            "image": "https://i.ytimg.com/vi/FGBhQbmPwH8/maxresdefault.jpg",
+                                            "albumImageUrl": "https://i.ytimg.com/vi/FGBhQbmPwH8/maxresdefault.jpg",
+                                            "album": None,
+                                            "youtubeVideoId": "FGBhQbmPwH8",
+                                            "youtubeUrl": "https://www.youtube.com/watch?v=FGBhQbmPwH8",
+                                            "viewCount": 123456789,
+                                            "likeCount": 4567890,
+                                        },
+                                        "artist": {
+                                            "name": "Daft Punk",
+                                            "avatarUrl": "https://yt3.ggpht.com/example",
+                                            "bio": "Official channel",
+                                            "profile": "https://www.youtube.com/@daftpunk",
+                                            "genres": [],
+                                            "youtubeChannelId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+                                            "youtubeChannelUrl": "https://www.youtube.com/@daftpunk",
+                                            "followers": 7000000,
+                                            "channelViews": 2500000000,
+                                        },
+                                    }
+                                ],
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        400: {
+            "description": "Invalid request payload",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "emptyQuery": {
+                            "summary": "Query is empty",
+                            "value": {
+                                "detail": {
+                                    "message": "Field 'query' cannot be empty",
+                                    "trace": [
+                                        "/metadata request received",
+                                        "payload parsed payload_type=MetadataRequest",
+                                        "validation failed: empty query",
+                                    ],
+                                }
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        404: {
+            "description": "No tracks found from all providers",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "notFound": {
+                            "summary": "No metadata matches",
+                            "value": {
+                                "detail": {
+                                    "message": "No tracks found on Spotify, SoundCloud, or YouTube",
+                                    "trace": [
+                                        "/metadata request received",
+                                        "payload parsed payload_type=MetadataRequest",
+                                        "query='unknown query' limit=5",
+                                        "spotify task success count=0",
+                                        "soundcloud task success count=0",
+                                        "youtube task success count=0",
+                                        "no enriched results from all providers",
+                                    ],
+                                    "providerErrors": {},
+                                }
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        500: {
+            "description": "Unexpected server error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "serverError": {
+                            "summary": "Unexpected error response",
+                            "value": {
+                                "detail": "Internal Server Error"
+                            },
+                        }
+                    }
+                }
+            },
+        },
+    },
+)
+async def metadata(
+    req: Request,
+    payload: MetadataRequest = Body(
+        ...,
+        examples={
+            "basic": {
+                "summary": "Metadata search",
+                "value": {"query": "Daft Punk - One More Time", "limit": 5},
+            }
+        },
+    ),
+):
     """
-    Search for track metadata from Spotify and SoundCloud.
+    Search for track metadata from Spotify, SoundCloud, and YouTube.
     
     Request body:
         - query (str, required): Search query (e.g., track title)
@@ -127,6 +334,7 @@ async def metadata(req: Request):
     Returns:
         - spotify: List of Spotify results
         - soundcloud: List of SoundCloud results
+        - youtube: List of YouTube results
     """
     env = req.scope["env"]
     trace: list[str] = []
@@ -137,48 +345,28 @@ async def metadata(req: Request):
 
     add_trace("/metadata request received")
 
-    try:
-        payload = await req.json()
-        add_trace(f"payload parsed payload_type={type(payload).__name__}")
-    except Exception as exc:
-        add_trace(f"invalid json body error={exc}")
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "message": "Invalid JSON body. Ensure keys and strings use double quotes.",
-                "trace": trace,
-            },
-        ) from exc
-    
-    # Validate request
-    if not isinstance(payload, dict) or not payload.get("query"):
-        add_trace("validation failed: missing query")
-        raise HTTPException(
-            status_code=400,
-            detail={"message": "Field 'query' is required", "trace": trace},
-        )
+    query = payload.query.strip()
+    limit = payload.limit
 
-    query = payload.get("query")
-    try:
-        limit = min(int(payload.get("limit", DEFAULT_LIMIT)), MAX_LIMIT)
-    except Exception as exc:
-        add_trace(f"validation failed: invalid limit error={exc}")
+    add_trace(f"payload parsed payload_type={type(payload).__name__}")
+
+    if not query:
+        add_trace("validation failed: empty query")
         raise HTTPException(
             status_code=400,
-            detail={
-                "message": "Field 'limit' must be a valid integer",
-                "trace": trace,
-            },
-        ) from exc
+            detail={"message": "Field 'query' cannot be empty", "trace": trace},
+        )
 
     add_trace(f"query={query!r} limit={limit}")
     
     spotify_task = search_spotify_api(query, env, limit=limit)
     soundcloud_task = search_soundcloud_api(query, env, limit=limit)
+    youtube_task = search_youtube_api(query, env, limit=limit)
     
-    spotify_results, soundcloud_results = await asyncio.gather(
+    spotify_results, soundcloud_results, youtube_results = await asyncio.gather(
         spotify_task,
         soundcloud_task,
+        youtube_task,
         return_exceptions=True
     )
 
@@ -196,6 +384,12 @@ async def metadata(req: Request):
     else:
         add_trace(f"soundcloud task success count={len(soundcloud_results)}")
 
+    if isinstance(youtube_results, Exception):
+        provider_errors["youtube"] = str(youtube_results)
+        add_trace(f"youtube task exception={youtube_results}")
+    else:
+        add_trace(f"youtube task success count={len(youtube_results)}")
+
     # Build Spotify response
     spotify_enriched = []
     if isinstance(spotify_results, list):
@@ -208,13 +402,19 @@ async def metadata(req: Request):
         for track_data, artist_data in soundcloud_results:
             soundcloud_enriched.append(_build_soundcloud_response(track_data, artist_data, query))
 
+    # Build YouTube response
+    youtube_enriched = []
+    if isinstance(youtube_results, list):
+        for track_data, artist_data in youtube_results:
+            youtube_enriched.append(_build_youtube_response(track_data, artist_data, query))
+
     # Return combined results
-    if not spotify_enriched and not soundcloud_enriched:
-        add_trace("no enriched results from both providers")
+    if not spotify_enriched and not soundcloud_enriched and not youtube_enriched:
+        add_trace("no enriched results from all providers")
         raise HTTPException(
             status_code=404,
             detail={
-                "message": "No tracks found on Spotify or SoundCloud",
+                "message": "No tracks found on Spotify, SoundCloud, or YouTube",
                 "trace": trace,
                 "providerErrors": provider_errors,
             },
@@ -222,12 +422,14 @@ async def metadata(req: Request):
 
     add_trace(
         f"success spotify={len(spotify_enriched)} "
-        f"soundcloud={len(soundcloud_enriched)}"
+        f"soundcloud={len(soundcloud_enriched)} "
+        f"youtube={len(youtube_enriched)}"
     )
 
     return {
         "spotify": spotify_enriched,
         "soundcloud": soundcloud_enriched,
+        "youtube": youtube_enriched,
     }
 
 
