@@ -89,6 +89,7 @@ const EDEN_GATEWAY_URL = process.env.PLASMO_PUBLIC_EDEN_GATEWAY || ""
 export function PopupApp() {
   const [currentUrl, setCurrentUrl] = useState("")
   const [youtubeVideo, setYoutubeVideo] = useState<YouTubeVideo | null>(null)
+  const [refinedQuery, setRefinedQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false)
   const [metadataError, setMetadataError] = useState("")
@@ -164,7 +165,8 @@ export function PopupApp() {
     }
 
     try {
-      const body = { query: youtubeVideo.title, limit: 5 }
+      const query = refinedQuery.trim() || youtubeVideo.title
+      const body = { query, limit: 5 }
       const res = await fetch(`${METADATA_WORKER_URL}/metadata`, {
         method: "POST",
         headers: {
@@ -232,7 +234,7 @@ export function PopupApp() {
     } finally {
       setIsFetchingMetadata(false)
     }
-  }, [youtubeVideo, resetMetadataState])
+  }, [youtubeVideo, refinedQuery, resetMetadataState])
 
   const handlePush = useCallback(async () => {
     setMetadataError("")
@@ -341,6 +343,17 @@ export function PopupApp() {
     () => getSelectedExternalUrl(selectedMetadata),
     [getSelectedExternalUrl, selectedMetadata]
   )
+
+  const formatDuration = useCallback((duration?: number | null) => {
+    if (!duration || duration <= 0 || !Number.isFinite(duration)) {
+      return "Unknown"
+    }
+
+    const totalSeconds = Math.round(duration)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    return `${minutes}m ${seconds}s`
+  }, [])
 
   const updateSelectedTrackField = useCallback(
     (field: keyof TrackMetadata, value: string) => {
@@ -541,6 +554,18 @@ export function PopupApp() {
               </div>
             </div>
 
+            <fieldset className="fieldset rounded-box border border-base-content/20 bg-base-100 p-3">
+              <legend className="fieldset-legend">Search Query</legend>
+              <input
+                type="text"
+                value={refinedQuery}
+                onChange={(e) => setRefinedQuery(e.target.value)}
+                placeholder="not what you are looking for? refine it.."
+                className="input input-bordered w-full"
+              />
+              <p className="label">If empty, the current YouTube title is used.</p>
+            </fieldset>
+
             <button
               type="button"
               disabled={!youtubeVideo || isFetchingMetadata}
@@ -556,12 +581,6 @@ export function PopupApp() {
                 "Choose version of song."
               )}
             </button>
-
-            {uploadSuccess ? (
-              <div role="alert" className="alert alert-success alert-soft text-sm">
-                <span>{uploadSuccess}</span>
-              </div>
-            ) : null}
 
             {metadataError && !uploadSuccess ? (
               <div role="alert" className="alert alert-error alert-soft text-sm">
@@ -590,36 +609,58 @@ export function PopupApp() {
                         <button
                           type="button"
                           onClick={() => setSelectedIndex(idx)}
-                          className={`btn w-full min-w-83.75 h-fit flex flex-col items-start rounded-sm justify-start gap-1 px-3 py-2 text-left normal-case ${
+                          className={`btn h-auto w-full min-w-83.75 items-start justify-start rounded-sm px-2 py-2 text-left normal-case ${
                             selectedIndex === idx ? "btn-primary" : "btn-ghost"
                           }`}
                         >
-                          <div className="flex flex-row w-full items-start justify-between gap-3">
-                            <span className="line-clamp-1 text-sm max-w-60 font-semibold">
-                              {option.track?.title || "Unknown title"}
-                            </span>
-                            <span className="badge badge-outline badge-xs uppercase">{option.source}</span>
+                          <div className="flex w-full items-start gap-3">
+                            <div className="avatar">
+                              <div className="mask mask-squircle h-14 w-14 bg-base-300">
+                                {option.track?.albumImageUrl || option.track?.image ? (
+                                  <img
+                                    src={option.track?.albumImageUrl || option.track?.image || ""}
+                                    alt={option.track?.title || "Track artwork"}
+                                  />
+                                ) : null}
+                              </div>
+                            </div>
+
+                            <div className="flex min-w-0 flex-1 flex-col gap-1">
+                              <div className="flex w-full items-start justify-between gap-2">
+                                  <div
+                                    className="tooltip tooltip-top max-w-full"
+                                    data-tip={option.track?.title || "Unknown title"}
+                                  >
+                                    <span
+                                      className="line-clamp-1 text-sm font-semibold"
+                                      title={option.track?.title || "Unknown title"}
+                                    >
+                                      {option.track?.title || "Unknown title"}
+                                    </span>
+                                  </div>
+                                <span className="badge badge-outline badge-xs uppercase text-nowrap">{option.source}</span>
+                              </div>
+
+                              <span className="line-clamp-1 text-xs opacity-70">
+                                by: {option.artist?.name || "Unknown artist"}
+                              </span>
+
+                              <div className="flex w-full flex-wrap items-center gap-2">
+                                <span className="text-xs opacity-70">
+                                  Album: {option.track?.album || "Unknown"}
+                                </span>
+                                <span className="text-xs opacity-70">
+                                  Genre: {option.track?.genre || "Unknown"}
+                                </span>
+                                <span className="badge badge-outline badge-xs uppercase">
+                                  {formatDuration(option.track?.duration)}
+                                </span>
+                                {option.track?.isrc ? (
+                                  <span className="text-xs opacity-70">ISRC: {option.track.isrc}</span>
+                                ) : null}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-row w-full items-end justify-between gap-0.5">
-                            <span className="text-xs opacity-70">
-                              by: {option.artist?.name || "Unknown artist"}
-                            </span>
-                          </div>
-                          <div className="flex flex-row w-full items-end justify-between gap-0.5">
-                            <span className="text-xs opacity-70">
-                              Album: {option.track?.album || "Unknown"}
-                            </span>
-                            <span className="text-xs opacity-70">
-                              Genre: {option.track?.genre || "Unknown"}
-                            </span>
-                            <span className="badge badge-outline badge-xs uppercase">
-                              {option.track?.duration ? `${option.track.duration.toFixed(1)}s` : "Unknown"}
-                            </span>
-                            {option.track?.isrc ? (
-                              <span className="text-xs opacity-70">ISRC: {option.track.isrc}</span>
-                            ) : null}
-                          </div>
-                          
                         </button>
                       </li>
                     ))}
@@ -719,6 +760,11 @@ export function PopupApp() {
                           ) : null}
                         </div>
                       </div>
+                    </div>
+                  ) : null}
+                  {uploadSuccess ? (
+                    <div role="alert" className="alert alert-success alert-soft text-sm">
+                      <span>{uploadSuccess}</span>
                     </div>
                   ) : null}
                 </div>
