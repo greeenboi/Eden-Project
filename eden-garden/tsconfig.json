@@ -1,12 +1,12 @@
 {
   "extends": "plasmo/templates/tsconfig.base",
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules", "build"],
   "include": [".plasmo/index.d.ts", "./**/*.ts", "./**/*.tsx"],
   "compilerOptions": {
+    "baseUrl": ".",
     "paths": {
       "~*": ["./*"]
     },
-    "types": ["react", "react-dom"],
-    "baseUrl": "."
+    "isolatedModules": true
   }
 }

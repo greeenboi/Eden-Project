@@ -1,5 +1,6 @@
-import { sendToBackground } from "@plasmohq/messaging"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { sendToBackground } from "@plasmohq/messaging";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { RequestBody as GetVideoRequestBody, ResponseBody as GetVideoResponseBody } from "~background/messages/get-video";
 
 type ChromeTab = { url?: string; id?: number }
 type ChromeTabs = {
@@ -74,10 +75,14 @@ const NO_TRACKS_FOUND_DETAILS = new Set([
   "No tracks found on Spotify, SoundCloud, or YouTube"
 ])
 
+type PopupEnv = {
+  PLASMO_PUBLIC_YT_METADATA_WORKER?: string
+  PLASMO_PUBLIC_YtMetadataWorker?: string
+  PLASMO_PUBLIC_EDEN_GATEWAY?: string
+}
+
 const METADATA_WORKER_URL =
-  process.env.PLASMO_PUBLIC_YT_METADATA_WORKER ||
-  process.env.PLASMO_PUBLIC_YtMetadataWorker ||
-  ""
+  process.env.PLASMO_PUBLIC_YT_METADATA_WORKER || process.env.PLASMO_PUBLIC_YtMetadataWorker || ""
 
 const EDEN_GATEWAY_URL = process.env.PLASMO_PUBLIC_EDEN_GATEWAY || ""
 
@@ -107,11 +112,11 @@ export function PopupApp() {
 
   const fetchYouTubeVideoViaMessaging = useCallback(async () => {
     try {
-      const result = await sendToBackground<{ activeTabOnly?: boolean }, YouTubeVideo | null>({
+      const result = await sendToBackground<GetVideoRequestBody, GetVideoResponseBody>({
         name: "get-video",
         body: { activeTabOnly: true }
       })
-      setYoutubeVideo(result)
+      setYoutubeVideo(result as YouTubeVideo | null)
     } catch (error) {
       console.error("[Eden Popup] Failed to fetch video info via messaging", error)
       setYoutubeVideo(null)
@@ -126,10 +131,11 @@ export function PopupApp() {
     ) {
       const w = window as Window & { chrome?: ChromeAPI }
       try {
-        const [tab] = await w.chrome?.tabs?.query({
+        const tabs = await w.chrome?.tabs?.query({
           active: true,
           currentWindow: true
         })
+        const tab = tabs?.[0]
         setCurrentUrl(tab?.url || "No URL available")
       } catch {
         setCurrentUrl("Unable to inspect active tab")
@@ -443,203 +449,283 @@ export function PopupApp() {
   }, [handleInitialLoad])
 
   return (
-    <main className="min-h-[620px] min-w-[470px] bg-slate-950 p-4 text-slate-100">
-      <section className="mx-auto flex w-full max-w-md flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/80 p-4">
-        <header className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Eden Music</h1>
-          <button
-            type="button"
-            onClick={handleInitialLoad}
-            disabled={isLoading}
-            className="rounded border border-slate-700 px-3 py-1 text-xs hover:bg-slate-800 disabled:opacity-50"
-          >
-            {isLoading ? "Loading..." : "Load"}
-          </button>
-        </header>
-
-        <p className="text-xs text-slate-400 break-all">Active tab: {currentUrl || "unknown"}</p>
-
-        <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
-          {youtubeVideo ? (
-            <div className="space-y-2">
-              <p className="font-semibold">{youtubeVideo.title}</p>
-              <p className="text-xs text-slate-400">Video ID: {youtubeVideo.id}</p>
-              <a
-                href={youtubeVideo.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block text-xs text-lime-400 hover:text-lime-300"
-              >
-                {youtubeVideo.url}
-              </a>
-              <p className="text-xs text-slate-500">
-                Saved at: {new Date(youtubeVideo.timestamp).toLocaleString()}
-              </p>
-              <div className="flex gap-2">
+    <main
+      data-theme="retro"
+      className="min-h-[620px] min-w-[470px] bg-base-300 p-4 text-base-content"
+    >
+      <section className="mx-auto w-full max-w-md">
+        <div className="card border border-base-content/20 bg-base-100 shadow-xl">
+          <div className="card-body gap-4 p-4">
+            <header className="navbar min-h-0 rounded-box bg-base-200 px-3 py-2">
+              <div className="navbar-start">
+                <h1 className="text-lg font-bold tracking-wide">Eden Music</h1>
+              </div>
+              <div className="navbar-end">
                 <button
                   type="button"
-                  onClick={handleOpenVideo}
-                  className="flex-1 rounded bg-slate-800 px-3 py-2 text-sm hover:bg-slate-700"
+                  onClick={handleInitialLoad}
+                  disabled={isLoading}
+                  className="btn btn-primary btn-sm"
                 >
-                  Open
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyId}
-                  className="flex-1 rounded bg-slate-800 px-3 py-2 text-sm hover:bg-slate-700"
-                >
-                  Copy ID
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  className="rounded bg-slate-800 px-3 py-2 text-sm hover:bg-slate-700"
-                >
-                  Refresh
+                  {isLoading ? (
+                    <>
+                      <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                      Loading
+                    </>
+                  ) : (
+                    "Load"
+                  )}
                 </button>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">
-              Navigate to a YouTube video and click Load to extract details.
-            </p>
-          )}
-        </div>
+            </header>
 
-        <button
-          type="button"
-          disabled={!youtubeVideo || isFetchingMetadata}
-          onClick={handleUpload}
-          className="rounded bg-lime-500 px-4 py-2 font-medium text-slate-950 hover:bg-lime-400 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isFetchingMetadata ? "Finding metadata..." : "Upload to Eden"}
-        </button>
+            <div className="mockup-browser border border-base-content/20 bg-base-200/70">
+              <div className="mockup-browser-toolbar">
+                <div className="input text-xs break-all">{currentUrl || "unknown"}</div>
+              </div>
 
-        {uploadSuccess ? <p className="text-sm text-green-400">{uploadSuccess}</p> : null}
-        {metadataError && !uploadSuccess ? (
-          <p className="text-sm text-red-400">{metadataError}</p>
-        ) : null}
+              <div className="bg-base-100 p-3">
+                {youtubeVideo ? (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="font-semibold leading-snug">{youtubeVideo.title}</p>
+                      <span className="badge badge-secondary badge-sm">YouTube</span>
+                    </div>
 
-        {showDetails ? (
-          <section className="space-y-3 rounded-lg border border-slate-800 bg-slate-950 p-3">
-            <h2 className="font-semibold">Track Details</h2>
-            {isFetchingMetadata ? <p className="text-sm text-slate-400">Fetching metadata...</p> : null}
-            {!isFetchingMetadata && trackOptions.length === 0 && !metadataError ? (
-              <p className="text-sm text-slate-400">No metadata loaded yet.</p>
-            ) : null}
+                    <p className="text-xs opacity-70">Video ID: {youtubeVideo.id}</p>
 
-            <div className="space-y-2">
-              {trackOptions.map((option, idx) => (
-                <button
-                  type="button"
-                  key={`${option.source}-${idx}`}
-                  onClick={() => setSelectedIndex(idx)}
-                  className={`w-full rounded border p-2 text-left transition ${
-                    selectedIndex === idx
-                      ? "border-lime-500 bg-slate-900"
-                      : "border-slate-800 bg-slate-950 hover:border-slate-700"
-                  }`}
-                >
-                  <p className="text-sm font-semibold">{option.track?.title || "Unknown title"}</p>
-                  <p className="text-xs text-slate-400">Artist: {option.artist?.name || "Unknown artist"}</p>
-                  <p className="text-xs text-slate-400">Album: {option.track?.album || "Unknown album"}</p>
-                  <p className="text-xs text-slate-400 break-all">
-                    Album image: {option.track?.albumImageUrl || option.track?.image || "N/A"}
-                  </p>
-                  <p className="text-xs text-slate-400">Genre: {option.track?.genre || "Unknown"}</p>
-                  <p className="text-xs text-slate-400">
-                    Duration: {option.track?.duration ? `${option.track.duration.toFixed(1)}s` : "Unknown"}
-                  </p>
-                  {option.track?.isrc ? (
-                    <p className="text-xs text-slate-400">ISRC: {option.track.isrc}</p>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-
-            {selectedMetadata ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="col-span-2 text-xs text-slate-400">
-                    Track title
-                    <input
-                      type="text"
-                      value={selectedMetadata.track?.title || ""}
-                      onChange={(e) => updateSelectedTrackField("title", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-xs text-slate-400">
-                    Artist name
-                    <input
-                      type="text"
-                      value={selectedMetadata.artist?.name || ""}
-                      onChange={(e) => updateSelectedArtistField("name", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-xs text-slate-400">
-                    Album
-                    <input
-                      type="text"
-                      value={selectedMetadata.track?.album || ""}
-                      onChange={(e) => updateSelectedTrackField("album", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-xs text-slate-400">
-                    Genre
-                    <input
-                      type="text"
-                      value={selectedMetadata.track?.genre || ""}
-                      onChange={(e) => updateSelectedTrackField("genre", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="text-xs text-slate-400">
-                    Duration (seconds)
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={selectedMetadata.track?.duration ?? ""}
-                      onChange={(e) => updateSelectedTrackField("duration", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                  <label className="col-span-2 text-xs text-slate-400">
-                    Artwork URL
-                    <input
-                      type="text"
-                      value={selectedMetadata.track?.image || ""}
-                      onChange={(e) => updateSelectedTrackField("image", e.target.value)}
-                      className="mt-1 w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-100"
-                    />
-                  </label>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    disabled={isPushing}
-                    onClick={handlePush}
-                    className="flex-1 rounded bg-lime-500 px-3 py-2 text-sm font-medium text-slate-950 hover:bg-lime-400 disabled:opacity-50"
-                  >
-                    {isPushing ? "Pushing..." : "Push to Eden"}
-                  </button>
-                  {selectedExternalUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => handleOpenSource(selectedExternalUrl)}
-                      className="rounded bg-slate-800 px-3 py-2 text-sm hover:bg-slate-700"
+                    <a
+                      href={youtubeVideo.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="link link-primary block break-all text-xs"
                     >
-                      Open Source
-                    </button>
-                  ) : null}
-                </div>
+                      {youtubeVideo.url}
+                    </a>
+
+                    <p className="text-xs opacity-60">
+                      Saved at: {new Date(youtubeVideo.timestamp).toLocaleString()}
+                    </p>
+
+                    <div className="join w-full">
+                      <button
+                        type="button"
+                        onClick={handleOpenVideo}
+                        className="btn btn-sm join-item flex-1"
+                      >
+                        Open
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCopyId}
+                        className="btn btn-sm join-item flex-1"
+                      >
+                        Copy ID
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRefresh}
+                        className="btn btn-sm join-item"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="alert alert-info alert-soft">
+                    <span className="text-sm">
+                      Navigate to a YouTube video and click Load to extract details.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={!youtubeVideo || isFetchingMetadata}
+              onClick={handleUpload}
+              className="btn btn-accent btn-block"
+            >
+              {isFetchingMetadata ? (
+                <>
+                  <span className="loading loading-dots loading-sm" aria-hidden="true" />
+                  Finding metadata...
+                </>
+              ) : (
+                "Choose version of song."
+              )}
+            </button>
+
+            {uploadSuccess ? (
+              <div role="alert" className="alert alert-success alert-soft text-sm">
+                <span>{uploadSuccess}</span>
               </div>
             ) : null}
-          </section>
-        ) : null}
+
+            {metadataError && !uploadSuccess ? (
+              <div role="alert" className="alert alert-error alert-soft text-sm">
+                <span>{metadataError}</span>
+              </div>
+            ) : null}
+
+            {showDetails ? (
+              <section className="collapse collapse-arrow collapse-open border border-base-content/20 bg-base-200/60">
+                <div className="collapse-title pb-0 text-base font-semibold">Track Details</div>
+                <div className="collapse-content space-y-3 pt-2">
+                  {isFetchingMetadata ? (
+                    <div className="flex items-center gap-2 text-sm opacity-80">
+                      <span className="loading loading-spinner loading-sm" aria-hidden="true" />
+                      Fetching metadata...
+                    </div>
+                  ) : null}
+
+                  {!isFetchingMetadata && trackOptions.length === 0 && !metadataError ? (
+                    <p className="text-sm opacity-70">No metadata loaded yet.</p>
+                  ) : null}
+
+                  <ul className="list rounded-box bg-base-100">
+                    {trackOptions.map((option, idx) => (
+                      <li key={`${option.source}-${idx}`} className="list-row py-2 w-full">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedIndex(idx)}
+                          className={`btn w-full min-w-83.75 h-fit flex flex-col items-start rounded-sm justify-start gap-1 px-3 py-2 text-left normal-case ${
+                            selectedIndex === idx ? "btn-primary" : "btn-ghost"
+                          }`}
+                        >
+                          <div className="flex flex-row w-full items-start justify-between gap-3">
+                            <span className="line-clamp-1 text-sm max-w-60 font-semibold">
+                              {option.track?.title || "Unknown title"}
+                            </span>
+                            <span className="badge badge-outline badge-xs uppercase">{option.source}</span>
+                          </div>
+                          <div className="flex flex-row w-full items-end justify-between gap-0.5">
+                            <span className="text-xs opacity-70">
+                              by: {option.artist?.name || "Unknown artist"}
+                            </span>
+                          </div>
+                          <div className="flex flex-row w-full items-end justify-between gap-0.5">
+                            <span className="text-xs opacity-70">
+                              Album: {option.track?.album || "Unknown"}
+                            </span>
+                            <span className="text-xs opacity-70">
+                              Genre: {option.track?.genre || "Unknown"}
+                            </span>
+                            <span className="badge badge-outline badge-xs uppercase">
+                              {option.track?.duration ? `${option.track.duration.toFixed(1)}s` : "Unknown"}
+                            </span>
+                            {option.track?.isrc ? (
+                              <span className="text-xs opacity-70">ISRC: {option.track.isrc}</span>
+                            ) : null}
+                          </div>
+                          
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {selectedMetadata ? (
+                    <div className="card border border-base-content/20 bg-base-100">
+                      <div className="card-body gap-3 p-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          <fieldset className="fieldset col-span-2">
+                            <legend className="fieldset-legend">Track title</legend>
+                            <input
+                              type="text"
+                              value={selectedMetadata.track?.title || ""}
+                              onChange={(e) => updateSelectedTrackField("title", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+
+                          <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Artist name</legend>
+                            <input
+                              type="text"
+                              value={selectedMetadata.artist?.name || ""}
+                              onChange={(e) => updateSelectedArtistField("name", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+
+                          <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Album</legend>
+                            <input
+                              type="text"
+                              value={selectedMetadata.track?.album || ""}
+                              onChange={(e) => updateSelectedTrackField("album", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+
+                          <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Genre</legend>
+                            <input
+                              type="text"
+                              value={selectedMetadata.track?.genre || ""}
+                              onChange={(e) => updateSelectedTrackField("genre", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+
+                          <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Duration (seconds)</legend>
+                            <input
+                              type="number"
+                              step="0.1"
+                              value={selectedMetadata.track?.duration ?? ""}
+                              onChange={(e) => updateSelectedTrackField("duration", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+
+                          <fieldset className="fieldset col-span-2">
+                            <legend className="fieldset-legend">Artwork URL</legend>
+                            <input
+                              type="text"
+                              value={selectedMetadata.track?.image || ""}
+                              onChange={(e) => updateSelectedTrackField("image", e.target.value)}
+                              className="input input-sm w-full"
+                            />
+                          </fieldset>
+                        </div>
+
+                        <div className="join w-full">
+                          <button
+                            type="button"
+                            disabled={isPushing}
+                            onClick={handlePush}
+                            className="btn btn-primary join-item flex-1"
+                          >
+                            {isPushing ? (
+                              <>
+                                <span className="loading loading-spinner loading-xs" aria-hidden="true" />
+                                Pushing...
+                              </>
+                            ) : (
+                              "Push to Eden"
+                            )}
+                          </button>
+
+                          {selectedExternalUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => handleOpenSource(selectedExternalUrl)}
+                              className="btn btn-outline join-item"
+                            >
+                              Open Source
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+            ) : null}
+          </div>
+        </div>
       </section>
     </main>
   )

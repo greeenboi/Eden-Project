@@ -1,8 +1,8 @@
 /// <reference types="chrome" />
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
-type RequestBody = { activeTabOnly?: boolean }
-type ResponseBody =
+export type RequestBody = { activeTabOnly?: boolean }
+export type ResponseBody =
   | {
       id: string
       title: string
