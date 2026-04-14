@@ -23,6 +23,8 @@ API_BASE_DEFAULT = os.getenv(
 )
 YTDLP_COOKIES_PATH = os.getenv("YTDLP_COOKIES_PATH")
 YTDLP_COOKIES_GIST_URL = os.getenv("YTDLP_COOKIES_GIST_URL")
+YTDLP_YOUTUBE_PO_TOKEN = os.getenv("YTDLP_YOUTUBE_PO_TOKEN")
+YTDLP_YOUTUBE_VISITOR_DATA = os.getenv("YTDLP_YOUTUBE_VISITOR_DATA")
 
 
 app = FastAPI()
@@ -134,24 +136,53 @@ def _run_ytdlp_attempts(
     has_cookies: bool,
 ) -> tuple[bool, dict[str, Any]]:
     """Run yt-dlp with different client strategies."""
-    attempts: List[tuple[str, List[str]]] = []
+    attempts: List[tuple[str, Optional[str]]] = []
     if not has_cookies:
-        # Android client avoids some restrictions but does not support cookies.
-        attempts.append(("android-client", ["--extractor-args", "youtube:player_client=android"]))
-    # Default web client (works with cookies); placed last as fallback.
-    attempts.append(("default", []))
+        # Datacenter IPs are more likely to hit bot checks; try multiple clients first.
+        attempts.extend(
+            [
+                ("ios-client", "ios"),
+                ("android-client", "android"),
+                ("tv-simply-client", "tv_simply"),
+            ]
+        )
+    # Default client is a generic fallback and supports cookie-based flows.
+    attempts.append(("default", None))
+
+    def extractor_args_for(player_client: Optional[str]) -> List[str]:
+        args_parts: List[str] = []
+        if player_client:
+            args_parts.append(f"player_client={player_client}")
+        if YTDLP_YOUTUBE_PO_TOKEN:
+            args_parts.append(f"po_token={YTDLP_YOUTUBE_PO_TOKEN}")
+        if YTDLP_YOUTUBE_VISITOR_DATA:
+            args_parts.append(f"visitor_data={YTDLP_YOUTUBE_VISITOR_DATA}")
+        if not args_parts:
+            return []
+        return ["--extractor-args", f"youtube:{';'.join(args_parts)}"]
 
     last_logs: List[str] = []
-    for attempt_name, extra_args in attempts:
-        cmd = base_cmd + extra_args + [url]
+    last_failure: dict[str, Any] = {}
+    for attempt_name, player_client in attempts:
+        cmd = base_cmd + extractor_args_for(player_client) + [url]
         logger.info("[download] running yt-dlp attempt=%s", attempt_name)
         result = subprocess.run(cmd, capture_output=True, text=True, check=False, encoding="utf-8")
         stdout_lines = result.stdout.splitlines()
         stderr_lines = result.stderr.splitlines()
-        last_logs = stdout_lines + stderr_lines
+        stderr_tail = stderr_lines[-10:]
+        stdout_tail = stdout_lines[-10:]
+        last_logs = stdout_tail + stderr_tail
 
         if result.returncode != 0:
+            for line in stderr_tail:
+                logger.warning("[download] stderr attempt=%s: %s", attempt_name, line)
             logger.warning("[download] yt-dlp attempt failed rc=%s attempt=%s", result.returncode, attempt_name)
+            last_failure = {
+                "attempt": attempt_name,
+                "returncode": result.returncode,
+                "stderr_tail": stderr_tail,
+                "stdout_tail": stdout_tail,
+            }
             continue
 
         info: Optional[dict[str, Any]] = None
@@ -189,7 +220,7 @@ def _run_ytdlp_attempts(
             "logs": last_logs,
         }
 
-    return False, {"logs": last_logs}
+    return False, {"logs": last_logs, "failure": last_failure}
 
 
 def download_ogg(url: str) -> dict[str, Any]:
@@ -198,6 +229,7 @@ def download_ogg(url: str) -> dict[str, Any]:
     output_template = str(temp_dir / "%(id)s.%(ext)s")
     base_cmd: List[str] = [
         "yt-dlp",
+        "--verbose",
         "--no-playlist",
         "--restrict-filenames",
         "-f",
@@ -250,6 +282,7 @@ def download_ogg(url: str) -> dict[str, Any]:
                 detail={
                     "message": "Failed to download audio via yt-dlp CLI",
                     "logs": result.get("logs", []),
+                    "failure": result.get("failure", {}),
                 },
             )
         return result
@@ -390,15 +423,23 @@ def build_track_metadata(
     default_duration: Optional[float],
     album_id: Optional[str],
 ) -> dict[str, Any]:
-    return {
+    # API schema treats optional fields as omitted, not null. Keep payload strict.
+    duration_value: Optional[float] = None
+    if track.duration is not None and track.duration > 0:
+        duration_value = track.duration
+    elif default_duration is not None and default_duration > 0:
+        duration_value = default_duration
+
+    metadata = {
         "title": track.title or default_title,
         "albumId": album_id,
         "artworkUrl": track.image,
-        "duration": track.duration if track.duration is not None else (default_duration or 0),
+        "duration": duration_value,
         "isrc": track.isrc,
         "genre": track.genre or "Other",
         "explicit": bool(track.explicit) if track.explicit is not None else False,
     }
+    return {key: value for key, value in metadata.items() if value is not None}
 
 
 def complete_upload(client: httpx.Client, upload_id: str, track_metadata: dict[str, Any]) -> dict[str, Any]:
