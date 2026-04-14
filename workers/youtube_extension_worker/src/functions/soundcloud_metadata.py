@@ -169,17 +169,25 @@ async def search_soundcloud_api(query: str, env, *, limit: int = 5) -> List[Tupl
     """
     client_id = getattr(env, 'SOUNDCLOUD_CLIENT_ID', None)
 
+    print(
+        f"[trace][soundcloud] start query={query!r} limit={limit} "
+        f"has_client_id={bool(client_id)}"
+    )
+
     if not client_id:
         warnings.warn(
             "Missing SoundCloud credentials (SOUNDCLOUD_CLIENT_ID) - skipping SoundCloud search",
             UserWarning,
             stacklevel=2
         )
+        print("[trace][soundcloud] skip search (missing client_id)")
         return []
 
     try:
         tracks = await search_soundcloud_tracks(query, client_id, limit)
+        print(f"[trace][soundcloud] tracks fetched count={len(tracks)}")
         if not tracks:
+            print("[trace][soundcloud] no track matches")
             return []
 
         results: List[Tuple[Dict[str, Any], Dict[str, Any] | None]] = []
@@ -187,17 +195,26 @@ async def search_soundcloud_api(query: str, env, *, limit: int = 5) -> List[Tupl
             artist_data = None
             if track_data.get("artist_id"):
                 try:
-                    artist_data = await get_soundcloud_user(track_data["artist_id"], client_id)
+                    artist_id = track_data["artist_id"]
+                    print(f"[trace][soundcloud] fetching artist artist_id={artist_id}")
+                    artist_data = await get_soundcloud_user(artist_id, client_id)
+                    print(
+                        f"[trace][soundcloud] artist fetched artist_id={artist_id} "
+                        f"has_artist_data={bool(artist_data)}"
+                    )
                 except Exception as e:
-                    print(f"[search_soundcloud_api] Failed to fetch artist: {e}")
+                    print(f"[trace][soundcloud] artist fetch failed: {e}")
                     # Continue without artist data
+            else:
+                print("[trace][soundcloud] skipping artist fetch (missing artist_id)")
             results.append((track_data, artist_data))
 
+        print(f"[trace][soundcloud] complete result_pairs={len(results)}")
         return results
     except HTTPException:
         # If SoundCloud API fails, return empty list (Spotify might still work)
-        print("[search_soundcloud_api] SoundCloud API failed, returning empty results")
+        print("[trace][soundcloud] api failure, returning empty results")
         return []
     except Exception as e:
-        print(f"[search_soundcloud_api] Unexpected error: {e}")
+        print(f"[trace][soundcloud] unexpected error: {e}")
         return []

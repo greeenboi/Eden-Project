@@ -213,43 +213,32 @@ def download_ogg(url: str) -> dict[str, Any]:
         "--no-progress",
     ]
 
-    has_cookies = False
     cookie_path: Optional[Path] = None
+    has_cookie_file = False
     if YTDLP_COOKIES_PATH:
         cookie_path = Path(YTDLP_COOKIES_PATH)
         if cookie_path.exists():
-            has_cookies = True
-            base_cmd.extend(["--cookies", str(cookie_path)])
-            logger.info("[download] using cookies file: %s", cookie_path)
+            has_cookie_file = True
+            logger.info("[download] cookies file is available for fallback: %s", cookie_path)
         else:
             logger.warning("[download] YTDLP_COOKIES_PATH set but file missing: %s", cookie_path)
 
     try:
-        # First attempt
-        success, result = _run_ytdlp_attempts(url, base_cmd, temp_dir, has_cookies)
+        # Default path: run without cookies first.
+        success, result = _run_ytdlp_attempts(url, base_cmd, temp_dir, has_cookies=False)
 
-        # If first attempt fails and we used cookies, try refreshing them
-        if not success and has_cookies:
-            stderr = "".join(result.get("logs", [])).lower()
-            # Basic check for common cookie-related error messages
-            is_cookie_error = (
-                "authentication" in stderr
-                or "consent" in stderr
-                or "429" in stderr
-                or "your country" in stderr
-            )
+        # Fallback path: try with local cookies if available.
+        if not success and cookie_path and has_cookie_file:
+            logger.warning("[download] default download failed. Retrying with cookie fallback.")
+            cookie_base_cmd = base_cmd[:] + ["--cookies", str(cookie_path)]
+            success, result = _run_ytdlp_attempts(url, cookie_base_cmd, temp_dir, has_cookies=True)
 
-            if is_cookie_error:
-                logger.warning("[download] download failed with potential cookie error. Refreshing cookies from Gist.")
-                if fetch_cookies_from_gist():
-                    logger.info("[download] retrying download with refreshed cookies.")
-                    # We need a new command list because the old one is immutable
-                    refreshed_base_cmd = base_cmd[:]
-                    # Ensure the cookie param is correctly pointing to the file
-                    if "--cookies" not in refreshed_base_cmd:
-                        refreshed_base_cmd.extend(["--cookies", str(cookie_path)])
-
-                    success, result = _run_ytdlp_attempts(url, refreshed_base_cmd, temp_dir, has_cookies)
+        # Final fallback: refresh cookies from Gist and retry with refreshed cookies.
+        if not success and cookie_path:
+            logger.warning("[download] retrying download with refreshed cookies from Gist.")
+            if fetch_cookies_from_gist():
+                refreshed_base_cmd = base_cmd[:] + ["--cookies", str(cookie_path)]
+                success, result = _run_ytdlp_attempts(url, refreshed_base_cmd, temp_dir, has_cookies=True)
 
         if not success:
             logger.error(
