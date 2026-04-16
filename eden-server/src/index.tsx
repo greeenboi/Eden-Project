@@ -11,6 +11,7 @@
 
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
+import { createMarkdownFromOpenApi } from '@scalar/openapi-to-markdown';
 import { cors } from "hono/cors";
 import { prettyJSON } from "hono/pretty-json";
 import type { Env } from "./lib/db";
@@ -212,5 +213,93 @@ app.get(
 		showSidebar: true,
 	}),
 );
+
+// generate the content to llms.txt
+const content = app.getOpenAPI31Document({
+  openapi: '3.0.0',
+  info: { version: "1.0.0",
+		title: "Eden Server API",
+		description: `
+# Eden Server - Music Streaming API
+
+A comprehensive music streaming platform API built on Cloudflare's edge stack.
+
+## Features
+
+### Upload Management
+- Initialize file uploads with signed R2 URLs
+- Complete upload workflow with automatic track creation
+- Track upload status and processing
+
+### Track Management
+- CRUD operations for track metadata
+- Search tracks by title, artist, or album
+- List and filter tracks with pagination
+- Automatic R2 cleanup on deletion
+
+### Architecture
+- **Cloudflare Workers**: Serverless compute at the edge
+- **D1 Database**: Relational metadata storage (SQLite)
+- **R2 Storage**: Scalable audio file storage
+- **KV Namespace**: Caching and rate limiting
+- **Drizzle ORM**: Type-safe database queries
+- **Hono + OpenAPI**: Type-safe routing with automatic docs
+
+## Authentication
+
+Authentication is required for most endpoints. Include the JWT token in the Authorization header:
+
+\`\`\`
+Authorization: Bearer <token>
+\`\`\`
+
+## Rate Limits
+
+- Upload initiation: 10 requests per minute per artist
+- Other endpoints: 100 requests per minute per user
+
+## Getting Started
+
+1. Initialize an upload session: \`POST /api/uploads/initiate\`
+2. Upload audio file to the signed R2 URL
+3. Complete the upload: \`POST /api/uploads/{id}/complete\`
+4. Track will be processed and made available for streaming
+    `.trim(),
+	},
+	servers: [
+		{ url: "http://localhost:5173", description: "Development Server" },
+		{
+			url: "https://eden-server.suvan-gowrishanker-204.workers.dev",
+			description: "Production (Cloudflare Workers)",
+		},
+	],
+	tags: [
+		{
+			name: "System",
+			description: "System health and status endpoints",
+		},
+		{
+			name: "Artists",
+			description: "Artist profile management, statistics, and track listings",
+		},
+		{
+			name: "Uploads",
+			description: "File upload initiation, completion, and status tracking",
+		},
+		{
+			name: "Tracks",
+			description: "Track metadata management and search",
+		},
+	],
+})
+
+const markdown = await createMarkdownFromOpenApi(
+  JSON.stringify(content)
+)
+
+// create route for llms.txt
+app.get('/llms.txt', async (c) => {
+  return c.text(markdown)
+})
 
 export default app;
