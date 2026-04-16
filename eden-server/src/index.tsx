@@ -293,13 +293,14 @@ Authorization: Bearer <token>
 	],
 })
 
-const markdown = await createMarkdownFromOpenApi(
-  JSON.stringify(content)
-)
 
 // create route for llms.txt
 app.get('/llms.txt', async (c) => {
-  return c.text(markdown)
+	// keep markdown generation to be done as per request to avoid overloading cloudflare cpu start time
+	const markdown = await createMarkdownFromOpenApi(
+		JSON.stringify(content)
+	)
+	return c.text(markdown)
 })
 
 export default app;
