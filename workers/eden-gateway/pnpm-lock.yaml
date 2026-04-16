@@ -15,8 +15,8 @@ importers:
         specifier: ^2.8.3
         version: 2.8.3
       hono:
-        specifier: ^4.12.12
-        version: 4.12.12
+        specifier: ^4.12.14
+        version: 4.12.14
       ioredis:
         specifier: ^5.9.1
         version: 5.9.1
@@ -523,8 +523,8 @@ packages:
   glob-to-regexp@0.4.1:
     resolution: {integrity: sha512-lkX1HJXwyMcprw/5YUZc2s7DrpAiHB21/V+E1rHUrVNokkvB6bqMzT0VfV6/86ZNabt1k14YOIaT7nDvOX3Iiw==}
 
-  hono@4.12.12:
-    resolution: {integrity: sha512-p1JfQMKaceuCbpJKAPKVqyqviZdS0eUxH9v82oWo1kb9xjQ5wA6iP3FNVAPDFlz5/p7d45lO+BpSk1tuSZMF4Q==}
+  hono@4.12.14:
+    resolution: {integrity: sha512-am5zfg3yu6sqn5yjKBNqhnTX7Cv+m00ox+7jbaKkrLMRJ4rAdldd1xPd/JzbBWspqaQv6RSTrgFN95EsfhC+7w==}
     engines: {node: '>=16.9.0'}
 
   ioredis@5.8.2:
@@ -1034,7 +1034,7 @@ snapshots:
 
   glob-to-regexp@0.4.1: {}
 
-  hono@4.12.12: {}
+  hono@4.12.14: {}
 
   ioredis@5.8.2:
     dependencies:
