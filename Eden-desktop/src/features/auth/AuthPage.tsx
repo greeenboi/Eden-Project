@@ -25,50 +25,71 @@ export function AuthPage() {
   }
 
   return (
-    <main className="eden-auth">
-      <h1>{mode === "login" ? "Sign in" : "Create account"}</h1>
-      <form onSubmit={onSubmit} className="eden-auth-form">
-        {mode === "signup" && (
+    <div className="eden-auth-shell">
+      <main className="eden-auth">
+        <div className="eden-auth-header">
+          <div className="eden-brand" style={{ padding: 0 }}>
+            <div className="eden-brand-mark">E</div>
+            <div>
+              <h1>Eden</h1>
+              <p>{mode === "login" ? "Welcome back" : "Create your account"}</p>
+            </div>
+          </div>
+          <p>
+            {mode === "login"
+              ? "Sign in to resume your library."
+              : "Set up your listener profile in seconds."}
+          </p>
+        </div>
+
+        <form onSubmit={onSubmit} className="eden-auth-form">
+          {mode === "signup" && (
+            <input
+              value={name}
+              onChange={(event) => setName(event.currentTarget.value)}
+              placeholder="Display name"
+              autoComplete="name"
+              required
+            />
+          )}
+
           <input
-            value={name}
-            onChange={(event) => setName(event.currentTarget.value)}
-            placeholder="Display name"
+            value={email}
+            onChange={(event) => setEmail(event.currentTarget.value)}
+            type="email"
+            placeholder="Email"
+            autoComplete="email"
             required
           />
-        )}
 
-        <input
-          value={email}
-          onChange={(event) => setEmail(event.currentTarget.value)}
-          type="email"
-          placeholder="Email"
-          required
-        />
+          <input
+            value={password}
+            onChange={(event) => setPassword(event.currentTarget.value)}
+            type="password"
+            placeholder="Password"
+            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            required
+            minLength={6}
+          />
 
-        <input
-          value={password}
-          onChange={(event) => setPassword(event.currentTarget.value)}
-          type="password"
-          placeholder="Password"
-          required
-        />
+          <button type="submit" className="btn-primary" disabled={auth.isLoading}>
+            {auth.isLoading ? "Working…" : mode === "login" ? "Sign in" : "Create account"}
+          </button>
+        </form>
 
-        <button type="submit" disabled={auth.isLoading}>
-          {auth.isLoading ? "Working..." : mode === "login" ? "Login" : "Signup"}
+        {auth.error && <div className="eden-error">{auth.error}</div>}
+
+        <button
+          type="button"
+          className="eden-auth-switch"
+          onClick={() => {
+            setMode(mode === "login" ? "signup" : "login");
+            auth.clearError();
+          }}
+        >
+          {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
         </button>
-      </form>
-
-      {auth.error && <p>{auth.error}</p>}
-
-      <button
-        type="button"
-        onClick={() => {
-          setMode(mode === "login" ? "signup" : "login");
-          auth.clearError();
-        }}
-      >
-        {mode === "login" ? "Need an account? Sign up" : "Have an account? Sign in"}
-      </button>
-    </main>
+      </main>
+    </div>
   );
 }

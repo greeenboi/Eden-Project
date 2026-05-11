@@ -12,7 +12,7 @@ function App() {
     audioPlayer.bind();
     initialize().catch(() => undefined);
 
-    let cleanup = () => void;
+    let cleanup: () => void = () => undefined;
     setupTrayListeners()
       .then((fn: () => void) => {
         cleanup = fn;
@@ -31,7 +31,7 @@ function App() {
   }, [initialized]);
 
   if (!initialized) {
-    return <main className="eden-loading">Hydrating Eden session...</main>;
+    return <main className="eden-loading">Hydrating Eden session</main>;
   }
 
   return <RouterProvider router={router} />;

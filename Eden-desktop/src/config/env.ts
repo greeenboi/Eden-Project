@@ -1,4 +1,5 @@
-export const API_BASE_URL = import.meta.env.VITE_EDEN_API_BASE_URL ?? "http://localhost:8787";
+export const API_BASE_URL =
+	import.meta.env.VITE_EDEN_API_BASE_URL ?? "https://eden-server.suvan-gowrishanker-204.workers.dev";
 
 export const APP_NAME = "Eden Desktop";
 

@@ -1,6 +1,6 @@
-import { create } from "zustand";
 import { readStorage, writeStorage } from "@/lib/storage";
 import type { QueueTrack } from "@/types/contracts";
+import { create } from "zustand";
 
 const PLAYER_KEY = "eden-desktop-player";
 
@@ -21,6 +21,7 @@ interface PlayerState extends PlayerPersisted {
   error: string | null;
   streamExpiresAt: string | null;
   setTrack: (track: QueueTrack | null) => void;
+  setTrackMetadata: (track: QueueTrack) => void;
   setTiming: (currentTime: number, duration: number) => void;
   setPlaying: (isPlaying: boolean) => void;
   setLoading: (isLoading: boolean) => void;
@@ -49,8 +50,10 @@ function persist(state: PlayerState): void {
 
 export const usePlayerStore = create<PlayerState>((set) => ({
   ...restored,
-  currentTrack: restored.lastTrack,
-  currentTime: restored.lastTime,
+  lastTrack: null,
+  lastTime: 0,
+  currentTrack: null,
+  currentTime: 0,
   duration: 0,
   isPlaying: false,
   isLoading: false,
@@ -65,6 +68,25 @@ export const usePlayerStore = create<PlayerState>((set) => ({
         currentTrack: track,
         currentTime: 0,
         duration: track?.duration ?? 0,
+      };
+      persist(next);
+      return next;
+    });
+  },
+
+  setTrackMetadata: (track) => {
+    set((state) => {
+      if (!state.currentTrack || state.currentTrack.id !== track.id) {
+        return state;
+      }
+
+      const next: PlayerState = {
+        ...state,
+        currentTrack: {
+          ...state.currentTrack,
+          ...track,
+        },
+        duration: track.duration ?? state.duration,
       };
       persist(next);
       return next;

@@ -1,6 +1,6 @@
-import { create } from "zustand";
 import { readStorage, writeStorage } from "@/lib/storage";
 import type { QueueSource, QueueTrack, RepeatMode, ShuffleMode } from "@/types/contracts";
+import { create } from "zustand";
 
 const QUEUE_KEY = "eden-desktop-queue";
 
@@ -19,6 +19,7 @@ interface QueueState extends QueueSnapshot {
   setQueue: (tracks: QueueTrack[], startIndex?: number, source?: QueueSource) => void;
   addToQueue: (track: QueueTrack) => void;
   addNext: (track: QueueTrack) => void;
+  updateTrackMetadata: (track: QueueTrack) => void;
   skipToNext: () => QueueTrack | null;
   skipToPrevious: () => QueueTrack | null;
   skipToIndex: (index: number) => QueueTrack | null;
@@ -107,6 +108,21 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         ...state,
         queue,
         originalQueue: [...state.originalQueue, track],
+      };
+      persistSnapshot(next);
+      return next;
+    });
+  },
+
+  updateTrackMetadata: (track) => {
+    set((state) => {
+      const updateList = (list: QueueTrack[]) =>
+        list.map((item) => (item.id === track.id ? { ...item, ...track } : item));
+      const next: QueueState = {
+        ...state,
+        queue: updateList(state.queue),
+        originalQueue: updateList(state.originalQueue),
+        history: updateList(state.history),
       };
       persistSnapshot(next);
       return next;

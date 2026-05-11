@@ -4,10 +4,14 @@ interface StubPageProps {
 
 export function StubPage({ title }: StubPageProps) {
   return (
-    <section>
-      <h2>{title}</h2>
-      <p className="eden-muted">
-        Listener experience ships first. This page is intentionally stubbed for the upcoming artist/admin flow.
+    <section className="eden-section">
+      <div className="eden-section-title">
+        <span className="eden-section-eyebrow">Coming soon</span>
+        <h2>{title}</h2>
+      </div>
+      <p className="eden-empty">
+        Listener experience ships first — this surface is stubbed for the upcoming artist & admin
+        flow.
       </p>
     </section>
   );
