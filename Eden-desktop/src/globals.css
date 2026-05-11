@@ -1,1 +1,292 @@
 @import "tailwindcss";
+
+:root {
+	color-scheme: dark;
+	--bg: #0f1417;
+	--panel: #151d21;
+	--panel-2: #1d282d;
+	--text: #e8f0f2;
+	--muted: #93a7af;
+	--brand: #69d2a3;
+	--border: #29363d;
+}
+
+* {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(circle at top right, #1b262c, #0f1417 52%);
+	color: var(--text);
+	font-family: "JetBrains Mono", "Segoe UI", sans-serif;
+}
+
+a {
+	color: var(--brand);
+}
+
+button,
+input {
+	border: 1px solid var(--border);
+	background: var(--panel-2);
+	color: var(--text);
+	border-radius: 8px;
+	padding: 0.5rem 0.7rem;
+}
+
+button {
+	cursor: pointer;
+}
+
+.eden-loading {
+	width: 100%;
+	height: 100%;
+	display: grid;
+	place-items: center;
+}
+
+.eden-root {
+	display: grid;
+	grid-template-columns: 260px 1fr;
+	width: 100%;
+	height: 100%;
+}
+
+.eden-sidebar {
+	background: color-mix(in srgb, var(--panel) 92%, black);
+	border-right: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	padding: 1rem;
+	gap: 1rem;
+}
+
+.eden-brand h1 {
+	margin: 0;
+}
+
+.eden-brand p {
+	margin: 0;
+	color: var(--muted);
+}
+
+.eden-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 0.4rem;
+}
+
+.eden-nav-link {
+	text-decoration: none;
+	color: var(--text);
+	padding: 0.5rem 0.6rem;
+	border-radius: 6px;
+}
+
+.eden-nav-link-active {
+	background: var(--panel-2);
+	color: var(--brand);
+}
+
+.eden-sidebar-footer {
+	margin-top: auto;
+}
+
+.eden-main-column {
+	display: grid;
+	grid-template-rows: auto 1fr auto;
+	min-height: 0;
+}
+
+.eden-topbar {
+	border-bottom: 1px solid var(--border);
+	padding: 0.9rem 1rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.eden-content {
+	min-height: 0;
+	overflow: auto;
+	padding: 1rem;
+}
+
+.eden-muted {
+	color: var(--muted);
+}
+
+.eden-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 0.8rem;
+}
+
+.eden-card {
+	border: 1px solid var(--border);
+	background: var(--panel);
+	border-radius: 12px;
+	padding: 0.8rem;
+}
+
+.eden-card h3 {
+	margin: 0 0 0.4rem;
+}
+
+.eden-card-actions {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 0.7rem;
+}
+
+.eden-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	gap: 0.5rem;
+}
+
+.eden-list li {
+	border: 1px solid var(--border);
+	background: var(--panel);
+	padding: 0.7rem;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.8rem;
+}
+
+.eden-player-bar {
+	border-top: 1px solid var(--border);
+	background: color-mix(in srgb, var(--panel) 82%, black);
+	padding: 0.75rem;
+	display: grid;
+	grid-template-columns: minmax(220px, 28%) 1fr minmax(200px, 24%);
+	gap: 1rem;
+	align-items: center;
+}
+
+.eden-player-track {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	min-width: 0;
+}
+
+.eden-artwork-placeholder {
+	width: 44px;
+	height: 44px;
+	border-radius: 8px;
+	background: linear-gradient(135deg, #2f4b55, #1b2b31);
+	border: 1px solid var(--border);
+}
+
+.eden-player-center {
+	position: relative;
+}
+
+.eden-player-controls {
+	display: flex;
+	gap: 0.45rem;
+	justify-content: center;
+	flex-wrap: wrap;
+}
+
+.eden-progress-wrap {
+	margin-top: 0.45rem;
+	display: grid;
+	grid-template-columns: 48px 1fr 48px;
+	align-items: center;
+	gap: 0.6rem;
+}
+
+.eden-progress-fill {
+	position: absolute;
+	left: 54px;
+	right: 54px;
+	bottom: 6px;
+	height: 2px;
+	background: var(--brand);
+	pointer-events: none;
+}
+
+.eden-player-right {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	justify-content: flex-end;
+}
+
+.eden-auth {
+	width: min(460px, 94vw);
+	margin: 4rem auto;
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	background: var(--panel);
+	padding: 1rem;
+	display: grid;
+	gap: 0.8rem;
+}
+
+.eden-auth-form {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.eden-search-row {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 0.8rem;
+}
+
+.eden-search-row input {
+	flex: 1;
+}
+
+.eden-switch-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.eden-splash {
+	width: 100%;
+	height: 100%;
+	display: grid;
+	place-items: center;
+	background: radial-gradient(circle at top right, #274039, #0f1417 58%);
+}
+
+.eden-splash-inner {
+	text-align: center;
+}
+
+.eden-splash-inner h1 {
+	margin: 0;
+	font-size: 2.3rem;
+}
+
+.eden-splash-inner p {
+	color: var(--muted);
+}
+
+@media (max-width: 1100px) {
+	.eden-root {
+		grid-template-columns: 1fr;
+	}
+
+	.eden-sidebar {
+		display: none;
+	}
+
+	.eden-player-bar {
+		grid-template-columns: 1fr;
+	}
+}
