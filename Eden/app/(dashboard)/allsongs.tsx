@@ -31,6 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
+const PAGE_SIZE = 10;
 const NAV_COLLAPSE_THRESHOLD = 4;
 const ALL_SONGS_SOURCE: QueueSource = { type: "all-songs" };
 
@@ -50,7 +51,7 @@ export default function AllSongsScreen() {
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	useEffect(() => {
-		fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+		fetchTracks(1, PAGE_SIZE, undefined, undefined, TRACK_STATUS_FILTER);
 
 		return () => {
 			clearTracks();
@@ -146,30 +147,41 @@ export default function AllSongsScreen() {
 		[queueTracks, playTrackWithQueue, playTrack],
 	);
 
-	const handleLoadMore = useCallback(() => {
-		if (
-			pagination &&
-			!isLoading &&
-			!refreshing &&
-			pagination.page * pagination.limit < pagination.total
-		) {
-			loadMoreTriggered(pagination.page + 1, "all-songs");
+	const loadingPageRef = useRef<number | null>(null);
 
-			fetchTracks(
-				pagination.page + 1,
-				50,
-				undefined,
-				undefined,
-				TRACK_STATUS_FILTER,
-			);
-		}
-	}, [pagination, isLoading, refreshing, fetchTracks]);
+	const handleLoadMore = useCallback(() => {
+		if (!pagination || isLoading || refreshing) return;
+
+		const loadedCount = tracks.length;
+		const hasMore =
+			pagination.total > 0
+				? loadedCount < pagination.total
+				: loadedCount === pagination.page * pagination.limit;
+
+		if (!hasMore) return;
+
+		const nextPage = pagination.page + 1;
+		if (loadingPageRef.current === nextPage) return;
+		loadingPageRef.current = nextPage;
+
+		loadMoreTriggered(nextPage, "all-songs");
+
+		fetchTracks(
+			nextPage,
+			PAGE_SIZE,
+			undefined,
+			undefined,
+			TRACK_STATUS_FILTER,
+		).finally(() => {
+			loadingPageRef.current = null;
+		});
+	}, [pagination, isLoading, refreshing, tracks.length, fetchTracks]);
 
 	const handleRefresh = useCallback(async () => {
 		setRefreshing(true);
 		try {
 			clearTracks();
-			await fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+			await fetchTracks(1, PAGE_SIZE, undefined, undefined, TRACK_STATUS_FILTER);
 			tracksRefreshed(tracks.length);
 		} finally {
 			setRefreshing(false);
@@ -229,7 +241,7 @@ export default function AllSongsScreen() {
 						showsVerticalScrollIndicator={false}
 						contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
 						onEndReached={handleLoadMore}
-						onEndReachedThreshold={0.5}
+						onEndReachedThreshold={1}
 						refreshControl={
 							<RefreshControl
 								refreshing={refreshing}
