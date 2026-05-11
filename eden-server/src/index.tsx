@@ -49,6 +49,7 @@ app.use(
 		origin: [
 			"http://localhost:5173",
 			"http://localhost:3000",
+			"http://localhost:1420",
 			"https://eden-server.suvan-gowrishanker-204.workers.dev",
 		],
 		allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
