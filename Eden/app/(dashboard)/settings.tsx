@@ -225,7 +225,7 @@ export default function SettingsScreen() {
 										className="flex-row items-center gap-3 py-2"
 										style={{ backgroundColor: cardColor }}
 									>
-										<item.icon size={20} className="" />
+										<item.icon size={20} color={THEME.dark.primary} className="" />
 										<View
 											className="flex-1 "
 											style={{ backgroundColor: cardColor }}
@@ -260,7 +260,7 @@ export default function SettingsScreen() {
 													className="flex-row items-center gap-3 flex-1 bg-card"
 													style={{ backgroundColor: cardColor }}
 												>
-													<item.icon size={20} className="" />
+													<item.icon size={20} color={THEME.dark.primary} className="" />
 													<View
 														className="flex-1 bg-card"
 														style={{ backgroundColor: cardColor }}
@@ -325,7 +325,7 @@ export default function SettingsScreen() {
 											className="flex-row items-center gap-3"
 											style={{ backgroundColor: cardColor }}
 										>
-											<Bug size={20} className="text-primary-foreground" />
+											<Bug size={20} color={THEME.dark.primary} className="text-primary-foreground" />
 											<View style={{ backgroundColor: cardColor }}>
 												<Text className="text-base font-medium">
 													Report a Bug
