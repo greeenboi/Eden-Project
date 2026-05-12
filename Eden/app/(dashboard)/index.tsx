@@ -12,6 +12,7 @@ import {
 } from "@expo/ui/jetpack-compose";
 import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifiers";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Menu, Play } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -24,6 +25,7 @@ import {
 	View,
 	useColorScheme,
 } from "react-native";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const TRACK_STATUS_FILTER = "published";
@@ -314,17 +316,37 @@ export default function HomeScreen() {
 
 	return (
 		<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+			<LinearGradient
+				colors={[`${themeColors.primary}22`, "transparent"]}
+				start={{ x: 0, y: 0 }}
+				end={{ x: 0.6, y: 0.6 }}
+				style={{
+					position: "absolute",
+					top: 0,
+					left: 0,
+					right: 0,
+					height: SCREEN_WIDTH * 1.1,
+				}}
+				pointerEvents="none"
+			/>
 			<ScrollView
-				style={{ flex: 1, backgroundColor: themeColors.background }}
+				style={{ flex: 1, backgroundColor: "transparent" }}
 				contentContainerStyle={{ paddingHorizontal: 16 }}
 				showsVerticalScrollIndicator={false}
+				contentInsetAdjustmentBehavior="automatic"
 			>
 				<View className="flex-row items-center justify-end px-4 py-3">
-					<Pressable onPress={handleOpenDrawer}>
+					<Pressable
+						onPress={handleOpenDrawer}
+						style={({ pressed }) => ({
+							opacity: pressed ? 0.6 : 1,
+							transform: [{ scale: pressed ? 0.92 : 1 }],
+						})}
+					>
 						<Menu size={32} color={themeColors.text} />
 					</Pressable>
 				</View>
-				<View className="mt-3">
+				<Animated.View entering={FadeIn.duration(300)} className="mt-3">
 					<View className="flex-row items-end justify-between">
 						<View>
 							<Text
@@ -347,27 +369,37 @@ export default function HomeScreen() {
 								}
 							}}
 							className="h-32 w-32 items-center justify-center rounded-full"
-							style={{ backgroundColor: themeColors.accent }}
+							style={({ pressed }) => ({
+								backgroundColor: themeColors.accent,
+								boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
+								opacity: pressed ? 0.85 : 1,
+								transform: [{ scale: pressed ? 0.94 : 1 }],
+							})}
 						>
 							<Play size={56} color={themeColors.mutedForeground} fill={themeColors.muted} />
 						</Pressable>
 					</View>
 
-					<AdaptiveCollage
-						featuredTracks={featuredTracks}
-						handleTrackPress={handleTrackPress}
-					/>
+					<Animated.View entering={FadeInDown.duration(360).delay(80).springify().damping(16)}>
+						<AdaptiveCollage
+							featuredTracks={featuredTracks}
+							handleTrackPress={handleTrackPress}
+						/>
+					</Animated.View>
 
-					<View style={{ marginTop:30, paddingBottom: 24 }}>
+					<Animated.View
+						entering={FadeInDown.duration(380).delay(140).springify().damping(16)}
+						style={{ marginTop: 30, paddingBottom: 24 }}
+					>
 						{renderTopArtists()}
-					</View>
+					</Animated.View>
 
 					{isLoading && (
 						<Text style={{ color: themeColors.tint, marginTop: 10 }}>
 							Loading songs...
 						</Text>
 					)}
-				</View>
+				</Animated.View>
 			</ScrollView>
 		</SafeAreaView>
 	);

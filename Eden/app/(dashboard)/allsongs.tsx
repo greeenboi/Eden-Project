@@ -196,69 +196,89 @@ export default function AllSongsScreen() {
 	);
 
 	return (
-		<SafeAreaView style={{ flex: 1 }}>
-			<DashboardHeader
-				navPaddingTop={navPaddingTop}
-				navPaddingBottom={navPaddingBottom}
-				navHeight={navHeight}
-				navTextScale={navTextScale}
-				navIconScale={navIconScale}
-				trackCount={pagination?.total}
-				isLoading={isLoading}
-			/>
+		<SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+			<View style={{ flex: 1, backgroundColor: "transparent" }}>
+				{isLoading && tracks.length === 0 ? (
+					<LoadingSkeleton />
+				) : (
+					<View
+						style={{
+							flex: 1,
+							paddingHorizontal: 12,
+							backgroundColor: "transparent",
+						}}
+					>
+						<FlashList
+							data={masonryTracks}
+							renderItem={renderTrackCard}
+							keyExtractor={(item) => item.id}
+							numColumns={NUM_COLUMNS}
+							masonry
+							onScroll={handleListScroll}
+							scrollEventThrottle={16}
+							optimizeItemArrangement
+							overrideItemLayout={(layout, item) => {
+								layout.span = item.span;
+							}}
+							showsVerticalScrollIndicator={false}
+							contentContainerStyle={{
+								paddingTop: 104,
+								paddingBottom: 16,
+							}}
+							onEndReached={handleLoadMore}
+							onEndReachedThreshold={1}
+							refreshControl={
+								<RefreshControl
+									refreshing={refreshing}
+									onRefresh={handleRefresh}
+									tintColor={themeColors.primary}
+									colors={[themeColors.primary]}
+									progressViewOffset={100}
+								/>
+							}
+							ListEmptyComponent={!isLoading ? <EmptyTrackList /> : null}
+							ListFooterComponent={
+								isLoading && tracks.length > 0 && !refreshing ? (
+									<LoadingMoreTracks />
+								) : null
+							}
+						/>
+					</View>
+				)}
 
-			{error && (
-				<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
-					<Alert variant="destructive" icon={AlertCircle}>
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				</View>
-			)}
-
-			{isLoading && tracks.length === 0 ? (
-				<LoadingSkeleton />
-			) : (
 				<View
 					style={{
-						flex: 1,
-						paddingHorizontal: 12,
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
 						backgroundColor: "transparent",
+						zIndex: 10,
 					}}
 				>
-					<FlashList
-						data={masonryTracks}
-						renderItem={renderTrackCard}
-						keyExtractor={(item) => item.id}
-						numColumns={NUM_COLUMNS}
-						masonry
-						onScroll={handleListScroll}
-						scrollEventThrottle={16}
-						optimizeItemArrangement
-						overrideItemLayout={(layout, item) => {
-							layout.span = item.span;
-						}}
-						showsVerticalScrollIndicator={false}
-						contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
-						onEndReached={handleLoadMore}
-						onEndReachedThreshold={1}
-						refreshControl={
-							<RefreshControl
-								refreshing={refreshing}
-								onRefresh={handleRefresh}
-								tintColor={themeColors.primary}
-								colors={[themeColors.primary]}
-							/>
-						}
-						ListEmptyComponent={!isLoading ? <EmptyTrackList /> : null}
-						ListFooterComponent={
-							isLoading && tracks.length > 0 && !refreshing ? (
-								<LoadingMoreTracks />
-							) : null
-						}
+					<DashboardHeader
+						navPaddingTop={navPaddingTop}
+						navPaddingBottom={navPaddingBottom}
+						navHeight={navHeight}
+						navTextScale={navTextScale}
+						navIconScale={navIconScale}
+						trackCount={pagination?.total}
+						isLoading={isLoading}
 					/>
+
+					{error && (
+						<View
+							style={{ backgroundColor: "transparent" }}
+							className="px-4 pb-2 pt-2"
+						>
+							<Alert variant="destructive" icon={AlertCircle}>
+								<AlertTitle>Error</AlertTitle>
+								<AlertDescription>{error}</AlertDescription>
+							</Alert>
+						</View>
+					)}
 				</View>
-			)}
+			</View>
 		</SafeAreaView>
 	);
 }
