@@ -1,27 +1,46 @@
-# Deploy FastAPI on Render
+# yt_downloader_worker
 
-Use this repo as a template to deploy a Python [FastAPI](https://fastapi.tiangolo.com) service on Render.
+FastAPI worker that downloads YouTube audio as OGG via yt-dlp and forwards it into Eden upload APIs.
 
-See https://render.com/docs/deploy-fastapi or follow the steps below:
+## Runtime
 
-## Manual Steps
+- Start command:
 
-1. You may use this repository directly or [create your own repository from this template](https://github.com/render-examples/fastapi/generate) if you'd like to customize the code.
-2. Create a new Web Service on Render.
-3. Specify the URL to your new repository or this repository.
-4. Render will automatically detect that you are deploying a Python service and use `pip` to download the dependencies.
-5. Specify the following as the Start Command.
+```bash
+uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+```
 
-    ```shell
-    uvicorn main:app --host 0.0.0.0 --port $PORT
-    ```
+- Health endpoint:
 
-6. Click Create Web Service.
+```text
+GET /health
+```
 
-Or simply click:
+## Environment Variables
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/render-examples/fastapi)
+- `API_BASE_DEFAULT`: Eden API base URL.
+- `YTDLP_COOKIES_PATH`: local cookies.txt path used for cookie fallback retries.
+- `YTDLP_COOKIES_GIST_URL`: optional URL used to refresh cookies file on failure.
+- `YTDLP_YOUTUBE_PO_TOKEN`: optional YouTube PO token extractor arg value.
+- `YTDLP_YOUTUBE_VISITOR_DATA`: optional YouTube visitor data extractor arg value.
 
-## Thanks
+## yt-dlp Strategy
 
-Thanks to [Harish](https://harishgarg.com) for the [inspiration to create a FastAPI quickstart for Render](https://twitter.com/harishkgarg/status/1435084018677010434) and for some sample code!
+The worker attempts multiple YouTube clients when no cookies are used:
+
+1. `ios`
+2. `android`
+3. `tv_simply`
+4. default client
+
+On failures, the worker logs bounded stderr tails per attempt and returns structured failure metadata to make Render/datacenter-IP bot detection easier to debug.
+
+## PO Token Notes
+
+- PO token and visitor data are passed through `--extractor-args` when env vars are configured.
+- YouTube PO token behavior changes frequently and may require provider-based automation for long-term reliability.
+- Keep yt-dlp current; this worker pins and upgrades yt-dlp in Docker builds.
+
+## Docker
+
+Dependencies are installed from `requirements.txt`, and yt-dlp is explicitly refreshed to a known version during image build to reduce stale cache issues.
