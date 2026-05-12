@@ -19,6 +19,8 @@ import {
 	UpdateTrackRequestSchema,
 } from "../models/dtos";
 import {
+	countPublishedTracks,
+	countTracks,
 	createTrack,
 	deleteTrack,
 	getPublishedTracks,
@@ -273,13 +275,10 @@ export async function listTracksHandler(c: ValidatedContext) {
 		const { page, limit, artistId, albumId, status } = query;
 		const offset = (page - 1) * limit;
 
-		const tracks = await listTracks(db, {
-			artistId,
-			albumId,
-			status,
-			limit,
-			offset,
-		});
+		const [tracks, total] = await Promise.all([
+			listTracks(db, { artistId, albumId, status, limit, offset }),
+			countTracks(db, { artistId, albumId, status }),
+		]);
 
 		// Transform tracks
 		const transformedTracks = tracks.map((track) => ({
@@ -306,7 +305,7 @@ export async function listTracksHandler(c: ValidatedContext) {
 				pagination: {
 					page,
 					limit,
-					total: tracks.length, // TODO: Implement proper total count
+					total,
 				},
 			},
 			200,
@@ -624,12 +623,10 @@ export async function getPublishedTracksHandler(c: ValidatedContext) {
 		const { page, limit, artistId, albumId } = query;
 		const offset = (page - 1) * limit;
 
-		const tracks = await getPublishedTracks(db, {
-			artistId,
-			albumId,
-			limit,
-			offset,
-		});
+		const [tracks, total] = await Promise.all([
+			getPublishedTracks(db, { artistId, albumId, limit, offset }),
+			countPublishedTracks(db, { artistId, albumId }),
+		]);
 
 		// Transform tracks
 		const transformedTracks = tracks.map((track) => ({
@@ -656,7 +653,7 @@ export async function getPublishedTracksHandler(c: ValidatedContext) {
 				pagination: {
 					page,
 					limit,
-					total: tracks.length, // TODO: Implement proper total count
+					total,
 				},
 			},
 			200,

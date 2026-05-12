@@ -1,7 +1,3 @@
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
-import useIsDark from "@/lib/hooks/isdark";
-import { THEME } from "@/lib/theme";
 import {
 	type DrawerContentComponentProps,
 	DrawerContentScrollView,
@@ -10,6 +6,11 @@ import {
 import { router } from "expo-router";
 import { Music, Search, Settings, Users, X } from "lucide-react-native";
 import { Pressable, StyleSheet } from "react-native";
+import { View } from "@/components/Themed";
+import { BlurSurface } from "@/components/ui/blur-surface";
+import { Text } from "@/components/ui/text";
+import useIsDark from "@/lib/hooks/isdark";
+import { THEME } from "@/lib/theme";
 
 export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const isDark = useIsDark();
@@ -19,151 +20,166 @@ export function CustomDrawerContent(props: DrawerContentComponentProps) {
 	const mutedColor = isDark
 		? THEME.dark.mutedForeground
 		: THEME.light.mutedForeground;
-	const backgroundColor = isDark
-		? THEME.dark.background
-		: THEME.light.background;
 	const primaryColor = isDark ? THEME.dark.primary : THEME.light.primary;
 
 	const currentRoute = props.state.routes[props.state.index]?.name;
+	const activeBg = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)";
 
 	return (
-		<View style={[styles.container, { backgroundColor }]}>
-			{/* Header */}
-			<View style={styles.header}>
-				<View style={styles.headerContent}>
-					<Music size={28} color={primaryColor} />
-					<Text className="text-2xl font-bold text-foreground ml-2">Eden</Text>
-				</View>
-				<Pressable onPress={() => props.navigation.closeDrawer()} hitSlop={8}>
-					<X size={24} color={mutedColor} />
-				</Pressable>
-			</View>
-
-			{/* Navigation Items */}
-			<DrawerContentScrollView
-				{...props}
-				contentContainerStyle={styles.scrollContent}
+		<BlurSurface intensity={70} style={styles.container}>
+			<View
+				style={[
+					styles.surface,
+					{
+						backgroundColor: isDark
+							? "rgba(10,10,12,0.55)"
+							: "rgba(255,255,255,0.55)",
+					},
+				]}
 			>
-				<View style={styles.section}>
-					<DrawerItem
-						label="Your Mix"
-						focused={currentRoute === "index"}
-						onPress={() => {
-							router.push("/");
-							props.navigation.closeDrawer();
-						}}
-						activeTintColor={primaryColor}
-						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={
-							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
-						}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
+				<View style={styles.header}>
+					<View style={styles.headerContent}>
+						<Music size={28} color={primaryColor} />
+						<Text className="text-2xl font-bold text-foreground ml-2">
+							Eden
+						</Text>
+					</View>
+					<Pressable
+						onPress={() => props.navigation.closeDrawer()}
+						hitSlop={8}
+						style={({ pressed }) => ({
+							opacity: pressed ? 0.6 : 1,
+							transform: [{ scale: pressed ? 0.92 : 1 }],
+						})}
+					>
+						<X size={24} color={mutedColor} />
+					</Pressable>
+				</View>
+
+				<DrawerContentScrollView
+					{...props}
+					contentContainerStyle={styles.scrollContent}
+				>
+					<View style={styles.section}>
+						<DrawerItem
+							label="Your Mix"
+							focused={currentRoute === "index"}
+							onPress={() => {
+								router.push("/");
+								props.navigation.closeDrawer();
+							}}
+							activeTintColor={primaryColor}
+							inactiveTintColor={foregroundColor}
+							activeBackgroundColor={activeBg}
+							style={styles.drawerItem}
+							labelStyle={styles.drawerLabel}
+						/>
+						<View style={[styles.separator, { backgroundColor: mutedColor }]} />
+						<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
+							Browse
+						</Text>
+						<DrawerItem
+							label="All Songs"
+							icon={({ size }) => (
+								<Music
+									size={size}
+									color={
+										currentRoute === "allsongs" ? primaryColor : foregroundColor
+									}
+								/>
+							)}
+							focused={currentRoute === "allsongs"}
+							onPress={() => {
+								router.push("/allsongs");
+								props.navigation.closeDrawer();
+							}}
+							activeTintColor={primaryColor}
+							inactiveTintColor={foregroundColor}
+							activeBackgroundColor={activeBg}
+							style={styles.drawerItem}
+							labelStyle={styles.drawerLabel}
+						/>
+						<DrawerItem
+							label="Artists"
+							icon={({ size }) => (
+								<Users
+									size={size}
+									color={
+										currentRoute === "artists" ? primaryColor : foregroundColor
+									}
+								/>
+							)}
+							focused={currentRoute === "artists"}
+							onPress={() => {
+								router.push("/artists");
+								props.navigation.closeDrawer();
+							}}
+							activeTintColor={primaryColor}
+							inactiveTintColor={foregroundColor}
+							activeBackgroundColor={activeBg}
+							style={styles.drawerItem}
+							labelStyle={styles.drawerLabel}
+						/>
+						<DrawerItem
+							label="Search"
+							icon={({ size }) => (
+								<Search
+									size={size}
+									color={
+										currentRoute === "search-songs"
+											? primaryColor
+											: foregroundColor
+									}
+								/>
+							)}
+							focused={currentRoute === "search-songs"}
+							onPress={() => {
+								router.push("/search-songs");
+								props.navigation.closeDrawer();
+							}}
+							activeTintColor={primaryColor}
+							inactiveTintColor={foregroundColor}
+							activeBackgroundColor={activeBg}
+							style={styles.drawerItem}
+							labelStyle={styles.drawerLabel}
+						/>
+					</View>
+
 					<View style={[styles.separator, { backgroundColor: mutedColor }]} />
-					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
-						Browse
-					</Text>
-					<DrawerItem
-						label="All Songs"
-						icon={({ size }) => (
-							<Music
-								size={size}
-								color={
-									currentRoute === "allsongs" ? primaryColor : foregroundColor
-								}
-							/>
-						)}
-						focused={currentRoute === "allsongs"}
-						onPress={() => {
-							router.push("/allsongs");
-							props.navigation.closeDrawer();
-						}}
-						activeTintColor={primaryColor}
-						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={
-							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
-						}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
-					<DrawerItem
-						label="Artists"
-						icon={({ size }) => (
-							<Users
-								size={size}
-								color={
-									currentRoute === "artists" ? primaryColor : foregroundColor
-								}
-							/>
-						)}
-						focused={currentRoute === "artists"}
-						onPress={() => {
-							router.push("/artists");
-							props.navigation.closeDrawer();
-						}}
-						activeTintColor={primaryColor}
-						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={
-							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
-						}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
-					<DrawerItem
-						label="Search"
-						icon={({ size }) => (
-							<Search
-								size={size}
-								color={
-									currentRoute === "search-songs"
-										? primaryColor
-										: foregroundColor
-								}
-							/>
-						)}
-						focused={currentRoute === "search-songs"}
-						onPress={() => {
-							router.push("/search-songs");
-							props.navigation.closeDrawer();
-						}}
-						activeTintColor={primaryColor}
-						inactiveTintColor={foregroundColor}
-						activeBackgroundColor={
-							isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
-						}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
-				</View>
 
-				<View style={[styles.separator, { backgroundColor: mutedColor }]} />
-
-				<View style={styles.section}>
-					<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
-						Account
-					</Text>
-					<DrawerItem
-						label="Settings"
-						icon={({ size }) => (
-							<Settings size={size} color={foregroundColor} />
-						)}
-						onPress={() => {
-							router.push("/settings");
-							props.navigation.closeDrawer();
-						}}
-						inactiveTintColor={foregroundColor}
-						style={styles.drawerItem}
-						labelStyle={styles.drawerLabel}
-					/>
-				</View>
-			</DrawerContentScrollView>
-		</View>
+					<View style={styles.section}>
+						<Text className="text-xs text-muted-foreground uppercase tracking-wider mb-2 px-4">
+							Account
+						</Text>
+						<DrawerItem
+							label="Settings"
+							icon={({ size }) => (
+								<Settings size={size} color={foregroundColor} />
+							)}
+							onPress={() => {
+								router.push("/settings");
+								props.navigation.closeDrawer();
+							}}
+							inactiveTintColor={foregroundColor}
+							style={styles.drawerItem}
+							labelStyle={styles.drawerLabel}
+						/>
+					</View>
+				</DrawerContentScrollView>
+			</View>
+		</BlurSurface>
 	);
 }
 
 const styles = StyleSheet.create({
 	container: {
+		flex: 1,
+		borderTopLeftRadius: 24,
+		borderBottomLeftRadius: 24,
+		borderCurve: "continuous",
+		overflow: "hidden",
+	},
+	surface: {
 		flex: 1,
 	},
 	header: {
@@ -195,7 +211,8 @@ const styles = StyleSheet.create({
 	},
 	drawerItem: {
 		marginHorizontal: 8,
-		borderRadius: 8,
+		borderRadius: 12,
+		borderCurve: "continuous",
 	},
 	drawerLabel: {
 		fontSize: 15,

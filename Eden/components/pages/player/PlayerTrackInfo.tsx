@@ -29,7 +29,9 @@ export function PlayerTrackInfo({
 					style={{ backgroundColor: "transparent" }}
 					className="flex-1 mr-4"
 				>
-					<Text className="text-2xl font-bold mb-1">{title}</Text>
+					<Text selectable className="text-2xl font-bold mb-1">
+						{title}
+					</Text>
 					<Pressable
 						onPress={() => {
 							if (artistId) {
@@ -39,7 +41,7 @@ export function PlayerTrackInfo({
 						}}
 						disabled={!artistId}
 					>
-						<Text className="text-lg opacity-70 mb-1 underline">
+						<Text selectable className="text-lg opacity-70 mb-1 underline">
 							{artistName}
 						</Text>
 					</Pressable>

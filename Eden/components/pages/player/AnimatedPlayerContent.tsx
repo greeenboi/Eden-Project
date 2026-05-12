@@ -393,27 +393,30 @@ const styles = StyleSheet.create({
 	fullArtworkWrapper: {
 		alignItems: "center",
 		paddingVertical: 16,
+		backgroundColor: "transparent",
 	},
 	artworkContainer: {
 		overflow: "hidden",
 		alignSelf: "center",
+		backgroundColor: "transparent",
 	},
 	artworkImage: {
 		width: "100%",
 		height: "100%",
+		backgroundColor: "transparent",
 	},
 	artworkPlaceholder: {
 		width: "100%",
 		height: "100%",
 		justifyContent: "center",
 		alignItems: "center",
-		backgroundColor: "rgba(0,0,0,0.1)",
+		backgroundColor: "transparent",
 	},
 	explicitBadge: {
 		position: "absolute",
 		bottom: 8,
 		right: 8,
-		backgroundColor: "rgba(0,0,0,0.7)",
+		backgroundColor: "transparent",
 		paddingHorizontal: 6,
 		paddingVertical: 2,
 		borderRadius: 4,
@@ -444,14 +447,17 @@ const styles = StyleSheet.create({
 		flex: 1,
 		gap: 16,
 		paddingHorizontal: 16,
+		backgroundColor: "transparent",
 	},
 	controlsContainer: {
 		paddingHorizontal: 16,
 		paddingBottom: 16,
+		backgroundColor: "transparent",
 	},
 	secondaryActions: {
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		paddingHorizontal: 8,
+		backgroundColor: "transparent",
 	},
 });

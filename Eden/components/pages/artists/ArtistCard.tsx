@@ -34,8 +34,18 @@ export function ArtistCard({
 			<Pressable
 				onPress={() => onPress(artist.id)}
 				className="flex-1 flex-row items-center p-2 gap-3"
+				style={({ pressed }) => ({
+					opacity: pressed ? 0.85 : 1,
+					transform: [{ scale: pressed ? 0.98 : 1 }],
+				})}
 			>
-				<Avatar alt={artist.name} className="w-14 h-14 rounded-full">
+				<Avatar
+					alt={artist.name}
+					className="w-14 h-14 rounded-full"
+					style={{
+						borderCurve: "continuous",
+					}}
+				>
 					{artist.avatarUrl ? (
 						<AvatarImage source={{ uri: artist.avatarUrl }} />
 					) : null}
@@ -54,7 +64,12 @@ export function ArtistCard({
 					</Text>
 					{artist.verified && (
 						<Host matchContents>
-							<Icon tint={themeColors.success} size={14} source={require("../../../assets/icons/verified.xml")} contentDescription="Verification-Badge" />
+							<Icon
+								tint={themeColors.success}
+								size={14}
+								source={require("../../../assets/icons/verified.xml")}
+								contentDescription="Verification-Badge"
+							/>
 						</Host>
 					)}
 				</View>
@@ -66,22 +81,49 @@ export function ArtistCard({
 		<Pressable
 			onPress={() => onPress(artist.id)}
 			className="flex-1 p-1.5 aspect-square"
+			style={({ pressed }) => ({
+				opacity: pressed ? 0.85 : 1,
+				transform: [{ scale: pressed ? 0.96 : 1 }],
+			})}
 		>
-			<Avatar alt={artist.name} className="w-full h-full rounded-full">
-				{artist.avatarUrl ? (
-					<AvatarImage source={{ uri: artist.avatarUrl }} />
-				) : null}
-				<AvatarFallback>
-					<Text className="text-2xl font-semibold">
-						{getInitials(artist.name)}
-					</Text>
-				</AvatarFallback>
-			</Avatar>
-			{artist.verified && (
-				<Host matchContents >
-					<Icon tint={themeColors.success} size={16} source={require("../../../assets/icons/verified.xml")} contentDescription="Verification-Badge" />
-				</Host>
-			)}
+			<View style={{ flex: 1, backgroundColor: "transparent" }}>
+				<Avatar
+					alt={artist.name}
+					className="w-full h-full rounded-full"
+					style={{
+						boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+						borderCurve: "continuous",
+					}}
+				>
+					{artist.avatarUrl ? (
+						<AvatarImage source={{ uri: artist.avatarUrl }} />
+					) : null}
+					<AvatarFallback>
+						<Text className="text-2xl font-semibold">
+							{getInitials(artist.name)}
+						</Text>
+					</AvatarFallback>
+				</Avatar>
+				{artist.verified && (
+					<View
+						style={{
+							position: "absolute",
+							bottom: 4,
+							right: 4,
+							backgroundColor: "transparent",
+						}}
+					>
+						<Host matchContents>
+							<Icon
+								tint={themeColors.success}
+								size={18}
+								source={require("../../../assets/icons/verified.xml")}
+								contentDescription="Verification-Badge"
+							/>
+						</Host>
+					</View>
+				)}
+			</View>
 		</Pressable>
 	);
 }

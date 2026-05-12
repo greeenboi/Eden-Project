@@ -191,6 +191,33 @@ export async function listTracks(
 }
 
 /**
+ * Count tracks matching the same filters as listTracks
+ */
+export async function countTracks(
+	db: DbClient,
+	filters: {
+		artistId?: string;
+		albumId?: string;
+		status?: string;
+	} = {},
+): Promise<number> {
+	const { artistId, albumId, status } = filters;
+
+	const conditions = [];
+	if (artistId) conditions.push(eq(tracks.artistId, artistId));
+	if (albumId) conditions.push(eq(tracks.albumId, albumId));
+	if (status) conditions.push(sql`${tracks.status} = ${status}`);
+
+	const query = db.select({ count: sql<number>`count(*)` }).from(tracks);
+	const result =
+		conditions.length === 0
+			? await query
+			: await query.where(and(...conditions));
+
+	return Number(result[0]?.count ?? 0);
+}
+
+/**
  * Update track metadata
  *
  * @param db - Database client
@@ -443,6 +470,30 @@ export async function getPublishedTracks(
 		.offset(offset);
 
 	return results;
+}
+
+/**
+ * Count published tracks matching the same filters as getPublishedTracks
+ */
+export async function countPublishedTracks(
+	db: DbClient,
+	filters: {
+		artistId?: string;
+		albumId?: string;
+	} = {},
+): Promise<number> {
+	const { artistId, albumId } = filters;
+
+	const conditions = [eq(tracks.status, TrackStatus.PUBLISHED)];
+	if (artistId) conditions.push(eq(tracks.artistId, artistId));
+	if (albumId) conditions.push(eq(tracks.albumId, albumId));
+
+	const result = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(tracks)
+		.where(and(...conditions));
+
+	return Number(result[0]?.count ?? 0);
 }
 
 /**

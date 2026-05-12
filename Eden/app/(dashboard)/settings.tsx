@@ -27,6 +27,7 @@ import { DrawerActions } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import * as MailComposer from "expo-mail-composer";
 import { useNavigation } from "expo-router";
+import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import {
 	Bell,
 	Bug,
@@ -174,43 +175,79 @@ export default function SettingsScreen() {
 							Settings
 						</Text>
 					</View>
-					<Pressable onPress={handleOpenDrawer}>
+					<Pressable
+						onPress={handleOpenDrawer}
+						style={({ pressed }) => ({
+							opacity: pressed ? 0.6 : 1,
+							transform: [{ scale: pressed ? 0.92 : 1 }],
+						})}
+					>
 						<Menu size={28} color={foregroundColor} />
 					</Pressable>
 				</View>
 
-				<ScrollView className="flex-1" contentContainerClassName="p-4">
+				<ScrollView
+					className="flex-1"
+					contentContainerClassName="p-4"
+					contentInsetAdjustmentBehavior="automatic"
+				>
 					{/* Profile Header Card */}
-					<Card className="mb-4">
-						<CardContent className="items-center py-6">
-							<View className="w-24 h-24 rounded-full overflow-hidden mb-4 items-center justify-center">
-								<LinearGradient
-									colors={gradientColors}
-									start={{ x: 0, y: 0 }}
-									end={{ x: 1, y: 1 }}
+					<Animated.View entering={FadeIn.duration(280)}>
+						<Card
+							className="mb-4"
+							style={{
+								borderRadius: 16,
+								borderCurve: "continuous",
+								boxShadow: "0 4px 14px rgba(0,0,0,0.08)",
+							}}
+						>
+							<CardContent className="items-center py-6">
+								<View
+									className="w-24 h-24 rounded-full overflow-hidden mb-4 items-center justify-center"
 									style={{
-										position: "absolute",
-										left: 0,
-										right: 0,
-										top: 0,
-										bottom: 0,
+										boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
+										borderCurve: "continuous",
 									}}
-								/>
-								<Avatar alt={user?.name || "User"} className="w-24 h-24 ">
-									<AvatarFallback className="bg-transparent">
-										<Text className="text-3xl text-white font-bold">
-											{getInitials(user?.name)}
-										</Text>
-									</AvatarFallback>
-								</Avatar>
-							</View>
-							<Text className="text-2xl font-bold mb-1">{user?.name}</Text>
-							<Text className="text-base ">{user?.email}</Text>
-						</CardContent>
-					</Card>
+								>
+									<LinearGradient
+										colors={gradientColors}
+										start={{ x: 0, y: 0 }}
+										end={{ x: 1, y: 1 }}
+										style={{
+											position: "absolute",
+											left: 0,
+											right: 0,
+											top: 0,
+											bottom: 0,
+										}}
+									/>
+									<Avatar alt={user?.name || "User"} className="w-24 h-24 ">
+										<AvatarFallback className="bg-transparent">
+											<Text className="text-3xl text-white font-bold">
+												{getInitials(user?.name)}
+											</Text>
+										</AvatarFallback>
+									</Avatar>
+								</View>
+								<Text selectable className="text-2xl font-bold mb-1">
+									{user?.name}
+								</Text>
+								<Text selectable className="text-base ">
+									{user?.email}
+								</Text>
+							</CardContent>
+						</Card>
+					</Animated.View>
 
 					{/* Account Information */}
-					<Card className="mb-4">
+					<Card
+						className="mb-4"
+						style={{
+							borderRadius: 16,
+							borderCurve: "continuous",
+							boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+						}}
+					>
 						<CardHeader>
 							<CardTitle>Account Information</CardTitle>
 						</CardHeader>
@@ -225,7 +262,7 @@ export default function SettingsScreen() {
 										className="flex-row items-center gap-3 py-2"
 										style={{ backgroundColor: cardColor }}
 									>
-										<item.icon size={20} className="" />
+										<item.icon size={20} color={THEME.dark.primary} className="" />
 										<View
 											className="flex-1 "
 											style={{ backgroundColor: cardColor }}
@@ -243,8 +280,22 @@ export default function SettingsScreen() {
 					</Card>
 
 					{/* Settings Sections */}
-					{settingsSections.map((section) => (
-						<Card key={section.title} className="mb-4">
+					{settingsSections.map((section, sectionIndex) => (
+						<Animated.View
+							key={section.title}
+							entering={FadeInDown.duration(320)
+								.delay(80 + sectionIndex * 60)
+								.springify()
+								.damping(16)}
+						>
+						<Card
+							className="mb-4"
+							style={{
+								borderRadius: 16,
+								borderCurve: "continuous",
+								boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+							}}
+						>
 							<CardHeader>
 								<CardTitle>{section.title}</CardTitle>
 							</CardHeader>
@@ -260,7 +311,7 @@ export default function SettingsScreen() {
 													className="flex-row items-center gap-3 flex-1 bg-card"
 													style={{ backgroundColor: cardColor }}
 												>
-													<item.icon size={20} className="" />
+													<item.icon size={20} color={THEME.dark.primary} className="" />
 													<View
 														className="flex-1 bg-card"
 														style={{ backgroundColor: cardColor }}
@@ -307,10 +358,18 @@ export default function SettingsScreen() {
 								))}
 							</CardContent>
 						</Card>
+						</Animated.View>
 					))}
 
 					{/* Bug Report */}
-					<Card className="mb-4">
+					<Card
+						className="mb-4"
+						style={{
+							borderRadius: 16,
+							borderCurve: "continuous",
+							boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+						}}
+					>
 						<CardHeader>
 							<CardTitle>Feedback</CardTitle>
 						</CardHeader>
@@ -325,7 +384,7 @@ export default function SettingsScreen() {
 											className="flex-row items-center gap-3"
 											style={{ backgroundColor: cardColor }}
 										>
-											<Bug size={20} className="text-primary-foreground" />
+											<Bug size={20} color={THEME.dark.primary} className="text-primary-foreground" />
 											<View style={{ backgroundColor: cardColor }}>
 												<Text className="text-base font-medium">
 													Report a Bug
@@ -393,7 +452,14 @@ export default function SettingsScreen() {
 					<Separator className="mb-6" />
 
 					{/* Developer Credits */}
-					<Card className="mb-4">
+					<Card
+						className="mb-4"
+						style={{
+							borderRadius: 16,
+							borderCurve: "continuous",
+							boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+						}}
+					>
 						<CardHeader>
 							<View
 								className="flex-row items-center gap-2 "

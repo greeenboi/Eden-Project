@@ -31,6 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const NUM_COLUMNS = 2;
 const TRACK_STATUS_FILTER = "published";
+const PAGE_SIZE = 10;
 const NAV_COLLAPSE_THRESHOLD = 4;
 const ALL_SONGS_SOURCE: QueueSource = { type: "all-songs" };
 
@@ -50,7 +51,7 @@ export default function AllSongsScreen() {
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	useEffect(() => {
-		fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+		fetchTracks(1, PAGE_SIZE, undefined, undefined, TRACK_STATUS_FILTER);
 
 		return () => {
 			clearTracks();
@@ -146,30 +147,41 @@ export default function AllSongsScreen() {
 		[queueTracks, playTrackWithQueue, playTrack],
 	);
 
-	const handleLoadMore = useCallback(() => {
-		if (
-			pagination &&
-			!isLoading &&
-			!refreshing &&
-			pagination.page * pagination.limit < pagination.total
-		) {
-			loadMoreTriggered(pagination.page + 1, "all-songs");
+	const loadingPageRef = useRef<number | null>(null);
 
-			fetchTracks(
-				pagination.page + 1,
-				50,
-				undefined,
-				undefined,
-				TRACK_STATUS_FILTER,
-			);
-		}
-	}, [pagination, isLoading, refreshing, fetchTracks]);
+	const handleLoadMore = useCallback(() => {
+		if (!pagination || isLoading || refreshing) return;
+
+		const loadedCount = tracks.length;
+		const hasMore =
+			pagination.total > 0
+				? loadedCount < pagination.total
+				: loadedCount === pagination.page * pagination.limit;
+
+		if (!hasMore) return;
+
+		const nextPage = pagination.page + 1;
+		if (loadingPageRef.current === nextPage) return;
+		loadingPageRef.current = nextPage;
+
+		loadMoreTriggered(nextPage, "all-songs");
+
+		fetchTracks(
+			nextPage,
+			PAGE_SIZE,
+			undefined,
+			undefined,
+			TRACK_STATUS_FILTER,
+		).finally(() => {
+			loadingPageRef.current = null;
+		});
+	}, [pagination, isLoading, refreshing, tracks.length, fetchTracks]);
 
 	const handleRefresh = useCallback(async () => {
 		setRefreshing(true);
 		try {
 			clearTracks();
-			await fetchTracks(1, 50, undefined, undefined, TRACK_STATUS_FILTER);
+			await fetchTracks(1, PAGE_SIZE, undefined, undefined, TRACK_STATUS_FILTER);
 			tracksRefreshed(tracks.length);
 		} finally {
 			setRefreshing(false);
@@ -184,69 +196,89 @@ export default function AllSongsScreen() {
 	);
 
 	return (
-		<SafeAreaView style={{ flex: 1 }}>
-			<DashboardHeader
-				navPaddingTop={navPaddingTop}
-				navPaddingBottom={navPaddingBottom}
-				navHeight={navHeight}
-				navTextScale={navTextScale}
-				navIconScale={navIconScale}
-				trackCount={pagination?.total}
-				isLoading={isLoading}
-			/>
+		<SafeAreaView style={{ flex: 1 }} edges={["top", "left", "right"]}>
+			<View style={{ flex: 1, backgroundColor: "transparent" }}>
+				{isLoading && tracks.length === 0 ? (
+					<LoadingSkeleton />
+				) : (
+					<View
+						style={{
+							flex: 1,
+							paddingHorizontal: 12,
+							backgroundColor: "transparent",
+						}}
+					>
+						<FlashList
+							data={masonryTracks}
+							renderItem={renderTrackCard}
+							keyExtractor={(item) => item.id}
+							numColumns={NUM_COLUMNS}
+							masonry
+							onScroll={handleListScroll}
+							scrollEventThrottle={16}
+							optimizeItemArrangement
+							overrideItemLayout={(layout, item) => {
+								layout.span = item.span;
+							}}
+							showsVerticalScrollIndicator={false}
+							contentContainerStyle={{
+								paddingTop: 104,
+								paddingBottom: 16,
+							}}
+							onEndReached={handleLoadMore}
+							onEndReachedThreshold={1}
+							refreshControl={
+								<RefreshControl
+									refreshing={refreshing}
+									onRefresh={handleRefresh}
+									tintColor={themeColors.primary}
+									colors={[themeColors.primary]}
+									progressViewOffset={100}
+								/>
+							}
+							ListEmptyComponent={!isLoading ? <EmptyTrackList /> : null}
+							ListFooterComponent={
+								isLoading && tracks.length > 0 && !refreshing ? (
+									<LoadingMoreTracks />
+								) : null
+							}
+						/>
+					</View>
+				)}
 
-			{error && (
-				<View style={{ backgroundColor: "transparent" }} className="px-4 pb-2">
-					<Alert variant="destructive" icon={AlertCircle}>
-						<AlertTitle>Error</AlertTitle>
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				</View>
-			)}
-
-			{isLoading && tracks.length === 0 ? (
-				<LoadingSkeleton />
-			) : (
 				<View
 					style={{
-						flex: 1,
-						paddingHorizontal: 12,
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
 						backgroundColor: "transparent",
+						zIndex: 10,
 					}}
 				>
-					<FlashList
-						data={masonryTracks}
-						renderItem={renderTrackCard}
-						keyExtractor={(item) => item.id}
-						numColumns={NUM_COLUMNS}
-						masonry
-						onScroll={handleListScroll}
-						scrollEventThrottle={16}
-						optimizeItemArrangement
-						overrideItemLayout={(layout, item) => {
-							layout.span = item.span;
-						}}
-						showsVerticalScrollIndicator={false}
-						contentContainerStyle={{ paddingTop: 8, paddingBottom: 16 }}
-						onEndReached={handleLoadMore}
-						onEndReachedThreshold={0.5}
-						refreshControl={
-							<RefreshControl
-								refreshing={refreshing}
-								onRefresh={handleRefresh}
-								tintColor={themeColors.primary}
-								colors={[themeColors.primary]}
-							/>
-						}
-						ListEmptyComponent={!isLoading ? <EmptyTrackList /> : null}
-						ListFooterComponent={
-							isLoading && tracks.length > 0 && !refreshing ? (
-								<LoadingMoreTracks />
-							) : null
-						}
+					<DashboardHeader
+						navPaddingTop={navPaddingTop}
+						navPaddingBottom={navPaddingBottom}
+						navHeight={navHeight}
+						navTextScale={navTextScale}
+						navIconScale={navIconScale}
+						trackCount={pagination?.total}
+						isLoading={isLoading}
 					/>
+
+					{error && (
+						<View
+							style={{ backgroundColor: "transparent" }}
+							className="px-4 pb-2 pt-2"
+						>
+							<Alert variant="destructive" icon={AlertCircle}>
+								<AlertTitle>Error</AlertTitle>
+								<AlertDescription>{error}</AlertDescription>
+							</Alert>
+						</View>
+					)}
 				</View>
-			)}
+			</View>
 		</SafeAreaView>
 	);
 }
