@@ -32,7 +32,6 @@
         "clsx": "^2.1.1",
         "expo": "~55.0.23",
         "expo-asset": "~55.0.15",
-        "expo-audio": "~55.0.13",
         "expo-blur": "~55.0.14",
         "expo-build-properties": "~55.0.13",
         "expo-constants": "~55.0.14",
@@ -1087,8 +1086,6 @@
     "expo-asset": ["expo-asset@55.0.17", "", { "dependencies": { "@expo/image-utils": "^0.8.14", "expo-constants": "~55.0.16" }, "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-pK9HHJuFqjE8kDUcbMFsZj3Cz8WdXpvZHZmYl7ouFQp59P83BvHln6VnqPDGlO+/4929G0Lm8ZUzbONuNRhi9w=="],
 
     "expo-atlas": ["expo-atlas@0.4.3", "", { "dependencies": { "@expo/server": "^0.5.0", "arg": "^5.0.2", "chalk": "^4.1.2", "compression": "^1.7.4", "connect": "^3.7.0", "express": "^4.19.2", "freeport-async": "^2.0.0", "getenv": "^2.0.0", "morgan": "^1.10.0", "open": "^8.4.2", "serve-static": "^1.15.0", "stream-json": "^1.8.0" }, "peerDependencies": { "expo": "*" }, "bin": { "expo-atlas": "build/src/cli/bin.js" } }, "sha512-nN2bouxFvMsqZqLl0ka+eI9Ofida0PcuoE4v+7fHlgyp95X2cCL8Acf0nRKXmmIBEYazdw0d7BAOZfC0b41oxA=="],
-
-    "expo-audio": ["expo-audio@55.0.14", "", { "peerDependencies": { "expo": "*", "expo-asset": "*", "react": "*", "react-native": "*" } }, "sha512-Biy6ffKXrnKHgcWSVWLKVdWLNhV/pj1JWJeotY6nDR6fVe8mjXQDCvi6EbaSFPdffVHym6UB2siKzWUNSnG+kQ=="],
 
     "expo-blur": ["expo-blur@55.0.14", "", { "peerDependencies": { "expo": "*", "react": "*", "react-native": "*" } }, "sha512-NKyCKFWTNpX4CZSsiE1sgkqk/yvR1K0UTukuIbxVKoobB+yALLg1CFav0NqfdQqjhtoj5oEzP0Brlq92Z08Zfg=="],
 
