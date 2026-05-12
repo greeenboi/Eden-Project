@@ -16,9 +16,11 @@ export function PlayerArtwork({ artworkUrl, explicit }: PlayerArtworkProps) {
 				width: "100%",
 				aspectRatio: 1,
 				maxWidth: 320,
-				borderRadius: 12,
+				borderRadius: 18,
+				borderCurve: "continuous",
 				overflow: "hidden",
 				position: "relative",
+				boxShadow: "0 12px 32px rgba(0,0,0,0.35)",
 			}}
 		>
 			{artworkUrl ? (

@@ -1,5 +1,10 @@
+import { router } from "expo-router";
+import { AlertCircle, ArrowLeft } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { Image, StyleSheet, useColorScheme } from "react-native";
 import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BlurSurface } from "@/components/ui/blur-surface";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
@@ -8,10 +13,6 @@ import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import type { RepeatMode } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 import { usePlaybackStore } from "@/lib/stores/playback";
-import { router } from "expo-router";
-import { AlertCircle, ArrowLeft } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { StyleSheet, useColorScheme } from "react-native";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 import { SwipeablePlayer } from "./player/SwipeablePlayer";
 
@@ -245,6 +246,35 @@ export function PlayingSongContent({
 
 	return (
 		<View style={styles.container} className="bg-background flex-1">
+			{variant === "full" && currentTrack?.artworkUrl && (
+				<View
+					pointerEvents="none"
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+					}}
+				>
+					<Image
+						source={{ uri: currentTrack.artworkUrl }}
+						style={{ width: "100%", height: "100%", opacity: 0.5 }}
+						resizeMode="cover"
+						blurRadius={40}
+					/>
+					<BlurSurface
+						intensity={70}
+						style={{
+							position: "absolute",
+							top: 0,
+							left: 0,
+							right: 0,
+							bottom: 0,
+						}}
+					/>
+				</View>
+			)}
 			{showHeader && (
 				<View
 					style={{ backgroundColor: "transparent" }}

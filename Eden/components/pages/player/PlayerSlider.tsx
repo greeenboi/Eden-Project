@@ -85,15 +85,21 @@ export function PlayerSlider({
 
 	return (
 		<View style={{ backgroundColor: "transparent" }} className="px-8 pb-6">
-			<View key={`slider-full-${trackId ?? "none"}`}>{renderNativeSlider(40)}</View>
+			<View key={`slider-full-${trackId ?? "none"}`} style={{ backgroundColor: "transparent" }}>{renderNativeSlider(40)}</View>
 			<View
 				style={{ backgroundColor: "transparent" }}
 				className="flex-row justify-between"
 			>
-				<Text className="text-sm opacity-50">
+				<Text
+					className="text-sm opacity-50"
+					style={{ fontVariant: ["tabular-nums"] }}
+				>
 					{formatDuration(sliderValue)}
 				</Text>
-				<Text className="text-sm opacity-50">
+				<Text
+					className="text-sm opacity-50"
+					style={{ fontVariant: ["tabular-nums"] }}
+				>
 					{/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
 					{formatDuration(duration!)}
 				</Text>
