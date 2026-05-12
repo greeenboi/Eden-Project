@@ -1,7 +1,7 @@
 {
   "name": "eden",
   "main": "expo-router/entry",
-  "version": "2.1.6",
+  "version": "2.2.0",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -32,6 +32,7 @@
     "@rn-primitives/toggle": "^1.2.0",
     "@rn-primitives/toggle-group": "^1.2.0",
     "@rnrepo/expo-config-plugin": "^0.3.0-beta.3",
+    "@rntp/player": "^5.0.0",
     "@shopify/flash-list": "2.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
