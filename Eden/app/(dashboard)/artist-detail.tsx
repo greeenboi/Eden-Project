@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
 import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import { useAlbumStore } from "@/lib/actions/albums";
 import {
@@ -25,15 +26,18 @@ import {
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import { FlashList } from "@shopify/flash-list";
-import { useLocalSearchParams } from "expo-router";
-import { AlertCircle, Disc3 } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { AlertCircle, Disc3, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView } from "react-native";
+import { Image, Pressable, ScrollView, useColorScheme } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {
 	const { id } = useLocalSearchParams();
 	const artistId = Array.isArray(id) ? id[0] : id;
+
+	const colorScheme = useColorScheme();
+	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	const [currentArtist, setCurrentArtist] = useState<Artist | null>(null);
 	const [currentArtistStats, setCurrentArtistStats] =
@@ -244,7 +248,10 @@ export default function ArtistDetailScreen() {
 				{!isLoading && currentArtist && (
 					<>
 						{/* Artist Header */}
-						<View className="mb-6">
+						<View className="mb-6 relative">
+							<Button className="absolute z-50 mt-1" variant="ghost" size="sm" onPress={() => router.back()}>
+								<X size={24} color={themeColors.tint} />
+							</Button>
 							<ArtistProfile 
 								CurrentArtist={currentArtist} 
 								handlePlayArtist={handlePlayArtist} 
