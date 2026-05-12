@@ -1,4 +1,6 @@
+import { FlashList } from "@shopify/flash-list";
 import { View } from "@/components/Themed";
+import { BlurSurface } from "@/components/ui/blur-surface";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -10,7 +12,6 @@ import {
 	queueTrackRemoved,
 	trackPlayWithQueue,
 } from "@/lib/analytics";
-import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
 import { useCallback } from "react";
@@ -94,7 +95,13 @@ function QueueItem({
 				DeleteAction(themeColors, progress, drag)
 			}
 		>
-			<Pressable onPress={onPlay}>
+			<Pressable
+				onPress={onPlay}
+				style={({ pressed }) => ({
+					opacity: pressed ? 0.7 : 1,
+					transform: [{ scale: pressed ? 0.995 : 1 }],
+				})}
+			>
 				<View
 					className={`flex-row items-center py-2 px-2 gap-3 ${isCurrentTrack ? "bg-primary/20" : ""}`}
 				>
@@ -130,7 +137,14 @@ function QueueItem({
 					</View>
 
 					{/* Artwork */}
-					<Card className="w-12 h-12 p-0 overflow-hidden">
+					<Card
+						className="w-12 h-12 p-0 overflow-hidden"
+						style={{
+							borderRadius: 10,
+							borderCurve: "continuous",
+							boxShadow: "0 3px 8px rgba(0,0,0,0.18)",
+						}}
+					>
 						<CardContent className="p-0 w-full h-full bg-primary/10 items-center justify-center">
 							{track.artworkUrl ? (
 								<Image
@@ -156,7 +170,10 @@ function QueueItem({
 
 					{/* Duration */}
 					{track.duration && (
-						<Text className="text-sm opacity-50 pr-2">
+						<Text
+							className="text-sm opacity-50 pr-2"
+							style={{ fontVariant: ["tabular-nums"] }}
+						>
 							{formatDuration(track.duration)}
 						</Text>
 					)}
@@ -243,6 +260,37 @@ export default function QueueScreen() {
 	return (
 		<SafeAreaView className="flex-1">
 			<View className="flex-1">
+				{/* Blurred artwork backdrop */}
+				{currentTrack?.artworkUrl && (
+					<View
+						pointerEvents="none"
+						style={{
+							position: "absolute",
+							top: 0,
+							left: 0,
+							right: 0,
+							height: 320,
+						}}
+					>
+						<Image
+							source={{ uri: currentTrack.artworkUrl }}
+							style={{ width: "100%", height: "100%", opacity: 0.55 }}
+							resizeMode="cover"
+							blurRadius={28}
+						/>
+						<BlurSurface
+							intensity={50}
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								right: 0,
+								bottom: 0,
+							}}
+						/>
+					</View>
+				)}
+
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-2 py-3 border-b border-border">
 					<Button variant="ghost" size="sm" onPress={() => router.back()}>

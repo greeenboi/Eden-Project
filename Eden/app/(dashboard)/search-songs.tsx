@@ -87,11 +87,21 @@ function ArtistCircleCard({
 		<Pressable
 			onPress={() => onPress(artist.id)}
 			className="items-center mr-3"
-			style={{ width: size }}
+			style={({ pressed }) => ({
+				width: size,
+				opacity: pressed ? 0.85 : 1,
+				transform: [{ scale: pressed ? 0.96 : 1 }],
+			})}
 		>
 			<Avatar
 				alt={artist.name}
-				style={{ width: size, height: size, borderRadius: size / 2 }}
+				style={{
+					width: size,
+					height: size,
+					borderRadius: size / 2,
+					boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+					borderCurve: "continuous",
+				}}
 			>
 				{artist.avatarUrl ? (
 					<AvatarImage source={{ uri: artist.avatarUrl }} />
@@ -149,12 +159,22 @@ function TrackSquareCard({
 		<Pressable
 			onPress={() => onPress(track.id)}
 			className="mr-3"
-			style={{ width: size }}
+			style={({ pressed }) => ({
+				width: size,
+				opacity: pressed ? 0.9 : 1,
+				transform: [{ scale: pressed ? 0.97 : 1 }],
+			})}
 		>
 			<Card className="bg-transparent border-0 p-0">
 				<View
-					className={`${imageColor} items-center justify-center relative rounded-lg overflow-hidden`}
-					style={{ width: size, height: size }}
+					className={`${imageColor} items-center justify-center relative overflow-hidden`}
+					style={{
+						width: size,
+						height: size,
+						borderRadius: 14,
+						borderCurve: "continuous",
+						boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+					}}
 				>
 					{track.artworkUrl ? (
 						<Image
@@ -208,10 +228,19 @@ function TrackListItem({ track, index, onPress }: TrackListItemProps) {
 	return (
 		<Pressable
 			onPress={() => onPress(track.id)}
-			className="flex-row items-center px-4 py-2 gap-3 active:opacity-70"
+			className="flex-row items-center px-4 py-2 gap-3"
+			style={({ pressed }) => ({
+				opacity: pressed ? 0.7 : 1,
+				transform: [{ scale: pressed ? 0.99 : 1 }],
+			})}
 		>
 			<View
-				className={`${imageColor} items-center justify-center w-14 h-14 rounded-md overflow-hidden`}
+				className={`${imageColor} items-center justify-center w-14 h-14 overflow-hidden`}
+				style={{
+					borderRadius: 10,
+					borderCurve: "continuous",
+					boxShadow: "0 3px 8px rgba(0,0,0,0.12)",
+				}}
 			>
 				{track.artworkUrl ? (
 					<Image
@@ -259,11 +288,21 @@ function AlbumCard({ album, onPress, size = 140 }: AlbumCardProps) {
 		<Pressable
 			onPress={() => onPress(album.id)}
 			className="mr-3"
-			style={{ width: size }}
+			style={({ pressed }) => ({
+				width: size,
+				opacity: pressed ? 0.9 : 1,
+				transform: [{ scale: pressed ? 0.97 : 1 }],
+			})}
 		>
 			<View
-				className="bg-muted/30 items-center justify-center rounded-lg overflow-hidden"
-				style={{ width: size, height: size }}
+				className="bg-muted/30 items-center justify-center overflow-hidden"
+				style={{
+					width: size,
+					height: size,
+					borderRadius: 14,
+					borderCurve: "continuous",
+					boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+				}}
 			>
 				{album.artworkUrl ? (
 					<Image
