@@ -1,20 +1,23 @@
+import { BlurSurface } from "@/components/ui/blur-surface";
 import Colors from "@/constants/Colors";
 import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
 import { type Artist, fetchArtists } from "@/lib/actions/artists";
 import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { useTrackStore } from "@/lib/actions/tracks";
+import { type Track, useTrackStore } from "@/lib/actions/tracks";
 import { trackPlayWithQueue } from "@/lib/analytics";
+import { formatDuration } from "@/lib/utils";
 import {
 	Box,
 	HorizontalCenteredHeroCarousel,
 	Host,
 	RNHostView,
+	SuggestionChip,
 } from "@expo/ui/jetpack-compose";
 import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifiers";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Menu, Play } from "lucide-react-native";
+import { Disc, Menu, Play, Sparkles } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	Dimensions,
@@ -25,7 +28,15 @@ import {
 	View,
 	useColorScheme,
 } from "react-native";
-import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
+import Animated, {
+	Easing,
+	FadeIn,
+	FadeInDown,
+	useAnimatedStyle,
+	useSharedValue,
+	withRepeat,
+	withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const TRACK_STATUS_FILTER = "published";
@@ -247,6 +258,49 @@ export default function HomeScreen() {
 
 	const featuredTracks = useMemo(() => tracks.slice(0, 10), [tracks]);
 
+	const newReleases: Track[] = useMemo(() => {
+		return [...tracks]
+			.sort(
+				(a, b) =>
+					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+			)
+			.slice(0, 8);
+	}, [tracks]);
+
+	const genres: string[] = useMemo(() => {
+		const seen = new Set<string>();
+		for (const track of tracks) {
+			const g = track.genre?.trim();
+			if (g && !seen.has(g.toLowerCase())) {
+				seen.add(g.toLowerCase());
+			}
+			if (seen.size >= 10) break;
+		}
+		return Array.from(seen).map(
+			(g) => g.charAt(0).toUpperCase() + g.slice(1),
+		);
+	}, [tracks]);
+
+	const quickPicks: Track[] = useMemo(() => {
+		if (tracks.length === 0) return [];
+		// Deterministic pseudo-shuffle so it doesn't reorder every render
+		const len = tracks.length;
+		const seed = (n: number) => (n * 9301 + 49297) % 233280;
+		const picked: Track[] = [];
+		const used = new Set<number>();
+		let i = 0;
+		while (picked.length < Math.min(4, len) && i < len * 3) {
+			const idx = seed(i + 7) % len;
+			if (!used.has(idx)) {
+				used.add(idx);
+				const track = tracks[idx];
+				if (track) picked.push(track);
+			}
+			i += 1;
+		}
+		return picked;
+	}, [tracks]);
+
 	const handleOpenDrawer = () => {
 		navigation.dispatch(DrawerActions.openDrawer());
 	};
@@ -273,6 +327,22 @@ export default function HomeScreen() {
 	const handleArtistPress = useCallback((artistId: string) => {
 		router.push(`/artist-detail?id=${artistId}`);
 	}, []);
+
+	const handleGenrePress = useCallback((genre: string) => {
+		router.push(`/search-songs?genre=${encodeURIComponent(genre)}`);
+	}, []);
+
+	const playPulse = useSharedValue(1);
+	useEffect(() => {
+		playPulse.value = withRepeat(
+			withTiming(1.06, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+			-1,
+			true,
+		);
+	}, [playPulse]);
+	const playPulseStyle = useAnimatedStyle(() => ({
+		transform: [{ scale: playPulse.value }],
+	}));
 
 	const renderTopArtists = () => {
 		if (isArtistsLoading) {
@@ -361,23 +431,25 @@ export default function HomeScreen() {
 							</Text>
 						</View>
 
-						<Pressable
-							onPress={() => {
-								const firstTrack = featuredTracks[0];
-								if (firstTrack) {
-									handleTrackPress(firstTrack.id);
-								}
-							}}
-							className="h-32 w-32 items-center justify-center rounded-full"
-							style={({ pressed }) => ({
-								backgroundColor: themeColors.accent,
-								boxShadow: "0 10px 24px rgba(0,0,0,0.25)",
-								opacity: pressed ? 0.85 : 1,
-								transform: [{ scale: pressed ? 0.94 : 1 }],
-							})}
-						>
-							<Play size={56} color={themeColors.mutedForeground} fill={themeColors.muted} />
-						</Pressable>
+						<Animated.View style={playPulseStyle}>
+							<Pressable
+								onPress={() => {
+									const firstTrack = featuredTracks[0];
+									if (firstTrack) {
+										handleTrackPress(firstTrack.id);
+									}
+								}}
+								className="h-32 w-32 items-center justify-center rounded-full"
+								style={({ pressed }) => ({
+									backgroundColor: themeColors.accent,
+									boxShadow: `0 10px 24px ${themeColors.primary}40`,
+									opacity: pressed ? 0.85 : 1,
+									transform: [{ scale: pressed ? 0.94 : 1 }],
+								})}
+							>
+								<Play size={56} color={themeColors.mutedForeground} fill={themeColors.muted} />
+							</Pressable>
+						</Animated.View>
 					</View>
 
 					<Animated.View entering={FadeInDown.duration(360).delay(80).springify().damping(16)}>
@@ -389,10 +461,318 @@ export default function HomeScreen() {
 
 					<Animated.View
 						entering={FadeInDown.duration(380).delay(140).springify().damping(16)}
-						style={{ marginTop: 30, paddingBottom: 24 }}
+						style={{ marginTop: 30, paddingBottom: 12 }}
 					>
 						{renderTopArtists()}
 					</Animated.View>
+
+					{/* New Releases */}
+					{newReleases.length > 0 && (
+						<Animated.View
+							entering={FadeInDown.duration(380).delay(180).springify().damping(16)}
+							style={{ marginTop: 12 }}
+						>
+							<View
+								style={{
+									flexDirection: "row",
+									alignItems: "center",
+									justifyContent: "space-between",
+									paddingHorizontal: 4,
+									marginBottom: 12,
+								}}
+							>
+								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+									<Sparkles size={20} color={themeColors.primary} />
+									<Text
+										style={{
+											color: themeColors.text,
+											fontSize: 22,
+											fontWeight: "700",
+										}}
+									>
+										New Releases
+									</Text>
+								</View>
+								<Pressable
+									onPress={() => router.push("/allsongs")}
+									style={({ pressed }) => ({
+										opacity: pressed ? 0.6 : 1,
+									})}
+								>
+									<Text
+										style={{
+											color: themeColors.primary,
+											fontSize: 14,
+											fontWeight: "600",
+										}}
+									>
+										See all
+									</Text>
+								</Pressable>
+							</View>
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								contentContainerStyle={{ paddingHorizontal: 4, gap: 14 }}
+							>
+								{newReleases.map((track, idx) => (
+									<Pressable
+										key={track.id}
+										onPress={() => handleTrackPress(track.id)}
+										style={({ pressed }) => ({
+											width: 168,
+											opacity: pressed ? 0.9 : 1,
+											transform: [{ scale: pressed ? 0.97 : 1 }],
+										})}
+									>
+										<View
+											style={{
+												width: 168,
+												height: 168,
+												borderRadius: 16,
+												borderCurve: "continuous",
+												overflow: "hidden",
+												backgroundColor: `${themeColors.primary}1a`,
+											}}
+										>
+											{track.artworkUrl ? (
+												<Image
+													source={{ uri: track.artworkUrl }}
+													style={{ width: "100%", height: "100%" }}
+													resizeMode="cover"
+												/>
+											) : (
+												<View
+													style={{
+														width: "100%",
+														height: "100%",
+														alignItems: "center",
+														justifyContent: "center",
+													}}
+												>
+													<Disc size={48} color={themeColors.primary} opacity={0.5} />
+												</View>
+											)}
+											{idx === 0 && (
+												<View
+													style={{
+														position: "absolute",
+														top: 8,
+														left: 8,
+														paddingHorizontal: 8,
+														paddingVertical: 4,
+														borderRadius: 999,
+														backgroundColor: themeColors.primary,
+													}}
+												>
+													<Text
+														style={{
+															color: themeColors.primaryForeground,
+															fontSize: 10,
+															fontWeight: "700",
+															letterSpacing: 0.4,
+														}}
+													>
+														LATEST
+													</Text>
+												</View>
+											)}
+										</View>
+										<Text
+											style={{
+												color: themeColors.text,
+												fontSize: 14,
+												fontWeight: "600",
+												marginTop: 8,
+											}}
+											numberOfLines={1}
+										>
+											{track.title}
+										</Text>
+										{track.duration ? (
+											<Text
+												style={{
+													color: themeColors.mutedForeground,
+													fontSize: 12,
+													marginTop: 2,
+													fontVariant: ["tabular-nums"],
+												}}
+											>
+												{formatDuration(track.duration)}
+											</Text>
+										) : null}
+									</Pressable>
+								))}
+							</ScrollView>
+						</Animated.View>
+					)}
+
+					{/* Browse Genres */}
+					{genres.length > 0 && (
+						<Animated.View
+							entering={FadeInDown.duration(380).delay(220).springify().damping(16)}
+							style={{ marginTop: 28 }}
+						>
+							<Text
+								style={{
+									color: themeColors.text,
+									fontSize: 22,
+									fontWeight: "700",
+									paddingHorizontal: 4,
+									marginBottom: 12,
+								}}
+							>
+								Browse Genres
+							</Text>
+							<ScrollView
+								horizontal
+								showsHorizontalScrollIndicator={false}
+								contentContainerStyle={{ paddingHorizontal: 4, gap: 10 }}
+							>
+								{genres.map((genre, idx) => (
+									<Host key={genre} matchContents>
+										<SuggestionChip
+											onClick={() => handleGenrePress(genre)}
+											colors={{
+												containerColor:
+													idx % 2 === 0
+														? `${themeColors.primary}`
+														: `${themeColors.accent}`,
+												labelColor: themeColors.text,
+											}}
+											border={{
+												width: 1,
+												color: `${themeColors.primary}`,
+											}}
+										>
+											<SuggestionChip.Label>
+												<Text
+													style={{
+														color: themeColors.text,
+														fontSize: 14,
+														fontWeight: "600",
+													}}
+												>
+													{genre}
+												</Text>
+											</SuggestionChip.Label>
+										</SuggestionChip>
+									</Host>
+								))}
+							</ScrollView>
+						</Animated.View>
+					)}
+
+					{/* Quick Picks */}
+					{quickPicks.length > 0 && (
+						<Animated.View
+							entering={FadeInDown.duration(380).delay(260).springify().damping(16)}
+							style={{ marginTop: 28, paddingBottom: 32 }}
+						>
+							<Text
+								style={{
+									color: themeColors.text,
+									fontSize: 22,
+									fontWeight: "700",
+									paddingHorizontal: 4,
+									marginBottom: 12,
+								}}
+							>
+								Quick Picks
+							</Text>
+							<View
+								style={{
+									flexDirection: "row",
+									flexWrap: "wrap",
+									gap: 10,
+								}}
+							>
+								{quickPicks.map((track) => (
+									<Pressable
+										key={track.id}
+										onPress={() => handleTrackPress(track.id)}
+										style={({ pressed }) => ({
+											width: (SCREEN_WIDTH - 32 - 10) / 2,
+											opacity: pressed ? 0.9 : 1,
+											transform: [{ scale: pressed ? 0.98 : 1 }],
+										})}
+									>
+										<BlurSurface
+											intensity={40}
+											style={{
+												flexDirection: "row",
+												alignItems: "center",
+												padding: 8,
+												gap: 10,
+												borderRadius: 14,
+												borderCurve: "continuous",
+												overflow: "hidden",
+												borderWidth: 0
+											}}
+										>
+											<View
+												style={{
+													width: 56,
+													height: 56,
+													borderRadius: 10,
+													borderCurve: "continuous",
+													overflow: "hidden",
+													backgroundColor: `${themeColors.primary}26`,
+													alignItems: "center",
+													justifyContent: "center",
+												}}
+											>
+												{track.artworkUrl ? (
+													<Image
+														source={{ uri: track.artworkUrl }}
+														style={{ width: "100%", height: "100%" }}
+														resizeMode="cover"
+													/>
+												) : (
+													<Disc size={26} color={themeColors.primary} opacity={0.6} />
+												)}
+											</View>
+											<View style={{ flex: 1 }}>
+												<Text
+													style={{
+														color: themeColors.text,
+														fontSize: 13,
+														fontWeight: "600",
+													}}
+													numberOfLines={1}
+												>
+													{track.title}
+												</Text>
+												{track.genre ? (
+													<Text
+														style={{
+															color: themeColors.mutedForeground,
+															fontSize: 11,
+															marginTop: 2,
+														}}
+														numberOfLines={1}
+													>
+														{track.genre}
+													</Text>
+												) : track.duration ? (
+													<Text
+														style={{
+															color: themeColors.mutedForeground,
+															fontSize: 11,
+															marginTop: 2,
+															fontVariant: ["tabular-nums"],
+														}}
+													>
+														{formatDuration(track.duration)}
+													</Text>
+												) : null}
+											</View>
+										</BlurSurface>
+									</Pressable>
+								))}
+							</View>
+						</Animated.View>
+					)}
 
 					{isLoading && (
 						<Text style={{ color: themeColors.tint, marginTop: 10 }}>
