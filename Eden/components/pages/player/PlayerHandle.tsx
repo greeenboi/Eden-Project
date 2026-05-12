@@ -1,8 +1,12 @@
 import Colors from "@/constants/Colors";
-import { usePlaybackStore } from "@/lib/stores/playback";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
 import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
+import TrackPlayer, {
+	PlaybackState,
+	usePlaybackState,
+	useProgress,
+} from "@rntp/player";
 import type React from "react";
 import { useCallback, useMemo } from "react";
 import {
@@ -33,31 +37,29 @@ const PlayerHandle: React.FC<PlayerHandleProps> = ({
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	// Playback state from shared store
-	const currentTime = usePlaybackStore((state) => state.currentTime);
-	const duration = usePlaybackStore((state) => state.duration);
-	const isLoaded = usePlaybackStore((state) => state.isLoaded);
-	const isLoading = usePlaybackStore((state) => state.isLoading);
-	const seekTo = usePlaybackStore((state) => state.seekTo);
+	const { position, duration } = useProgress();
+	const playbackState = usePlaybackState();
+	const isLoaded =
+		playbackState === PlaybackState.Ready ||
+		playbackState === PlaybackState.Ended;
+	const isLoading = playbackState === PlaybackState.Buffering;
 
-	// Calculate safe slider values
 	const sliderMax = useMemo(() => {
 		if (!Number.isFinite(duration) || duration <= 0) return 1;
 		return duration;
 	}, [duration]);
 
 	const sliderValue = useMemo(() => {
-		const value = currentTime;
-		if (!Number.isFinite(value)) return 0;
-		return Math.min(sliderMax, Math.max(0, value));
-	}, [currentTime, sliderMax]);
+		if (!Number.isFinite(position)) return 0;
+		return Math.min(sliderMax, Math.max(0, position));
+	}, [position, sliderMax]);
 
 	const handleSlidingComplete = useCallback(
 		(value: number) => {
-			if (!isLoaded || !Number.isFinite(value) || !seekTo) return;
-			seekTo(Math.min(sliderMax, Math.max(0, value)));
+			if (!isLoaded || !Number.isFinite(value)) return;
+			TrackPlayer.seekTo(Math.min(sliderMax, Math.max(0, value)));
 		},
-		[isLoaded, sliderMax, seekTo],
+		[isLoaded, sliderMax],
 	);
 
 	// Animated styles for the regular handle

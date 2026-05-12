@@ -6,7 +6,6 @@ import {
 	type RepeatMode,
 	type ShuffleMode,
 	selectCurrentIndex,
-	selectCurrentTrackId,
 	selectHasNext,
 	selectHasPrevious,
 	selectQueue,
@@ -17,12 +16,9 @@ import {
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
 import {
-	addMediaNotificationResponseListener,
-	dismissMediaNotification,
-	setupMediaNotifications,
-	showMediaNotification,
-} from "@/lib/services/media-notifications";
-import { usePlaybackStore } from "@/lib/stores/playback";
+	rebuildRntpQueueWindow,
+	shiftWindowToActive,
+} from "@/lib/services/track-player-adapter";
 import { THEME } from "@/lib/theme";
 import {
 	BottomSheetModal,
@@ -30,6 +26,7 @@ import {
 	BottomSheetScrollView,
 	useBottomSheet,
 } from "@gorhom/bottom-sheet";
+import TrackPlayer, { Event } from "@rntp/player";
 import {
 	type ReactNode,
 	createContext,
@@ -207,31 +204,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const repeatMode = useQueueStore(selectRepeatMode);
 	const shuffleMode = useQueueStore(selectShuffleMode);
 	const queueSource = useQueueStore(selectQueueSource);
-	const currentTrackId = useQueueStore(selectCurrentTrackId);
-
-	// Playback store subscription scoped to isPlaying only
-	const isPlaying = usePlaybackStore((state) => state.isPlaying);
-
-	// Track if notifications are set up
-	const notificationsSetupRef = useRef(false);
-
-	// Set up notifications on mount
-	useEffect(() => {
-		if (notificationsSetupRef.current) {
-			console.log("[GlobalPlayer] Notifications already set up, skipping");
-			return;
-		}
-		notificationsSetupRef.current = true;
-
-		console.log("[GlobalPlayer] Setting up notifications...");
-		setupMediaNotifications()
-			.then((success) => {
-				console.log("[GlobalPlayer] Notification setup result:", success);
-			})
-			.catch((err) => {
-				console.warn("[GlobalPlayer] Failed to setup notifications:", err);
-			});
-	}, []);
 
 	const snapPoints = useMemo(() => ["20%", "98%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
@@ -315,17 +287,28 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	);
 
 	const skipToNext = useCallback(() => {
-		const nextTrack = skipToNextInQueue();
-		if (nextTrack) {
-			setSelectedTrackId(nextTrack.id);
+		// Prefer RNTP's native skip — MediaItemTransition will sync zustand and
+		// reshape the window without resetting playback. Falls back to zustand
+		// if we're at the edge of RNTP's window.
+		const rntpQueue = TrackPlayer.getQueue();
+		const activeIdx = TrackPlayer.getActiveMediaItemIndex();
+		if (activeIdx !== null && activeIdx < rntpQueue.length - 1) {
+			TrackPlayer.skipToNext();
+			return;
 		}
+		const nextTrack = skipToNextInQueue();
+		if (nextTrack) setSelectedTrackId(nextTrack.id);
 	}, [skipToNextInQueue]);
 
 	const skipToPrevious = useCallback(() => {
-		const prevTrack = skipToPreviousInQueue();
-		if (prevTrack) {
-			setSelectedTrackId(prevTrack.id);
+		const rntpQueue = TrackPlayer.getQueue();
+		const activeIdx = TrackPlayer.getActiveMediaItemIndex();
+		if (activeIdx !== null && activeIdx > 0) {
+			TrackPlayer.skipToPrevious();
+			return;
 		}
+		const prevTrack = skipToPreviousInQueue();
+		if (prevTrack) setSelectedTrackId(prevTrack.id);
 	}, [skipToPreviousInQueue]);
 
 	const addToQueue = useCallback(
@@ -383,134 +366,62 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			? queue[currentIndex - 1]?.artworkUrl
 			: null;
 
-	// Current track for notifications
-	const currentTrack =
-		currentIndex >= 0 && currentIndex < queue.length
-			? queue[currentIndex]
-			: null;
-
-	const notificationDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
-		null,
+	// Sync zustand current → UI selectedTrackId (covers transitions driven from
+	// the background-service while the app was locked).
+	const currentTrackIdFromQueue = useQueueStore(
+		(s) =>
+			s.currentIndex >= 0 && s.currentIndex < s.queue.length
+				? s.queue[s.currentIndex]?.id ?? null
+				: null,
 	);
-	const lastNotificationSignatureRef = useRef<string | null>(null);
-
-	// Update notification when track or playback state changes
 	useEffect(() => {
-		console.log("[GlobalPlayer] Notification effect triggered");
-		console.log("[GlobalPlayer] - isPlayerVisible:", isPlayerVisible);
-		console.log(
-			"[GlobalPlayer] - currentTrack:",
-			currentTrack?.title ?? "none",
+		if (!currentTrackIdFromQueue) return;
+		setSelectedTrackId(currentTrackIdFromQueue);
+	}, [currentTrackIdFromQueue]);
+
+	// RNTP queue mirrors a [prev?, current, next?] window of zustand so the
+	// notification's Next/Previous buttons show (Media3 hides them when the
+	// timeline has no successor/predecessor MediaItem) and native auto-advance
+	// works on lockscreen. Only kicks in when zustand contains the track —
+	// single-track playTrack mode falls through to useTrackAudioPlayer.
+	const rebuildSignatureRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (!isPlayerVisible || !selectedTrackId) return;
+		const inZustandQueue = queue.some((t) => t.id === selectedTrackId);
+		if (!inZustandQueue) return;
+		// If RNTP is already playing this track (e.g. MediaItemTransition just
+		// updated zustand → selectedTrackId), don't tear down the window.
+		if (TrackPlayer.getActiveMediaItem()?.mediaId === selectedTrackId) {
+			rebuildSignatureRef.current = `${selectedTrackId}|${queue.length}`;
+			return;
+		}
+		const sig = `${selectedTrackId}|${queue.length}`;
+		if (rebuildSignatureRef.current === sig) return;
+		rebuildSignatureRef.current = sig;
+		void rebuildRntpQueueWindow();
+	}, [isPlayerVisible, selectedTrackId, queue]);
+
+	// When the player transitions to a new MediaItem (native auto-advance at
+	// track end, native Next/Previous, lockscreen buttons), reshape the window
+	// without resetting playback.
+	useEffect(() => {
+		const sub = TrackPlayer.addEventListener(
+			Event.MediaItemTransition,
+			(e) => {
+				if (e.index < 0) return;
+				void shiftWindowToActive(e.index);
+			},
 		);
-		console.log("[GlobalPlayer] - isPlaying:", isPlaying);
-		console.log("[GlobalPlayer] - hasNext:", hasNext);
-		console.log("[GlobalPlayer] - hasPrevious:", hasPrevious);
-
-		if (!isPlayerVisible || !currentTrack) {
-			console.log("[GlobalPlayer] No player or track, dismissing notification");
-			if (notificationDebounceRef.current) {
-				clearTimeout(notificationDebounceRef.current);
-				notificationDebounceRef.current = null;
-			}
-			lastNotificationSignatureRef.current = null;
-			// Dismiss notification when player is hidden
-			dismissMediaNotification().catch(() => {});
-			return;
-		}
-
-		const signature = [
-			currentTrackId,
-			isPlaying ? "1" : "0",
-			hasNext ? "1" : "0",
-			hasPrevious ? "1" : "0",
-		].join("|");
-
-		if (signature === lastNotificationSignatureRef.current) {
-			return;
-		}
-
-		if (notificationDebounceRef.current) {
-			clearTimeout(notificationDebounceRef.current);
-		}
-
-		notificationDebounceRef.current = setTimeout(() => {
-			console.log("[GlobalPlayer] Showing notification for:", currentTrack.title);
-			showMediaNotification({
-				track: currentTrack,
-				isPlaying,
-				hasNext,
-				hasPrevious,
-			})
-				.then(() => {
-					lastNotificationSignatureRef.current = signature;
-					console.log("[GlobalPlayer] showMediaNotification completed");
-				})
-				.catch((err) => {
-					console.warn("[GlobalPlayer] Failed to show notification:", err);
-				});
-		}, 300);
-
-		return () => {
-			if (notificationDebounceRef.current) {
-				clearTimeout(notificationDebounceRef.current);
-				notificationDebounceRef.current = null;
-			}
-		};
-	}, [
-		currentTrackId,
-		isPlaying,
-		hasNext,
-		hasPrevious,
-		isPlayerVisible,
-		currentTrack,
-	]);
-
-	// Listen for notification action responses (play/pause/next/previous)
-	useEffect(() => {
-		console.log("[GlobalPlayer] Setting up notification response listener");
-		const subscription = addMediaNotificationResponseListener((action) => {
-			console.log("[GlobalPlayer] Notification action received:", action);
-			switch (action) {
-				case "PLAY":
-				case "PAUSE":
-					// Toggle playback via the registered callback
-					console.log("[GlobalPlayer] Toggling playback");
-					usePlaybackStore.getState().togglePlayback?.();
-					break;
-				case "NEXT": {
-					console.log("[GlobalPlayer] Skipping to next");
-					skipToNextInQueue();
-					const nextTrack = useQueueStore.getState().getCurrentTrack();
-					if (nextTrack) {
-						setSelectedTrackId(nextTrack.id);
-					}
-					break;
-				}
-				case "PREVIOUS": {
-					console.log("[GlobalPlayer] Skipping to previous");
-					skipToPreviousInQueue();
-					const prevTrack = useQueueStore.getState().getCurrentTrack();
-					if (prevTrack) {
-						setSelectedTrackId(prevTrack.id);
-					}
-					break;
-				}
-			}
-		});
-
-		return () => {
-			console.log("[GlobalPlayer] Removing notification response listener");
-			subscription.remove();
-		};
-	}, [skipToNextInQueue, skipToPreviousInQueue]);
+		return () => sub.remove();
+	}, []);
 
 	const dismissPlayer = useCallback(() => {
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
 		clearQueue();
-		// Dismiss notification when player is dismissed
-		dismissMediaNotification().catch(() => {});
+		TrackPlayer.stop();
+		TrackPlayer.clear();
 	}, [clearQueue]);
 
 	const expandPlayer = useCallback(() => {

@@ -12,7 +12,6 @@ import Colors from "@/constants/Colors";
 import { useTrackAudioPlayer } from "@/lib/AudioPlayer";
 import type { RepeatMode } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
-import { usePlaybackStore } from "@/lib/stores/playback";
 import { AnimatedPlayerContent } from "./player/AnimatedPlayerContent";
 import { SwipeablePlayer } from "./player/SwipeablePlayer";
 
@@ -94,75 +93,15 @@ export function PlayingSongContent({
 			onTrackEnd,
 		});
 
-	// Sync playback state to shared store for handle slider
-	const updatePlayback = usePlaybackStore((state) => state.updatePlayback);
-	const registerSeekCallback = usePlaybackStore(
-		(state) => state.registerSeekCallback,
-	);
-	const unregisterSeekCallback = usePlaybackStore(
-		(state) => state.unregisterSeekCallback,
-	);
-	const resetPlayback = usePlaybackStore((state) => state.reset);
-
+	// Sync player.loop with repeatMode - loop single track when repeatMode is "one".
 	useEffect(() => {
-		updatePlayback({
-			currentTime: status.currentTime ?? 0,
-			duration: status.duration ?? 0,
-			isLoaded: status.isLoaded,
-			isPlaying: status.playing,
-			isLoading: loadingStream,
-		});
-	}, [
-		status.currentTime,
-		status.duration,
-		status.isLoaded,
-		status.playing,
-		loadingStream,
-		updatePlayback,
-	]);
-
-	// Sync player.loop with repeatMode - loop single track when repeatMode is "one"
-	// Re-apply after each track loads since player.replace() may reset the loop setting
-	useEffect(() => {
-		if (!status.isLoaded) return; // Only set loop once track is loaded
+		if (!status.isLoaded) return;
 		const shouldLoop = repeatMode === "one";
 		if (player.loop !== shouldLoop) {
 			// eslint-disable-next-line react-compiler/react-compiler
 			player.loop = shouldLoop;
 		}
 	}, [repeatMode, player, status.isLoaded]);
-
-	// Register seek callback so handle slider can control playback
-	useEffect(() => {
-		const seekCallback = (time: number) => {
-			if (status.isLoaded) {
-				player.seekTo(time);
-			}
-		};
-		registerSeekCallback(seekCallback);
-		return () => {
-			unregisterSeekCallback();
-			resetPlayback();
-		};
-	}, [
-		player,
-		status.isLoaded,
-		registerSeekCallback,
-		unregisterSeekCallback,
-		resetPlayback,
-	]);
-
-	// Register toggle playback callback for notification controls
-	useEffect(() => {
-		const toggle = () => togglePlayback();
-		const playbackStore = usePlaybackStore.getState();
-		if (playbackStore.registerToggleCallback) {
-			playbackStore.registerToggleCallback(toggle);
-		}
-		return () => {
-			usePlaybackStore.getState().unregisterToggleCallback?.();
-		};
-	}, [togglePlayback]);
 
 	const pendingSeekRef = useRef<number | null>(null);
 
