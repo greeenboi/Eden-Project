@@ -1,11 +1,16 @@
-import type { AudioMode } from "expo-audio";
-import {
-	setAudioModeAsync,
-	setIsAudioActiveAsync,
-	useAudioPlayer,
-	useAudioPlayerStatus,
-} from "expo-audio";
+import TrackPlayer, {
+	Event,
+	type MediaItem,
+	PlaybackState,
+	RepeatMode,
+	useActiveMediaItem,
+	useIsPlaying,
+	usePlaybackState,
+	useProgress,
+} from "@rntp/player";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueueStore } from "@/lib/actions/queue";
+import { useTrackStore } from "@/lib/actions/tracks";
 
 type FetchStream = (trackId: string) => Promise<{ streamUrl: string }>;
 
@@ -17,7 +22,6 @@ type UseTrackAudioPlayerOptions = {
 	updateInterval?: number;
 	onError?: (error: unknown) => void;
 	onTrackEnd?: () => void;
-	audioMode?: Partial<AudioMode>;
 };
 
 type AudioStatusSnapshot = {
@@ -26,41 +30,59 @@ type AudioStatusSnapshot = {
 	isBuffering: boolean;
 	isLoaded: boolean;
 	playing: boolean;
-	didJustFinish?: boolean;
+	didJustFinish: boolean;
 };
 
-const fallbackStatus: AudioStatusSnapshot = {
-	currentTime: 0,
-	duration: 0,
-	isBuffering: false,
-	isLoaded: false,
-	playing: false,
-	didJustFinish: false,
+type PlayerFacade = {
+	play: () => void;
+	pause: () => void;
+	seekTo: (position: number) => void;
+	/** Replace the currently loaded media (clears queue, sets single item, plays). */
+	replace: (url: string, item?: { title?: string; artist?: string; artworkUrl?: string; duration?: number; mediaId?: string }) => void;
+	loop: boolean;
 };
-
-const defaultBackgroundAudioMode: Partial<AudioMode> = {
-	playsInSilentMode: true,
-	shouldPlayInBackground: true,
-	interruptionModeAndroid: "duckOthers",
-	interruptionMode: "mixWithOthers",
-};
-
-const NEAR_END_THRESHOLD_SECONDS = 5;
 
 export function useTrackAudioPlayer({
 	trackId,
 	fetchStream,
 	enabled = true,
 	skipSeconds = 10,
-	updateInterval = 100,
+	updateInterval = 250,
 	onError,
 	onTrackEnd,
-	audioMode,
 }: UseTrackAudioPlayerOptions) {
-	const playerOptions = useMemo(() => ({ updateInterval }), [updateInterval]);
-	const player = useAudioPlayer(null, playerOptions);
-	const rawStatus = useAudioPlayerStatus(player) as AudioStatusSnapshot | null;
-	const status = rawStatus ?? fallbackStatus;
+	const playbackState = usePlaybackState();
+	const isPlayingNow = useIsPlaying();
+	// updateInterval comes in as milliseconds (preserved from legacy expo-audio API);
+	// useProgress wants seconds, so divide. Clamp to a sane floor.
+	const intervalSeconds = Math.max(0.05, updateInterval / 1000);
+	const progress = useProgress(intervalSeconds);
+	const activeItem = useActiveMediaItem();
+	const activeItemMatchesTrack =
+		!trackId || activeItem?.mediaId === trackId;
+
+	const status: AudioStatusSnapshot = useMemo(
+		() => ({
+			currentTime: activeItemMatchesTrack ? progress.position : 0,
+			duration: activeItemMatchesTrack ? progress.duration : 0,
+			isBuffering: playbackState === PlaybackState.Buffering,
+			isLoaded:
+				activeItemMatchesTrack &&
+				(playbackState === PlaybackState.Ready ||
+					playbackState === PlaybackState.Ended),
+			playing: activeItemMatchesTrack && isPlayingNow,
+			didJustFinish:
+				activeItemMatchesTrack && playbackState === PlaybackState.Ended,
+		}),
+		[
+			progress.position,
+			progress.duration,
+			playbackState,
+			isPlayingNow,
+			activeItemMatchesTrack,
+		],
+	);
+
 	const fetchStreamRef = useRef(fetchStream);
 	const onErrorRef = useRef(onError);
 	const onTrackEndRef = useRef(onTrackEnd);
@@ -77,72 +99,38 @@ export function useTrackAudioPlayer({
 		onTrackEndRef.current = onTrackEnd;
 	}, [onTrackEnd]);
 
-	const safePause = useCallback(() => {
-		try {
-			player.pause();
-		} catch (err) {
-			// `useAudioPlayer` releases the native object on unmount; ignore pauses after release
-			console.warn("[useTrackAudioPlayer] pause failed", err);
-		}
-	}, [player]);
-
-	const safePauseRef = useRef(safePause);
-
-	useEffect(() => {
-		safePauseRef.current = safePause;
-	}, [safePause]);
-
-	const [streamUrl, setStreamUrl] = useState<string | null>(null);
 	const [loadingStream, setLoadingStream] = useState(false);
 	const [streamError, setStreamError] = useState<unknown>(null);
-	const [audioSessionReady, setAudioSessionReady] = useState(false);
 	const [volume, setVolumeState] = useState(1);
-	// Track whether we've actually loaded audio to avoid pausing an unused player
-	const hasLoadedAudio = useRef(false);
+	const [loop, setLoopState] = useState(false);
 
 	useEffect(() => {
-		// expo-audio controls volume via imperative player property.
-		// eslint-disable-next-line react-compiler/react-compiler
-		player.volume = volume;
-	}, [player, volume]);
+		TrackPlayer.setVolume(volume);
+	}, [volume]);
 
 	useEffect(() => {
-		if (!enabled || audioSessionReady) return;
+		TrackPlayer.setRepeatMode(loop ? RepeatMode.One : RepeatMode.Off);
+	}, [loop]);
 
-		let cancelled = false;
-		(async () => {
-			try {
-				await setAudioModeAsync(audioMode ?? defaultBackgroundAudioMode);
-				if (cancelled) return;
-				await setIsAudioActiveAsync(true);
-				if (!cancelled) setAudioSessionReady(true);
-			} catch (err) {
-				if (cancelled) return;
-				setStreamError(err);
-				onErrorRef.current?.(err);
-			}
-		})();
-
-		return () => {
-			cancelled = true;
-		};
-	}, [audioMode, audioSessionReady, enabled]);
-
+	// Load the active trackId by fetching its stream URL and pushing into RNTP.
+	// Only handles the single-track playTrack(trackId) path — when zustand's
+	// queue owns the track, GlobalPlayerProvider's window-mirror loads it.
 	useEffect(() => {
 		if (!trackId || !enabled) {
-			setStreamUrl(null);
-			setStreamError(null);
-			setLoadingStream(false);
-			// Only pause if we've actually loaded audio before
-			if (hasLoadedAudio.current) {
-				safePauseRef.current();
-				hasLoadedAudio.current = false;
-			}
 			return;
 		}
 
-		// Reset the flag when starting to load a new track
-		hasLoadedAudio.current = false;
+		// Skip the round-trip if RNTP is already playing this track
+		// (e.g. background service drove the change while we were unmounted).
+		if (TrackPlayer.getActiveMediaItem()?.mediaId === trackId) {
+			return;
+		}
+
+		// If the track is in zustand's queue, the window-mirror in
+		// GlobalPlayerProvider handles loading and Next/Prev navigation.
+		if (useQueueStore.getState().queue.some((t) => t.id === trackId)) {
+			return;
+		}
 
 		let cancelled = false;
 		setLoadingStream(true);
@@ -151,7 +139,39 @@ export function useTrackAudioPlayer({
 		fetchStreamRef
 			.current(trackId)
 			.then((response) => {
-				if (!cancelled) setStreamUrl(response.streamUrl);
+				if (cancelled) return;
+				const { streamUrl } = response;
+				const responseTrack = (response as { track?: { title?: string; artworkUrl?: string | null; duration?: number | null } }).track;
+				const queueTrack = useQueueStore
+					.getState()
+					.queue.find((t) => t.id === trackId);
+				const detailedTrack = useTrackStore.getState().currentTrack;
+				const detailedMatchesTrack =
+					detailedTrack && detailedTrack.id === trackId;
+				const detailedArtistName = detailedMatchesTrack
+					? detailedTrack?.artist?.name
+					: undefined;
+				const detailedAlbumTitle = detailedMatchesTrack
+					? detailedTrack?.album?.title
+					: undefined;
+
+				const item: MediaItem = {
+					mediaId: trackId,
+					url: streamUrl,
+					title: queueTrack?.title ?? responseTrack?.title,
+					artist: queueTrack?.artistName ?? detailedArtistName,
+					albumTitle: detailedAlbumTitle,
+					artworkUrl:
+						queueTrack?.artworkUrl ??
+						responseTrack?.artworkUrl ??
+						undefined,
+					duration:
+						queueTrack?.duration ??
+						responseTrack?.duration ??
+						undefined,
+				};
+				TrackPlayer.setMediaItem(item);
+				TrackPlayer.play();
 			})
 			.catch((err) => {
 				if (cancelled) return;
@@ -164,133 +184,131 @@ export function useTrackAudioPlayer({
 
 		return () => {
 			cancelled = true;
-			// Only pause on cleanup if we've loaded audio
-			if (hasLoadedAudio.current) {
-				safePauseRef.current();
-			}
 		};
 	}, [trackId, enabled]);
 
-	// Track if autoplay is pending (should play when loaded)
-	const autoplayPendingRef = useRef(false);
-
+	// Once detailed track info (artist name, album title) arrives, push it
+	// into RNTP's active media item so the notification subtitle fills in
+	// instead of staying "loading".
+	const currentDetailedTrack = useTrackStore((s) => s.currentTrack);
 	useEffect(() => {
-		if (!enabled) return;
-		if (!streamUrl) return;
-		// Mark autoplay as pending when we replace with a new stream
-		autoplayPendingRef.current = true;
-		player.replace(streamUrl);
-		// Mark that we've loaded audio so cleanup knows to pause
-		hasLoadedAudio.current = true;
-	}, [enabled, streamUrl, player]);
+		if (!trackId) return;
+		if (!currentDetailedTrack || currentDetailedTrack.id !== trackId) return;
+		const active = TrackPlayer.getActiveMediaItem();
+		if (active?.mediaId !== trackId) return;
 
-	// Autoplay after buffering completes
-	useEffect(() => {
-		if (!autoplayPendingRef.current) return;
-		if (!status.isLoaded) return;
-		if (loadingStream) return;
-
-		// Audio is loaded and we have pending autoplay - start playback
-		autoplayPendingRef.current = false;
-		player.play();
-	}, [status.isLoaded, loadingStream, player]);
-
-	// Track end detection - fire onTrackEnd when track finishes naturally
-	const hasTriggeredEndRef = useRef(false);
-	const prevTrackIdRef = useRef(trackId);
-
-	// Reset the end trigger when track changes (moved inside effect to avoid render-time side effects)
-	useEffect(() => {
-		if (prevTrackIdRef.current !== trackId) {
-			hasTriggeredEndRef.current = false;
-			prevTrackIdRef.current = trackId;
+		const patch: {
+			title?: string;
+			artist?: string;
+			albumTitle?: string;
+		} = {};
+		const artistName = currentDetailedTrack.artist?.name;
+		const albumTitle = currentDetailedTrack.album?.title;
+		if (artistName && active.artist !== artistName) {
+			patch.artist = artistName;
 		}
+		if (albumTitle && active.albumTitle !== albumTitle) {
+			patch.albumTitle = albumTitle;
+		}
+		if (currentDetailedTrack.title && active.title !== currentDetailedTrack.title) {
+			patch.title = currentDetailedTrack.title;
+		}
+		if (Object.keys(patch).length === 0) return;
+
+		const index = TrackPlayer.getActiveMediaItemIndex();
+		if (index === null) return;
+		TrackPlayer.updateMetadata(index, patch);
+	}, [trackId, currentDetailedTrack]);
+
+	// Fire onTrackEnd when playback naturally finishes.
+	const lastEndedRef = useRef<string | null>(null);
+	useEffect(() => {
+		if (playbackState !== PlaybackState.Ended) return;
+		if (loop) return;
+		if (lastEndedRef.current === trackId) return;
+		lastEndedRef.current = trackId ?? null;
+		onTrackEndRef.current?.();
+	}, [playbackState, loop, trackId]);
+
+	useEffect(() => {
+		// Reset the ended-flag whenever the active track changes.
+		lastEndedRef.current = null;
 	}, [trackId]);
 
+	// Also catch PlaybackError from the native side.
 	useEffect(() => {
-		if (!status.didJustFinish) return;
-		if (hasTriggeredEndRef.current) return;
-		if (player.loop) return;
+		const sub = TrackPlayer.addEventListener(Event.PlaybackError, (e) => {
+			setStreamError(e);
+			onErrorRef.current?.(e);
+		});
+		return () => sub.remove();
+	}, []);
 
-		hasTriggeredEndRef.current = true;
-		onTrackEndRef.current?.();
-	}, [status.didJustFinish, player.loop]);
-
-	useEffect(() => {
-		if (!status.isLoaded) return;
-		if (!status.duration || status.duration <= 0) return;
-		if (hasTriggeredEndRef.current) return;
-		if (player.loop) return;
-
-		const timeRemaining = status.duration - status.currentTime;
-		if (timeRemaining > NEAR_END_THRESHOLD_SECONDS) return;
-
-		const isAtEnd = status.currentTime >= status.duration - 0.3;
-		if (isAtEnd && !status.playing && !status.isBuffering) {
-			hasTriggeredEndRef.current = true;
-			onTrackEndRef.current?.();
-		}
-	}, [
-		status.isLoaded,
-		status.duration,
-		status.currentTime,
-		status.playing,
-		status.isBuffering,
-		player.loop,
-	]);
-
-	const progress = useMemo(() => {
-		if (!status.duration || status.duration <= 0) return 0;
-		return (status.currentTime / status.duration) * 100;
-	}, [status.currentTime, status.duration]);
+	const player: PlayerFacade = useMemo(
+		() => ({
+			play: () => TrackPlayer.play(),
+			pause: () => TrackPlayer.pause(),
+			seekTo: (position: number) => TrackPlayer.seekTo(position),
+			replace: (url, item) => {
+				TrackPlayer.setMediaItem({
+					mediaId: item?.mediaId ?? url,
+					url,
+					title: item?.title,
+					artist: item?.artist,
+					artworkUrl: item?.artworkUrl,
+					duration: item?.duration,
+				});
+				TrackPlayer.play();
+			},
+			get loop() {
+				return loop;
+			},
+			set loop(value: boolean) {
+				setLoopState(value);
+			},
+		}),
+		[loop],
+	);
 
 	const togglePlayback = useCallback(() => {
 		if (!status.isLoaded) return;
 		if (status.playing) {
-			player.pause();
+			TrackPlayer.pause();
 		} else {
-			player.play();
+			TrackPlayer.play();
 		}
-	}, [status.isLoaded, status.playing, player]);
+	}, [status.isLoaded, status.playing]);
 
 	const seekForward = useCallback(
 		(seconds = skipSeconds) => {
-			if (!status.duration || status.duration <= 0) return;
-			const target = Math.min(status.currentTime + seconds, status.duration);
-			player.seekTo(target);
+			TrackPlayer.seekBy(seconds);
 		},
-		[status.currentTime, status.duration, player, skipSeconds],
+		[skipSeconds],
 	);
 
 	const seekBackward = useCallback(
 		(seconds = skipSeconds) => {
-			if (!status.duration || status.duration <= 0) return;
-			const target = Math.max(status.currentTime - seconds, 0);
-			player.seekTo(target);
+			TrackPlayer.seekBy(-seconds);
 		},
-		[status.currentTime, status.duration, player, skipSeconds],
+		[skipSeconds],
 	);
 
 	const toggleMute = useCallback(() => {
 		setVolumeState((prev) => (prev > 0 ? 0 : 1));
 	}, []);
 
-	const setVolume = useCallback(
-		(value: number) => {
-			const clamped = Math.max(0, Math.min(1, value));
-			setVolumeState(clamped);
-		},
-		[],
-	);
+	const setVolume = useCallback((value: number) => {
+		setVolumeState(Math.max(0, Math.min(1, value)));
+	}, []);
 
 	return {
 		player,
 		status,
-		streamUrl,
 		streamError,
 		loadingStream,
-		progress,
-		ready: status.isLoaded && Boolean(streamUrl),
+		progress:
+			status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0,
+		ready: status.isLoaded,
 		seekForward,
 		seekBackward,
 		togglePlayback,

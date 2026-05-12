@@ -2,7 +2,7 @@
   "expo": {
     "name": "Eden",
     "slug": "Eden",
-    "version": "2.1.6",
+    "version": "2.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "eden",
@@ -14,7 +14,10 @@
       "backgroundColor": "#180518"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -51,18 +54,10 @@
         }
       ],
       "expo-secure-store",
-      "expo-audio",
       "expo-font",
       "expo-web-browser",
       "expo-mail-composer",
       "expo-build-properties",
-      [
-        "expo-notifications",
-        {
-          "color": "#180518",
-          "defaultChannel": "media-playback"
-        }
-      ],
       "expo-image",
       "@rnrepo/expo-config-plugin"
     ],
