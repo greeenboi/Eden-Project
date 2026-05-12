@@ -384,22 +384,34 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	// timeline has no successor/predecessor MediaItem) and native auto-advance
 	// works on lockscreen. Only kicks in when zustand contains the track —
 	// single-track playTrack mode falls through to useTrackAudioPlayer.
+	//
+	// Signature keys off the *identities* of the [prev, current, next] window
+	// so shuffle / moveInQueue / addNext (which can swap neighbours without
+	// changing queue length) still trigger a rebuild.
 	const rebuildSignatureRef = useRef<string | null>(null);
 	useEffect(() => {
 		if (!isPlayerVisible || !selectedTrackId) return;
 		const inZustandQueue = queue.some((t) => t.id === selectedTrackId);
 		if (!inZustandQueue) return;
-		// If RNTP is already playing this track (e.g. MediaItemTransition just
-		// updated zustand → selectedTrackId), don't tear down the window.
-		if (TrackPlayer.getActiveMediaItem()?.mediaId === selectedTrackId) {
-			rebuildSignatureRef.current = `${selectedTrackId}|${queue.length}`;
-			return;
-		}
-		const sig = `${selectedTrackId}|${queue.length}`;
+		const prevId = queue[currentIndex - 1]?.id ?? "";
+		const nextId = queue[currentIndex + 1]?.id ?? "";
+		const sig = `${selectedTrackId}|${prevId}|${nextId}`;
 		if (rebuildSignatureRef.current === sig) return;
 		rebuildSignatureRef.current = sig;
+
+		// If RNTP is already playing this track, the *current* slot is fine —
+		// only the neighbours may have changed (shuffle, addNext, moveInQueue).
+		// Reuse shiftWindowToActive to refresh prev/next without resetting
+		// playback position.
+		if (TrackPlayer.getActiveMediaItem()?.mediaId === selectedTrackId) {
+			const activeIdx = TrackPlayer.getActiveMediaItemIndex();
+			if (activeIdx !== null) void shiftWindowToActive(activeIdx);
+			return;
+		}
+
+		// Different active track → full rebuild (resets position).
 		void rebuildRntpQueueWindow();
-	}, [isPlayerVisible, selectedTrackId, queue]);
+	}, [isPlayerVisible, selectedTrackId, queue, currentIndex]);
 
 	// When the player transitions to a new MediaItem (native auto-advance at
 	// track end, native Next/Previous, lockscreen buttons), reshape the window
