@@ -8,11 +8,6 @@
     "scheme": "eden",
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#180518",
-    "splash": {
-      "image": "./assets/images/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#180518"
-    },
     "ios": {
       "supportsTablet": false,
       "infoPlist": {
