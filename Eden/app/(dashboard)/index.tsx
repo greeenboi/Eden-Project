@@ -8,16 +8,17 @@ import { trackPlayWithQueue } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import {
 	Box,
+	CircularWavyProgressIndicator,
+	Column,
 	HorizontalCenteredHeroCarousel,
 	Host,
-	RNHostView,
-	SuggestionChip,
+	RNHostView
 } from "@expo/ui/jetpack-compose";
 import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifiers";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Disc, Menu, Play, Sparkles } from "lucide-react-native";
+import { DrawerActions, useNavigation } from "expo-router/react-navigation";
+import { Disc, Menu, Play } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
 	Dimensions,
@@ -205,6 +206,17 @@ const AdaptiveCollage = ({
 	);
 };
 
+const WavyLoading = ({ color, dimension }: { color?: string; dimension?: number }) => (
+	<Host matchContents>
+		<Column verticalArrangement={{ spacedBy: 16 }}>
+			<CircularWavyProgressIndicator
+				color={color}
+				modifiers={dimension ? [size(dimension, dimension)] : undefined}
+			/>
+		</Column>
+	</Host>
+);
+
 export default function HomeScreen() {
 	const colorScheme = useColorScheme();
 	const navigation = useNavigation();
@@ -212,8 +224,18 @@ export default function HomeScreen() {
 	const { tracks, isLoading, fetchTracks, clearTracks } = useTrackStore();
 	const [topArtists, setTopArtists] = useState<Artist[]>([]);
 	const [isArtistsLoading, setIsArtistsLoading] = useState(false);
+	const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
 
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
+
+	// Reveal the page only after the first round of both fetches has settled,
+	// so the centered wavy loader hides exactly once all sections have data.
+	useEffect(() => {
+		if (hasInitialLoaded) return;
+		if (isLoading || isArtistsLoading) return;
+		if (tracks.length === 0) return;
+		setHasInitialLoaded(true);
+	}, [hasInitialLoaded, isLoading, isArtistsLoading, tracks.length]);
 
 	useEffect(() => {
 		fetchTracks(1, 40, undefined, undefined, TRACK_STATUS_FILTER);
@@ -267,19 +289,6 @@ export default function HomeScreen() {
 			.slice(0, 8);
 	}, [tracks]);
 
-	const genres: string[] = useMemo(() => {
-		const seen = new Set<string>();
-		for (const track of tracks) {
-			const g = track.genre?.trim();
-			if (g && !seen.has(g.toLowerCase())) {
-				seen.add(g.toLowerCase());
-			}
-			if (seen.size >= 10) break;
-		}
-		return Array.from(seen).map(
-			(g) => g.charAt(0).toUpperCase() + g.slice(1),
-		);
-	}, [tracks]);
 
 	const quickPicks: Track[] = useMemo(() => {
 		if (tracks.length === 0) return [];
@@ -328,10 +337,6 @@ export default function HomeScreen() {
 		router.push(`/artist-detail?id=${artistId}`);
 	}, []);
 
-	const handleGenrePress = useCallback((genre: string) => {
-		router.push(`/search-songs?genre=${encodeURIComponent(genre)}`);
-	}, []);
-
 	const playPulse = useSharedValue(1);
 	useEffect(() => {
 		playPulse.value = withRepeat(
@@ -346,7 +351,7 @@ export default function HomeScreen() {
 
 	const renderTopArtists = () => {
 		if (isArtistsLoading) {
-			return <Text style={{ color: themeColors.tint }}>Loading artists...</Text>;
+			return <WavyLoading color={themeColors.primary} />;
 		}
 
 		if (topArtists.length === 0) {
@@ -383,6 +388,36 @@ export default function HomeScreen() {
 			</Host>
 		);
 	};
+
+	if (!hasInitialLoaded) {
+		return (
+			<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
+				<LinearGradient
+					colors={[`${themeColors.primary}22`, "transparent"]}
+					start={{ x: 0, y: 0 }}
+					end={{ x: 0.6, y: 0.6 }}
+					style={{
+						position: "absolute",
+						top: 0,
+						left: 0,
+						right: 0,
+						height: SCREEN_WIDTH * 1.1,
+					}}
+					pointerEvents="none"
+				/>
+				<Animated.View
+					entering={FadeIn.duration(200)}
+					style={{
+						flex: 1,
+						alignItems: "center",
+						justifyContent: "center",
+					}}
+				>
+					<WavyLoading color={themeColors.primary} dimension={72} />
+				</Animated.View>
+			</SafeAreaView>
+		);
+	}
 
 	return (
 		<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
@@ -482,7 +517,6 @@ export default function HomeScreen() {
 								}}
 							>
 								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-									<Sparkles size={20} color={themeColors.primary} />
 									<Text
 										style={{
 											color: themeColors.text,
@@ -607,61 +641,6 @@ export default function HomeScreen() {
 						</Animated.View>
 					)}
 
-					{/* Browse Genres */}
-					{genres.length > 0 && (
-						<Animated.View
-							entering={FadeInDown.duration(380).delay(220).springify().damping(16)}
-							style={{ marginTop: 28 }}
-						>
-							<Text
-								style={{
-									color: themeColors.text,
-									fontSize: 22,
-									fontWeight: "700",
-									paddingHorizontal: 4,
-									marginBottom: 12,
-								}}
-							>
-								Browse Genres
-							</Text>
-							<ScrollView
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								contentContainerStyle={{ paddingHorizontal: 4, gap: 10 }}
-							>
-								{genres.map((genre, idx) => (
-									<Host key={genre} matchContents>
-										<SuggestionChip
-											onClick={() => handleGenrePress(genre)}
-											colors={{
-												containerColor:
-													idx % 2 === 0
-														? `${themeColors.primary}`
-														: `${themeColors.accent}`,
-												labelColor: themeColors.text,
-											}}
-											border={{
-												width: 1,
-												color: `${themeColors.primary}`,
-											}}
-										>
-											<SuggestionChip.Label>
-												<Text
-													style={{
-														color: themeColors.text,
-														fontSize: 14,
-														fontWeight: "600",
-													}}
-												>
-													{genre}
-												</Text>
-											</SuggestionChip.Label>
-										</SuggestionChip>
-									</Host>
-								))}
-							</ScrollView>
-						</Animated.View>
-					)}
 
 					{/* Quick Picks */}
 					{quickPicks.length > 0 && (
@@ -774,11 +753,6 @@ export default function HomeScreen() {
 						</Animated.View>
 					)}
 
-					{isLoading && (
-						<Text style={{ color: themeColors.tint, marginTop: 10 }}>
-							Loading songs...
-						</Text>
-					)}
 				</Animated.View>
 			</ScrollView>
 		</SafeAreaView>

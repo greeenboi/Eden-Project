@@ -14,7 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { vexo } from "vexo-analytics";
 import "../global.css";
-import { DarkThemeCustom, LightTheme } from "../lib/themeprovider.config";
+import { DarkThemeCustom, LightTheme } from "@/lib/themeprovider.config";
 
 const globalTrackPlayer = globalThis as typeof globalThis & {
 	__trackPlayerSetupPromise?: Promise<void>;

@@ -23,7 +23,7 @@ import { useSession } from "@/lib/ctx";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
 import { generateGradientColors, getInitials } from "@/lib/utils";
-import { DrawerActions } from "@react-navigation/native";
+import { DrawerActions } from "expo-router/react-navigation";
 import { LinearGradient } from "expo-linear-gradient";
 import * as MailComposer from "expo-mail-composer";
 import { useNavigation } from "expo-router";
@@ -491,7 +491,7 @@ export default function SettingsScreen() {
 					<View className="items-center py-6 mb-8 ">
 						<Heart size={20} color={THEME.dark.destructive} />
 						<Text className="text-center  text-sm">
-							Made with passion for music lovers
+							Made with passion by greeenboi
 						</Text>
 					</View>
 				</ScrollView>

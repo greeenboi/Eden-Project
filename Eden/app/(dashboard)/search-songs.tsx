@@ -27,15 +27,18 @@ import {
 } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import {
+	DockedSearchBar,
+	Text as ExpoText,
 	Host,
 	SegmentedButton,
 	SingleChoiceSegmentedButtonRow
 } from "@expo/ui/jetpack-compose";
 import {
+	background, fillMaxWidth,
 	width
 } from "@expo/ui/jetpack-compose/modifiers";
-import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { router } from "expo-router";
+import { DrawerActions, useNavigation } from "expo-router/react-navigation";
 import {
 	AlertCircle,
 	BadgeCheck,
@@ -79,8 +82,7 @@ function ArtistCircleCard({
 	artist,
 	onPress,
 	size = 100,
-}: ArtistCircleCardProps) {
-	const colorScheme = useColorScheme();
+}: ArtistCircleCardProps) {	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	return (
@@ -560,6 +562,15 @@ export default function SearchSongsScreen() {
 		await handleSearchWithQuery(searchQuery);
 	}, [handleSearchWithQuery, searchQuery]);
 
+	useEffect(() => {
+		const query = searchQuery.trim();
+		if (!query) return;
+		const timer = setTimeout(() => {
+			handleSearchWithQuery(query);
+		}, 500);
+		return () => clearTimeout(timer);
+	}, [searchQuery, handleSearchWithQuery]);
+
 	// Cleanup on unmount
 	useEffect(() => {
 		return () => abortControllerRef.current?.abort();
@@ -681,16 +692,20 @@ export default function SearchSongsScreen() {
 				</View>
 
 				{/* Large Search Bar */}
-				<View className="px-4 pb-3">
+				<View className="px-4 pb-3 flex flex-row justify-center">
 					<View className="bg-transparent gap-2">
-						<Input
-							placeholder="What do you want to listen to?"
-							value={searchQuery}
-							onChangeText={setSearchQuery}
-							onSubmitEditing={handleSearch}
-							returnKeyType="search"
-							className="h-20 border-none"
-						/>
+						<Host matchContents>
+							<DockedSearchBar
+								modifiers={[fillMaxWidth()]}
+								onQueryChange={setSearchQuery}
+							>
+								<DockedSearchBar.Placeholder>
+									<ExpoText color={themeColors.primary}>
+										What do you want to listen to?
+									</ExpoText>
+								</DockedSearchBar.Placeholder>
+							</DockedSearchBar>
+						</Host>
 						{isSearching && <ActivityIndicator size="small" color={themeColors.tint} />}
 					</View>
 				</View>
