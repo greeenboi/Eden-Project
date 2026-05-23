@@ -8,8 +8,6 @@ import { trackPlayWithQueue } from "@/lib/analytics";
 import { formatDuration } from "@/lib/utils";
 import {
 	Box,
-	CircularWavyProgressIndicator,
-	Column,
 	HorizontalCenteredHeroCarousel,
 	Host,
 	RNHostView

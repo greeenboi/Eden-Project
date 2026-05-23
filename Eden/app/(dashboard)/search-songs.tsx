@@ -34,7 +34,7 @@ import {
 	SingleChoiceSegmentedButtonRow
 } from "@expo/ui/jetpack-compose";
 import {
-	background, fillMaxWidth,
+	fillMaxWidth,
 	width
 } from "@expo/ui/jetpack-compose/modifiers";
 import { router } from "expo-router";
@@ -558,9 +558,9 @@ export default function SearchSongsScreen() {
 		[searchType],
 	);
 
-	const handleSearch = useCallback(async () => {
-		await handleSearchWithQuery(searchQuery);
-	}, [handleSearchWithQuery, searchQuery]);
+	// const handleSearch = useCallback(async () => {
+	// 	await handleSearchWithQuery(searchQuery);
+	// }, [handleSearchWithQuery, searchQuery]);
 
 	useEffect(() => {
 		const query = searchQuery.trim();

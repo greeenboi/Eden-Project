@@ -42,7 +42,8 @@ export default function SignIn() {
 		try {
 			if (isSignUp) {
 				if (!name.trim()) {
-					throw new Error("Name is required");
+					console.error("Name is required");
+					return;
 				}
 				await signUp(email, password, name);
 			} else {

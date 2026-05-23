@@ -43,7 +43,6 @@ interface PlayerControlsProps {
 export function PlayerControls({
 	isLoaded,
 	isPlaying,
-	isMuted,
 	loadingStream,
 	themeColors,
 	hasNext = false,
@@ -52,7 +51,6 @@ export function PlayerControls({
 	repeatMode = "off",
 	onTogglePlayback,
 	onToggleRepeat,
-	onToggleMute,
 	onToggleShuffle,
 	onSkipNext,
 	onSkipPrevious,

@@ -21,10 +21,6 @@ export function LoadingMoreTracks() {
 		pulse.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
 	}, [pulse]);
 
-	const animatedStyle = useAnimatedStyle(() => ({
-		opacity: pulse.value,
-	}));
-
 	return (
 		<Animated.View
 			entering={FadeIn.duration(180)}

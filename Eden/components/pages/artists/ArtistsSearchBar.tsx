@@ -15,7 +15,6 @@ export function ArtistsSearchBar({
 	searchQuery,
 	onSearchChange,
 	onClear,
-	isSearchMode,
 }: ArtistsSearchBarProps) {
 	return (
 		<View className="bg-transparent flex-row items-center gap-2">
