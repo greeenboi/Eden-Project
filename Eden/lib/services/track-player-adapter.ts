@@ -1,7 +1,6 @@
 import TrackPlayer, { type MediaItem } from "@rntp/player";
-import { useQueueStore } from "@/lib/actions/queue";
+import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
-import type { QueueTrack } from "@/lib/actions/queue";
 
 export function queueTrackToMediaItem(
 	track: QueueTrack,
@@ -22,99 +21,178 @@ async function fetchUrl(id: string): Promise<string | null> {
 		const { streamUrl } = await useTrackStore.getState().getStreamingUrl(id);
 		return streamUrl;
 	} catch (err) {
-		console.warn("[track-player-adapter] fetchUrl failed for", id, err);
+		console.warn("[sync] fetchUrl failed for", id, err);
 		return null;
 	}
 }
 
-function windowFromQueue(): {
-	prev: QueueTrack | null;
-	current: QueueTrack | null;
-	next: QueueTrack | null;
-} {
-	const { queue, currentIndex } = useQueueStore.getState();
-	if (currentIndex < 0 || currentIndex >= queue.length) {
-		return { prev: null, current: null, next: null };
-	}
-	return {
-		prev: currentIndex > 0 ? queue[currentIndex - 1] : null,
-		current: queue[currentIndex],
-		next: currentIndex < queue.length - 1 ? queue[currentIndex + 1] : null,
-	};
+// ---------------------------------------------------------------------------
+// Locked, revision-tracked RNTP ↔ zustand sync.
+//
+// Mental model:
+//   • zustand is the source of truth for what *should* be playing.
+//   • RNTP's queue is a downstream [prev?, current, next?] window of zustand.
+//   • Every reconciliation goes through `syncRntpToZustand`.
+//   • At most one sync runs at a time. Concurrent requests collapse into a
+//     single follow-up run after the in-flight one finishes.
+//   • A revision counter lets an in-flight sync abort early (after the next
+//     `await`) when a newer sync request has arrived, so we never commit
+//     stale data to RNTP.
+//
+// Drivers of sync (where it gets called from):
+//   1. Subscription on `useQueueStore` — any change to the
+//      [prev, current, next] window triggers a sync.
+//   2. Initial mount of the provider.
+//
+// Direction of dataflow:
+//   • zustand → RNTP via this function.
+//   • RNTP → zustand happens in GlobalPlayerProvider's
+//     `MediaItemTransition` listener (writes new active index to zustand);
+//     the subscription above then triggers a sync to refresh neighbours.
+// ---------------------------------------------------------------------------
+
+let inFlight = false;
+let pendingRevision = 0;
+let revisionInFlight = -1;
+let queued = false;
+
+function isStale(): boolean {
+	return revisionInFlight !== pendingRevision;
 }
 
 /**
- * Full rebuild of the RNTP queue from zustand's current window.
- * Resets playback position; use for "play this track" actions, never for
- * passive sync after a transition (use shiftWindowToActive for that).
+ * Request a reconciliation of RNTP's queue with zustand's current window.
+ * Safe to call from anywhere, any number of times — calls coalesce and the
+ * latest revision always wins.
  */
-export async function rebuildRntpQueueWindow(): Promise<void> {
-	const { prev, current, next } = windowFromQueue();
-	if (!current) {
+export function syncRntpToZustand(): void {
+	pendingRevision++;
+	if (inFlight) {
+		queued = true;
+		return;
+	}
+	void runSyncLoop();
+}
+
+async function runSyncLoop(): Promise<void> {
+	if (inFlight) return;
+	inFlight = true;
+	try {
+		// Loop until pendingRevision is stable (no new request during run).
+		while (true) {
+			revisionInFlight = pendingRevision;
+			queued = false;
+			try {
+				await doSync();
+			} catch (err) {
+				console.warn("[sync] doSync threw", err);
+			}
+			if (!queued) break;
+		}
+	} finally {
+		inFlight = false;
+		revisionInFlight = -1;
+	}
+}
+
+async function doSync(): Promise<void> {
+	const z = useQueueStore.getState();
+	if (z.queue.length === 0 || z.currentIndex < 0) {
 		TrackPlayer.clear();
 		return;
 	}
 
-	const [prevUrl, curUrl, nextUrl] = await Promise.all([
-		prev ? fetchUrl(prev.id) : Promise.resolve(null),
-		fetchUrl(current.id),
-		next ? fetchUrl(next.id) : Promise.resolve(null),
-	]);
-	if (!curUrl) return;
+	const cur = z.queue[z.currentIndex];
+	if (!cur) return;
+	const prev = z.currentIndex > 0 ? z.queue[z.currentIndex - 1] : null;
+	const next =
+		z.currentIndex < z.queue.length - 1 ? z.queue[z.currentIndex + 1] : null;
 
-	const items: MediaItem[] = [];
-	if (prev && prevUrl) items.push(queueTrackToMediaItem(prev, prevUrl));
-	const startIndex = items.length;
-	items.push(queueTrackToMediaItem(current, curUrl));
-	if (next && nextUrl) items.push(queueTrackToMediaItem(next, nextUrl));
+	const active = TrackPlayer.getActiveMediaItem();
 
-	TrackPlayer.setMediaItems(items, startIndex);
-	TrackPlayer.play();
+	if (active?.mediaId !== cur.id) {
+		// Current track changed — full rebuild.
+		const [pU, cU, nU] = await Promise.all([
+			prev ? fetchUrl(prev.id) : Promise.resolve(null),
+			fetchUrl(cur.id),
+			next ? fetchUrl(next.id) : Promise.resolve(null),
+		]);
+		if (isStale() || !cU) return;
+
+		const items: MediaItem[] = [];
+		if (prev && pU) items.push(queueTrackToMediaItem(prev, pU));
+		const startIdx = items.length;
+		items.push(queueTrackToMediaItem(cur, cU));
+		if (next && nU) items.push(queueTrackToMediaItem(next, nU));
+
+		TrackPlayer.setMediaItems(items, startIdx);
+		TrackPlayer.play();
+		return;
+	}
+
+	// Same current track — reconcile neighbour slots without resetting position.
+	await reconcileNeighbours(prev, next);
 }
 
-/**
- * After Media3's native auto-advance / skipToNext / skipToPrevious has fired
- * MediaItemTransition, reshape the RNTP queue so the new active item sits in
- * the middle slot — *without* resetting playback. Drops the now-orphan edge
- * and appends a fresh neighbour from zustand if one exists.
- */
-export async function shiftWindowToActive(activeIndex: number): Promise<void> {
-	const rntpQueue = TrackPlayer.getQueue();
-	const active = rntpQueue[activeIndex];
-	if (!active?.mediaId) return;
+async function reconcileNeighbours(
+	wantPrev: QueueTrack | null,
+	wantNext: QueueTrack | null,
+): Promise<void> {
+	// Normalize first: RNTP queue should be exactly [prev?, current, next?]
+	// before we start surgical edits.
+	let activeIdx = TrackPlayer.getActiveMediaItemIndex();
+	if (activeIdx === null) return;
+	let queue = TrackPlayer.getQueue();
 
-	// Sync zustand's currentIndex to whatever RNTP now considers active.
-	const z = useQueueStore.getState();
-	const newZustandIndex = z.queue.findIndex((t) => t.id === active.mediaId);
-	if (newZustandIndex < 0) return;
-	if (newZustandIndex !== z.currentIndex) {
-		z.skipToIndex(newZustandIndex);
-	}
-
-	const { prev, next } = windowFromQueue();
-
-	// Drop everything before the active item.
-	for (let i = activeIndex - 1; i >= 0; i--) {
+	// Drop trailing items past activeIdx + 1.
+	for (let i = queue.length - 1; i > activeIdx + 1; i--) {
 		TrackPlayer.removeMediaItem(i);
 	}
-	// Drop everything after the active item.
-	const queueAfter = TrackPlayer.getQueue();
-	const activeIndexAfterShrink = 0;
-	for (let i = queueAfter.length - 1; i > activeIndexAfterShrink; i--) {
+	// Drop leading items before activeIdx - 1.
+	for (let i = activeIdx - 2; i >= 0; i--) {
 		TrackPlayer.removeMediaItem(i);
+		activeIdx -= 1;
 	}
+	queue = TrackPlayer.getQueue();
 
-	// Now RNTP queue has exactly the active item at index 0. Refill the edges.
-	if (prev) {
-		const prevUrl = await fetchUrl(prev.id);
-		if (prevUrl) {
-			TrackPlayer.insertMediaItem(0, queueTrackToMediaItem(prev, prevUrl));
+	// Fix the prev slot.
+	const havePrev = activeIdx > 0 ? queue[activeIdx - 1] : null;
+	if ((havePrev?.mediaId ?? null) !== (wantPrev?.id ?? null)) {
+		if (havePrev) {
+			TrackPlayer.removeMediaItem(activeIdx - 1);
+			activeIdx -= 1;
+		}
+		if (wantPrev) {
+			const url = await fetchUrl(wantPrev.id);
+			if (isStale()) return;
+			if (url) {
+				const idx = TrackPlayer.getActiveMediaItemIndex();
+				if (idx !== null) {
+					TrackPlayer.insertMediaItem(
+						idx,
+						queueTrackToMediaItem(wantPrev, url),
+					);
+					activeIdx = idx + 1;
+				}
+			}
 		}
 	}
-	if (next) {
-		const nextUrl = await fetchUrl(next.id);
-		if (nextUrl) {
-			TrackPlayer.addMediaItem(queueTrackToMediaItem(next, nextUrl));
+
+	// Fix the next slot.
+	queue = TrackPlayer.getQueue();
+	activeIdx = TrackPlayer.getActiveMediaItemIndex() ?? activeIdx;
+	if (activeIdx === null) return;
+	const haveNext = activeIdx < queue.length - 1 ? queue[activeIdx + 1] : null;
+	if ((haveNext?.mediaId ?? null) !== (wantNext?.id ?? null)) {
+		if (haveNext) {
+			TrackPlayer.removeMediaItem(activeIdx + 1);
+		}
+		if (wantNext) {
+			const url = await fetchUrl(wantNext.id);
+			if (isStale()) return;
+			if (url) {
+				TrackPlayer.addMediaItem(queueTrackToMediaItem(wantNext, url));
+			}
 		}
 	}
 }

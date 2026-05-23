@@ -15,10 +15,7 @@ import {
 	useQueueStore,
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
-import {
-	rebuildRntpQueueWindow,
-	shiftWindowToActive,
-} from "@/lib/services/track-player-adapter";
+import { syncRntpToZustand } from "@/lib/services/track-player-adapter";
 import { THEME } from "@/lib/theme";
 import {
 	BottomSheetModal,
@@ -100,8 +97,7 @@ interface GlobalPlayerStateContextValue {
 	queueSource: QueueSource | null;
 }
 
-type GlobalPlayerContextValue = GlobalPlayerActionsContextValue &
-	GlobalPlayerStateContextValue;
+
 
 const GlobalPlayerActionsContext =
 	createContext<GlobalPlayerActionsContextValue | null>(null);
@@ -181,7 +177,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 	const [sheetIndex, setSheetIndex] = useState(0);
 	const [isPlayerVisible, setIsPlayerVisible] = useState(false);
-	const [isSheetMounted, setIsSheetMounted] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
 
@@ -250,19 +245,15 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		return () => backHandler.remove();
 	}, [handleHardwareBackPress]);
 
-	// Mount the sheet on first render so it's ready when needed
-	useEffect(() => {
-		if (!isSheetMounted) {
-			bottomSheetRef.current?.present();
-			setIsSheetMounted(true);
-		}
-	}, [isSheetMounted]);
-
 	const playTrack = useCallback(
 		(trackId: string) => {
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
+			// Modal must be (re)presented every time — `present()` is the only
+			// way to add it to the stack after a dismiss, and snapToIndex is a
+			// no-op on a dismissed modal.
+			bottomSheetRef.current?.present();
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
 		[FULL_SNAP_INDEX],
@@ -281,6 +272,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			setSelectedTrackId(track.id);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
+			bottomSheetRef.current?.present();
 			bottomSheetRef.current?.snapToIndex(FULL_SNAP_INDEX);
 		},
 		[FULL_SNAP_INDEX, setQueue],
@@ -301,7 +293,6 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [skipToNextInQueue]);
 
 	const skipToPrevious = useCallback(() => {
-		const rntpQueue = TrackPlayer.getQueue();
 		const activeIdx = TrackPlayer.getActiveMediaItemIndex();
 		if (activeIdx !== null && activeIdx > 0) {
 			TrackPlayer.skipToPrevious();
@@ -367,7 +358,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			: null;
 
 	// Sync zustand current → UI selectedTrackId (covers transitions driven from
-	// the background-service while the app was locked).
+	// the background-service while the app was locked, and natural auto-advance).
 	const currentTrackIdFromQueue = useQueueStore(
 		(s) =>
 			s.currentIndex >= 0 && s.currentIndex < s.queue.length
@@ -379,52 +370,52 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		setSelectedTrackId(currentTrackIdFromQueue);
 	}, [currentTrackIdFromQueue]);
 
-	// RNTP queue mirrors a [prev?, current, next?] window of zustand so the
-	// notification's Next/Previous buttons show (Media3 hides them when the
-	// timeline has no successor/predecessor MediaItem) and native auto-advance
-	// works on lockscreen. Only kicks in when zustand contains the track —
-	// single-track playTrack mode falls through to useTrackAudioPlayer.
-	//
-	// Signature keys off the *identities* of the [prev, current, next] window
-	// so shuffle / moveInQueue / addNext (which can swap neighbours without
-	// changing queue length) still trigger a rebuild.
-	const rebuildSignatureRef = useRef<string | null>(null);
+	// ---- Single sync loop: zustand is the source of truth, RNTP mirrors a
+	// [prev?, current, next?] window of it. The adapter serializes concurrent
+	// calls and aborts stale work mid-flight via a revision token; this effect
+	// just wires the two drivers (zustand mutations + native transitions) into
+	// it.
 	useEffect(() => {
-		if (!isPlayerVisible || !selectedTrackId) return;
-		const inZustandQueue = queue.some((t) => t.id === selectedTrackId);
-		if (!inZustandQueue) return;
-		const prevId = queue[currentIndex - 1]?.id ?? "";
-		const nextId = queue[currentIndex + 1]?.id ?? "";
-		const sig = `${selectedTrackId}|${prevId}|${nextId}`;
-		if (rebuildSignatureRef.current === sig) return;
-		rebuildSignatureRef.current = sig;
+		// Initial run in case zustand already has state (e.g. persisted across
+		// a reload, or the provider remounted).
+		syncRntpToZustand();
 
-		// If RNTP is already playing this track, the *current* slot is fine —
-		// only the neighbours may have changed (shuffle, addNext, moveInQueue).
-		// Reuse shiftWindowToActive to refresh prev/next without resetting
-		// playback position.
-		if (TrackPlayer.getActiveMediaItem()?.mediaId === selectedTrackId) {
-			const activeIdx = TrackPlayer.getActiveMediaItemIndex();
-			if (activeIdx !== null) void shiftWindowToActive(activeIdx);
-			return;
-		}
+		// 1. Zustand → RNTP: any change to the [prev, current, next] window
+		//    triggers a sync. We dedupe by signature so unrelated zustand
+		//    mutations (history, source) don't churn the player.
+		let lastSig: string | null = null;
+		const unsubscribe = useQueueStore.subscribe((state) => {
+			const cur = state.queue[state.currentIndex]?.id ?? "";
+			const prev = state.queue[state.currentIndex - 1]?.id ?? "";
+			const next = state.queue[state.currentIndex + 1]?.id ?? "";
+			const sig = `${cur}|${prev}|${next}`;
+			if (sig === lastSig) return;
+			lastSig = sig;
+			syncRntpToZustand();
+		});
 
-		// Different active track → full rebuild (resets position).
-		void rebuildRntpQueueWindow();
-	}, [isPlayerVisible, selectedTrackId, queue, currentIndex]);
-
-	// When the player transitions to a new MediaItem (native auto-advance at
-	// track end, native Next/Previous, lockscreen buttons), reshape the window
-	// without resetting playback.
-	useEffect(() => {
-		const sub = TrackPlayer.addEventListener(
+		// 2. RNTP → zustand: native auto-advance, lockscreen Next/Prev, BT
+		//    headset buttons all fire MediaItemTransition. We only update
+		//    zustand here — the subscription above takes care of refreshing
+		//    RNTP's neighbour slots in response.
+		const transition = TrackPlayer.addEventListener(
 			Event.MediaItemTransition,
 			(e) => {
-				if (e.index < 0) return;
-				void shiftWindowToActive(e.index);
+				if (!e.item?.mediaId) return;
+				const z = useQueueStore.getState();
+				const newIdx = z.queue.findIndex(
+					(t) => t.id === e.item?.mediaId,
+				);
+				if (newIdx >= 0 && newIdx !== z.currentIndex) {
+					z.skipToIndex(newIdx);
+				}
 			},
 		);
-		return () => sub.remove();
+
+		return () => {
+			unsubscribe();
+			transition.remove();
+		};
 	}, []);
 
 	const dismissPlayer = useCallback(() => {
