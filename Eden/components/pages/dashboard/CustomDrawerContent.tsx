@@ -1,18 +1,14 @@
-import {
-	type DrawerContentComponentProps,
-	DrawerContentScrollView,
-	DrawerItem,
-} from "@react-navigation/drawer";
-import { router } from "expo-router";
-import { Music, Search, Settings, Users, X } from "lucide-react-native";
-import { Pressable, StyleSheet } from "react-native";
 import { View } from "@/components/Themed";
 import { BlurSurface } from "@/components/ui/blur-surface";
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";
+import { router } from "expo-router";
+import { DrawerContentScrollView, DrawerItem } from "expo-router/build/react-navigation/drawer";
+import { Music, Search, Settings, Users, X } from "lucide-react-native";
+import { Pressable, StyleSheet } from "react-native";
 
-export function CustomDrawerContent(props: DrawerContentComponentProps) {
+export function CustomDrawerContent(props: any) {
 	const isDark = useIsDark();
 	const foregroundColor = isDark
 		? THEME.dark.foreground

@@ -1,4 +1,4 @@
-import { DrawerActions, useNavigation } from "@react-navigation/native";
+import { DrawerActions, useNavigation } from "expo-router/react-navigation";
 import type { LucideIcon } from "lucide-react-native";
 import { Menu, Search } from "lucide-react-native";
 import type { ReactNode } from "react";
