@@ -1,4 +1,3 @@
-import { View } from "@/components/Themed";
 import {
 	DashboardHeader,
 	EmptyTrackList,
@@ -25,7 +24,7 @@ import {
 	type NativeScrollEvent,
 	type NativeSyntheticEvent,
 	RefreshControl,
-	useColorScheme,
+	useColorScheme, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect } from "react";
-import { useWindowDimensions } from "react-native";
+import {useWindowDimensions, View} from "react-native";
 import Animated, {
 	Easing,
 	useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
 	withRepeat,
 	withTiming,
 } from "react-native-reanimated";
-import { View } from "@/components/Themed";
+
 import useIsDark from "@/lib/hooks/isdark";
 
 interface ShimmerTileProps {

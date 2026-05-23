@@ -1,7 +1,7 @@
 import { DrawerActions, useNavigation } from "expo-router/react-navigation";
 import { Menu, Users } from "lucide-react-native";
-import { Pressable } from "react-native";
-import { View } from "@/components/Themed";
+import {Pressable, View} from "react-native";
+
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";
 import { THEME } from "@/lib/theme";

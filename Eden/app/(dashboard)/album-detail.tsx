@@ -1,4 +1,3 @@
-import { View } from "@/components/Themed";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +22,7 @@ import {
 	Play,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
-import { Image, Pressable, ScrollView, StyleSheet } from "react-native";
+import {Image, Pressable, ScrollView, StyleSheet, View} from "react-native";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();

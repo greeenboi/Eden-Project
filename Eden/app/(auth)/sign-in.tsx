@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,7 +22,7 @@ import {
 	Platform,
 	View as RNView,
 	ScrollView,
-	StyleSheet,
+	StyleSheet, View,
 } from "react-native";
 
 export default function SignIn() {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	background: {
-		...StyleSheet.absoluteFillObject,
+		...StyleSheet.absoluteFill,
 		opacity: 0.55,
 	},
 	scrollContent: {

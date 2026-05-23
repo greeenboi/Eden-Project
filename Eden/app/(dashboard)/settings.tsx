@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +42,7 @@ import {
 	Wifi,
 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, ScrollView } from "react-native";
+import {Pressable, ScrollView, View} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SettingsScreen() {

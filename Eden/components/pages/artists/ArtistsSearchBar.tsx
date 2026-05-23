@@ -1,7 +1,8 @@
 import { X } from "lucide-react-native";
-import { View } from "@/components/Themed";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {View} from "react-native";
 
 interface ArtistsSearchBarProps {
 	searchQuery: string;

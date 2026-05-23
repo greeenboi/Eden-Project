@@ -1,8 +1,8 @@
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { Image, StyleSheet, useColorScheme } from "react-native";
-import { View } from "@/components/Themed";
+import {Image, StyleSheet, useColorScheme, View} from "react-native";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { BlurSurface } from "@/components/ui/blur-surface";
 import { Button } from "@/components/ui/button";

@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import ArtistProfile from "@/components/pages/artists/details/ArtistProfile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import { FlashList } from "@shopify/flash-list";
 import { router, useLocalSearchParams } from "expo-router";
 import { AlertCircle, Disc3, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, useColorScheme } from "react-native";
+import {Image, Pressable, ScrollView, useColorScheme, View} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistDetailScreen() {

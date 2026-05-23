@@ -1,6 +1,6 @@
 import { router } from "expo-router";
-import { Pressable } from "react-native";
-import { View } from "@/components/Themed";
+import {Pressable, View} from "react-native";
+
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 

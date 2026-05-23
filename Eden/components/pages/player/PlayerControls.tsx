@@ -7,9 +7,10 @@ import {
 	SkipBack,
 	SkipForward,
 } from "lucide-react-native";
-import { ActivityIndicator, Pressable } from "react-native";
-import { View } from "@/components/Themed";
+import { Pressable, View} from "react-native";
+
 import type { RepeatMode } from "@/lib/actions/queue";
+import WavyLoading from "@/components/ui/wavy-loading";
 
 interface PlayerControlsProps {
 	isLoaded: boolean;
@@ -112,7 +113,7 @@ export function PlayerControls({
 							/>
 						)
 					) : (
-						<ActivityIndicator size="large" color={themeColors.tint} />
+						<WavyLoading color={themeColors.tint} />
 					)}
 				</View>
 			</Pressable>

@@ -1,5 +1,4 @@
 import { FlashList } from "@shopify/flash-list";
-import { View } from "@/components/Themed";
 import { BlurSurface } from "@/components/ui/blur-surface";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +14,7 @@ import {
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
 import { useCallback } from "react";
-import { Image, Pressable, useColorScheme } from "react-native";
+import {Image, Pressable, useColorScheme, View} from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
 	Extrapolation,

@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import {
 	Accordion,
 	AccordionContent,
@@ -56,7 +56,7 @@ import {
 	ScrollView,
 	type TextStyle,
 	useColorScheme,
-	useWindowDimensions,
+	useWindowDimensions, View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 

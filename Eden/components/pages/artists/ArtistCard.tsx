@@ -1,10 +1,10 @@
-import { View } from "@/components/Themed";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Text } from "@/components/ui/text";
 import Colors from "@/constants/Colors";
 import type { Artist } from "@/lib/actions/artists";
 import { Host, Icon } from "@expo/ui/jetpack-compose";
-import { Pressable, useColorScheme } from "react-native";
+import {Pressable, useColorScheme, View} from "react-native";
 
 interface ArtistCardProps {
 	artist: Artist;

@@ -1,8 +1,8 @@
 import { DrawerActions, useNavigation } from "expo-router/react-navigation";
 import { router } from "expo-router";
 import { Menu, Music, Search } from "lucide-react-native";
-import { Animated, Pressable } from "react-native";
-import { View } from "@/components/Themed";
+import {Animated, Pressable, View} from "react-native";
+
 import { BlurSurface } from "@/components/ui/blur-surface";
 import { Text } from "@/components/ui/text";
 import useIsDark from "@/lib/hooks/isdark";

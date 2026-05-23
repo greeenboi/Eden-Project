@@ -1,6 +1,6 @@
 import { Music } from "lucide-react-native";
-import { Image } from "react-native";
-import { View } from "@/components/Themed";
+import {Image, View} from "react-native";
+
 import { Badge } from "@/components/ui/badge";
 import { Text } from "@/components/ui/text";
 

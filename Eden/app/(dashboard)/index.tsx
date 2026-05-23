@@ -39,6 +39,7 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import WavyLoading from "@/components/ui/wavy-loading";
 
 const TRACK_STATUS_FILTER = "published";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -206,16 +207,6 @@ const AdaptiveCollage = ({
 	);
 };
 
-const WavyLoading = ({ color, dimension }: { color?: string; dimension?: number }) => (
-	<Host matchContents>
-		<Column verticalArrangement={{ spacedBy: 16 }}>
-			<CircularWavyProgressIndicator
-				color={color}
-				modifiers={dimension ? [size(dimension, dimension)] : undefined}
-			/>
-		</Column>
-	</Host>
-);
 
 export default function HomeScreen() {
 	const colorScheme = useColorScheme();

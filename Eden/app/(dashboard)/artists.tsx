@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import {
 	ArtistCard,
 	ArtistsHeader,
@@ -21,7 +21,7 @@ import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { AlertCircle } from "lucide-react-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { RefreshControl, useColorScheme } from "react-native";
+import {RefreshControl, useColorScheme, View} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ArtistsScreen() {

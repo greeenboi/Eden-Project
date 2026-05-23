@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import { MarqueeText } from "@/components/ui/MarqueeText";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -13,11 +13,10 @@ import {
 } from "lucide-react-native";
 import { memo, useEffect } from "react";
 import {
-	ActivityIndicator,
 	Image,
 	Pressable,
 	StyleSheet,
-	useWindowDimensions,
+	useWindowDimensions, View,
 } from "react-native";
 import Animated, {
 	Extrapolation,
@@ -29,6 +28,7 @@ import Animated, {
 import { PlayerControls } from "./PlayerControls";
 import { PlayerSlider } from "./PlayerSlider";
 import { PlayerTrackInfo } from "./PlayerTrackInfo";
+import WavyLoading from "@/components/ui/wavy-loading";
 
 const SPRING_CONFIG = {
 	damping: 20,
@@ -273,7 +273,7 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 										<Play color={themeColors.tint} size={24} />
 									)
 								) : (
-									<ActivityIndicator size="small" color={themeColors.tint} />
+									<WavyLoading color={themeColors.tint} />
 								)}
 							</View>
 						</Pressable>

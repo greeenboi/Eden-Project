@@ -1,8 +1,9 @@
-import { View } from "@/components/Themed";
+
 import { Text } from "@/components/ui/text";
 import { formatDuration } from "@/lib/utils";
 import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
 import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
+import {View} from "react-native";
 
 interface PlayerSliderProps {
 	trackId?: string;

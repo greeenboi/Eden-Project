@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ActivityIndicator, useColorScheme } from "react-native";
+import { useColorScheme, View} from "react-native";
 import Animated, {
 	FadeIn,
 	FadeOut,
@@ -8,9 +8,9 @@ import Animated, {
 	withRepeat,
 	withTiming,
 } from "react-native-reanimated";
-import { View } from "@/components/Themed";
-import { Text } from "@/components/ui/text";
+
 import Colors from "@/constants/Colors";
+import WavyLoading from "@/components/ui/wavy-loading";
 
 export function LoadingMoreTracks() {
 	const colorScheme = useColorScheme();
@@ -34,10 +34,7 @@ export function LoadingMoreTracks() {
 				style={{ backgroundColor: "transparent" }}
 				className="py-4 items-center flex-row justify-center gap-2"
 			>
-				<ActivityIndicator size="small" color={themeColors.primary} />
-				<Animated.View style={animatedStyle}>
-					<Text className="text-sm opacity-70">Loading more tracks...</Text>
-				</Animated.View>
+				<WavyLoading color={themeColors.primary} />
 			</View>
 		</Animated.View>
 	);

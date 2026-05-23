@@ -1,4 +1,4 @@
-import { View } from "@/components/Themed";
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
@@ -6,7 +6,7 @@ import type { Track } from "@/lib/actions/tracks";
 import { formatDuration } from "@/lib/utils";
 import { LinearGradient } from "expo-linear-gradient";
 import { Clock, Disc } from "lucide-react-native";
-import { Image, Pressable } from "react-native";
+import {Image, Pressable, View} from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 interface MasonryTrack extends Track {
