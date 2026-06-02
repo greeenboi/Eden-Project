@@ -12,7 +12,7 @@ import {
 	Host,
 	RNHostView
 } from "@expo/ui/jetpack-compose";
-import { Shapes, clickable, clip, size } from "@expo/ui/jetpack-compose/modifiers";
+import { Shapes, clickable, clip, offset, rotate, size, zIndex } from "@expo/ui/jetpack-compose/modifiers";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { DrawerActions, useNavigation } from "expo-router/react-navigation";
@@ -50,67 +50,76 @@ type CollageTrack = {
 	artworkUrl?: string | null;
 };
 
-type PositionValue = number | `${number}%`;
-
 type CollageShape = "Circle" | "Star" | "RoundedCornerShape" | "Pill" | "Slanted" | "Other";
 
+const COLLAGE_HEIGHT = scale(400);
+
+// Each tile is placed by an absolute (x, y) offset, in dp, from the top-left of
+// the collage box. These are pre-computed (instead of the old per-tile
+// percentage / right / bottom values) so the whole collage can render inside a
+// SINGLE native Host — see AdaptiveCollage. Five separate, overlapping native
+// surfaces desync and disappear when the drawer's slide animation transforms
+// the screen; one surface does not.
 type CollageConfig = {
 	width: number;
 	height: number;
-	top?: PositionValue;
-	left?: PositionValue;
-	right?: PositionValue;
-	bottom?: PositionValue;
+	x: number;
+	y: number;
 	zIndex: number;
 	shape: CollageShape;
-	rotate: string;
+	rotate: number;
 };
 
 const COSMIC_SWIRL_CONFIGS: CollageConfig[] = [
+	// Large pill, upper area (was top 14% / left 14%)
 	{
 		width: scale(240),
 		height: scale(240),
-		top: "14%",
-		left: "14%",
+		x: SCREEN_WIDTH * 0.14,
+		y: scale(33.6),
 		zIndex: 10,
 		shape: "Pill",
-		rotate: "0deg",
+		rotate: 0,
 	},
+	// Small circle bleeding off the left edge (was top 10 / left -10)
 	{
 		width: scale(110),
 		height: scale(110),
-		top: scale(10),
-		left: scale(-10),
+		x: scale(-10),
+		y: scale(10),
 		zIndex: 20,
 		shape: "Circle",
-		rotate: "10deg",
+		rotate: 10,
 	},
+	// Cookie, top-right (was top 20 / right 10)
 	{
 		width: scale(100),
 		height: scale(100),
-		top: scale(20),
-		right: scale(10),
+		x: SCREEN_WIDTH - scale(110),
+		y: scale(20),
 		zIndex: 20,
 		shape: "Other",
-		rotate: "-18deg",
+		rotate: -18,
 	},
+	// Slanted rounded square, lower-left (was bottom-section top 10 / left -10)
 	{
 		width: scale(130),
 		height: scale(130),
-		top: scale(10),
-		left: scale(-10),
+		x: scale(-10),
+		y: scale(250),
 		zIndex: 20,
 		shape: "RoundedCornerShape",
-		rotate: "-20deg",
+		rotate: -20,
 	},
+	// Large star, bottom-right bleed (was bottom -40 / right -30)
 	{
 		width: scale(210),
 		height: scale(210),
-		bottom: -40,
-		right: scale(-30),
+		x: SCREEN_WIDTH - scale(180),
+		y: scale(190) + 40,
 		zIndex: 15,
 		shape: "Star",
-		rotate: "45deg",
+		rotate: 45,
 	},
 ];
 
@@ -133,38 +142,6 @@ const getNativeShape = (shapeName: CollageShape) => {
 	}
 };
 
-const getStyles = (cfg: CollageConfig) => ({
-	position: "absolute" as const,
-	width: cfg.width,
-	height: cfg.height,
-	top: cfg.top,
-	left: cfg.left,
-	right: cfg.right,
-	bottom: cfg.bottom,
-	zIndex: cfg.zIndex,
-	transform: [{ rotate: cfg.rotate }],
-});
-
-const CollageItem = ({ track, cfg, pressFn }: { track: CollageTrack; cfg: CollageConfig; pressFn?: () => void }) => {
-	if (!track.artworkUrl) return null;
-
-	return (
-		<Pressable onPress={() => pressFn?.()} style={getStyles(cfg)}>
-			<Host matchContents>
-				<Box modifiers={[size(cfg.width, cfg.height), clip(getNativeShape(cfg.shape))]}>
-					<RNHostView matchContents>
-						<Image
-							source={{ uri: track.artworkUrl }}
-							style={{ width: "100%", height: "100%" }}
-							resizeMode="cover"
-						/>
-					</RNHostView>
-				</Box>
-			</Host>
-		</Pressable>
-	);
-};
-
 const AdaptiveCollage = ({
 	featuredTracks,
 	handleTrackPress,
@@ -172,35 +149,48 @@ const AdaptiveCollage = ({
 	featuredTracks: CollageTrack[];
 	handleTrackPress: (trackId: string) => void;
 }) => {
-	const collageHeight = scale(400);
-
-	const songsToShow: (CollageTrack | null)[] = [...featuredTracks.slice(0, 6)];
-	while (songsToShow.length < 6) songsToShow.push(null);
-
-	const topTracks = songsToShow.slice(0, 3);
-	const bottomTracks = songsToShow.slice(3, 6);
+	// Pair each config with its track up-front, then drop tiles that have no
+	// artwork. Pairing before filtering keeps every tile on its own config.
+	const tiles = COSMIC_SWIRL_CONFIGS.map((cfg, i) => ({
+		cfg,
+		track: featuredTracks[i] ?? null,
+	})).filter((t): t is { cfg: CollageConfig; track: CollageTrack } => Boolean(t.track?.artworkUrl));
 
 	return (
-		<View style={{ width: SCREEN_WIDTH, height: collageHeight }}>
-			<View style={{ height: "60%", width: "100%", position: "relative" }}>
-				{topTracks.map((track, i) => {
-					const cfg = COSMIC_SWIRL_CONFIGS[i];
-					if (!track || !cfg) return null;
-					const trackKey = track.id ?? track.artworkUrl ?? `top-slot-${cfg.zIndex}-${cfg.shape}`;
-					// biome-ignore lint/style/noNonNullAssertion: track id is not null when all tracks are always present
-					return <CollageItem key={`top-${trackKey}`} track={track} cfg={cfg} pressFn={() => handleTrackPress(track.id!)} />;
-				})}
-			</View>
-
-			<View style={{ height: "40%", width: "100%", position: "relative" }}>
-				{bottomTracks.map((track, i) => {
-					const cfg = COSMIC_SWIRL_CONFIGS[i + 3];
-					if (!track || !cfg) return null;
-					const trackKey = track.id ?? track.artworkUrl ?? `bottom-slot-${cfg.zIndex}-${cfg.shape}`;
-					// biome-ignore lint/style/noNonNullAssertion: track id is not null when all tracks are always present
-					return <CollageItem key={`bottom-${trackKey}`} track={track} cfg={cfg} pressFn={() => handleTrackPress(track.id!)} />;
-				})}
-			</View>
+		<View style={{ width: SCREEN_WIDTH, height: COLLAGE_HEIGHT }}>
+			<Host matchContents>
+				{/* One native surface for the whole collage. Children stack at the
+				    Box's top-left (default contentAlignment) and are placed by their
+				    own offset()/rotate()/zIndex() modifiers — this is what survives
+				    the drawer's slide transform where five separate Hosts did not. */}
+				<Box modifiers={[size(SCREEN_WIDTH, COLLAGE_HEIGHT)]}>
+					{tiles.map(({ cfg, track }, i) => {
+						const key = track.id ?? track.artworkUrl ?? `slot-${i}`;
+						return (
+							<Box
+								key={key}
+								modifiers={[
+									size(cfg.width, cfg.height),
+									offset(cfg.x, cfg.y),
+									rotate(cfg.rotate),
+									zIndex(cfg.zIndex),
+									clip(getNativeShape(cfg.shape)),
+									...(track.id ? [clickable(() => handleTrackPress(track.id as string))] : []),
+								]}
+							>
+								<RNHostView matchContents>
+									<Image
+										// biome-ignore lint/style/noNonNullAssertion: filtered to non-null artwork above
+										source={{ uri: track.artworkUrl! }}
+										style={{ width: "100%", height: "100%" }}
+										resizeMode="cover"
+									/>
+								</RNHostView>
+							</Box>
+						);
+					})}
+				</Box>
+			</Host>
 		</View>
 	);
 };
