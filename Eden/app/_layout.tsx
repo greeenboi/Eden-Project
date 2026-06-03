@@ -1,3 +1,4 @@
+import LoadingScreen from "@/components/ui/loading-screen";
 import { SessionProvider, useSession } from "@/lib/ctx";
 import { SplashScreenController } from "@/lib/splash";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
@@ -140,25 +141,26 @@ function RootLayoutNav() {
 	const colorScheme = useColorScheme();
 	const { session, isLoading } = useSession();
 
-	// Wait for auth initialization
-	if (isLoading) {
-		return null;
-	}
-
 	return (
 		<ThemeProvider
 			value={colorScheme === "dark" ? DarkThemeCustom : LightTheme}
 		>
-			<GestureHandlerRootView>
-				<Stack screenOptions={{ headerShown: false }}>
-					<Stack.Protected guard={!session}>
-						<Stack.Screen name="(auth)" />
-					</Stack.Protected>
+			<GestureHandlerRootView style={{ flex: 1 }}>
+				{isLoading ? (
+					// Auth/session context still initializing — show the global spinner
+					// (the splash is already down) until it settles.
+					<LoadingScreen />
+				) : (
+					<Stack screenOptions={{ headerShown: false }}>
+						<Stack.Protected guard={!session}>
+							<Stack.Screen name="(auth)" />
+						</Stack.Protected>
 
-					<Stack.Protected guard={!!session}>
-						<Stack.Screen name="(dashboard)" />
-					</Stack.Protected>
-				</Stack>
+						<Stack.Protected guard={!!session}>
+							<Stack.Screen name="(dashboard)" />
+						</Stack.Protected>
+					</Stack>
+				)}
 				<PortalHost />
 			</GestureHandlerRootView>
 		</ThemeProvider>

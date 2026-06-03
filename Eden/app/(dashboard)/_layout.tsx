@@ -50,7 +50,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "All Songs",
 						drawerItemStyle: { display: "none" }, // Hide from auto-generated list
-						lazy: false,
+						lazy: true,
 					}}
 				/>
 				<Drawer.Screen
@@ -58,7 +58,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Artists",
 						drawerItemStyle: { display: "none" },
-						lazy: false,
+						lazy: true,
 					}}
 				/>
 				<Drawer.Screen
@@ -66,7 +66,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Search",
 						drawerItemStyle: { display: "none" },
-						lazy: false,
+						lazy: true,
 					}}
 				/>
 				<Drawer.Screen
@@ -74,7 +74,7 @@ export default function AppLayout() {
 					options={{
 						drawerLabel: "Settings",
 						drawerItemStyle: { display: "none" },
-						lazy: false,
+						lazy: true,
 					}}
 				/>
 
