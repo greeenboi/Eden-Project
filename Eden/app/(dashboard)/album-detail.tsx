@@ -1,18 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Text } from "@/components/ui/text";
-import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { useTrackStore } from "@/lib/actions/tracks";
-import {
-	albumPlayStarted,
-	albumViewed,
-	trackPlayWithQueue,
-} from "@/lib/analytics";
-import { formatDuration } from "@/lib/utils";
 import { router, useLocalSearchParams } from "expo-router";
 import {
 	AlertCircle,
@@ -22,7 +7,23 @@ import {
 	Play,
 } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
-import {Image, Pressable, ScrollView, StyleSheet, View} from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Artwork } from "@/components/ui/artwork";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { useTrackStore } from "@/lib/actions/tracks";
+import {
+	albumPlayStarted,
+	albumViewed,
+	trackPlayWithQueue,
+} from "@/lib/analytics";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
+import { formatDuration } from "@/lib/utils";
 
 export default function AlbumDetailScreen() {
 	const { id } = useLocalSearchParams();
@@ -177,10 +178,9 @@ export default function AlbumDetailScreen() {
 							<Card className="w-full aspect-square max-w-sm overflow-hidden">
 								<CardContent className="flex-1 items-center justify-center bg-primary/10 p-0">
 									{albumInfo?.artworkUrl ? (
-										<Image
+										<Artwork
 											source={{ uri: albumInfo.artworkUrl }}
 											style={{ width: "100%", height: "100%" }}
-											resizeMode="cover"
 										/>
 									) : (
 										<Music size={120} className="text-primary opacity-50" />
@@ -277,10 +277,9 @@ export default function AlbumDetailScreen() {
 													className="w-12 h-12 rounded overflow-hidden bg-primary/10"
 												>
 													{track.artworkUrl ? (
-														<Image
+														<Artwork
 															source={{ uri: track.artworkUrl }}
 															style={{ width: "100%", height: "100%" }}
-															resizeMode="cover"
 														/>
 													) : (
 														<View

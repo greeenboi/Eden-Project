@@ -1,9 +1,9 @@
 import { router } from "expo-router";
 import { AlertCircle, ArrowLeft } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import {Image, StyleSheet, useColorScheme, View} from "react-native";
-
+import { useCallback, useEffect, useRef } from "react";
+import { StyleSheet, useColorScheme, View } from "react-native";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Artwork } from "@/components/ui/artwork";
 import { BlurSurface } from "@/components/ui/blur-surface";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,7 +89,6 @@ export function PlayingSongContent({
 			trackId,
 			fetchStream: getStreamingUrl,
 			enabled: Boolean(trackId && currentTrack && currentTrack.id === trackId),
-			updateInterval: 100,
 			onTrackEnd,
 		});
 
@@ -105,36 +104,22 @@ export function PlayingSongContent({
 
 	const pendingSeekRef = useRef<number | null>(null);
 
-	const sliderValue = useMemo(() => {
-		return status.currentTime ?? 0;
-	}, [status.currentTime]);
+	const handleSlidingComplete = useCallback(
+		(value: number) => {
+			if (!status.isLoaded || !Number.isFinite(value)) return;
 
-	const sliderMax = useMemo(() => {
-		return status.duration && status.duration > 0 ? status.duration : 1;
-	}, [status.duration]);
+			// PlayerSlider already clamps to its own [0, duration] range.
+			const clampedValue = Math.max(0, value);
 
-	const safeSliderMax = useMemo(() => {
-		if (!Number.isFinite(sliderMax) || sliderMax <= 0) return 1;
-		return sliderMax;
-	}, [sliderMax]);
-
-	const safeSliderValue = useMemo(() => {
-		if (!Number.isFinite(sliderValue)) return 0;
-		return Math.min(safeSliderMax, Math.max(0, sliderValue));
-	}, [safeSliderMax, sliderValue]);
-
-	const handleSlidingComplete = useCallback((value: number) => {
-		if (!status.isLoaded || !Number.isFinite(value)) return;
-
-		const clampedValue = Math.min(safeSliderMax, Math.max(0, value));
-
-		// Commit seek once at thumb release; ignore duplicate release events.
-		if (pendingSeekRef.current === clampedValue) {
-			return;
-		}
-		pendingSeekRef.current = clampedValue;
-		player.seekTo(clampedValue);
-	}, [player, safeSliderMax, status.isLoaded]);
+			// Commit seek once at thumb release; ignore duplicate release events.
+			if (pendingSeekRef.current === clampedValue) {
+				return;
+			}
+			pendingSeekRef.current = clampedValue;
+			player.seekTo(clampedValue);
+		},
+		[player, status.isLoaded],
+	);
 
 	// Localize loading to this track so list fetches elsewhere don't block the player UI
 	const isTrackLoading =
@@ -184,7 +169,7 @@ export function PlayingSongContent({
 	}
 
 	return (
-		<View style={styles.container} className="bg-background flex-1">
+		<View style={styles.container} className="bg-background flex-1 ">
 			{variant === "full" && currentTrack?.artworkUrl && (
 				<View
 					pointerEvents="none"
@@ -196,10 +181,9 @@ export function PlayingSongContent({
 						bottom: 0,
 					}}
 				>
-					<Image
+					<Artwork
 						source={{ uri: currentTrack.artworkUrl }}
 						style={{ width: "100%", height: "100%", opacity: 0.5 }}
-						resizeMode="cover"
 						blurRadius={40}
 					/>
 					<BlurSurface
@@ -285,9 +269,6 @@ export function PlayingSongContent({
 						isPlaying={status.playing}
 						isLoaded={status.isLoaded}
 						loadingStream={loadingStream}
-						sliderValue={safeSliderValue}
-						sliderMax={safeSliderMax}
-						duration={status.duration ?? 0}
 						themeColors={themeColors}
 						hasNext={hasNext}
 						hasPrevious={hasPrevious}
@@ -319,7 +300,8 @@ export function PlayingSongContent({
 					<AlertCircle size={64} className="opacity-30 mb-4" />
 					<Text className="text-xl font-semibold mb-2">Track Not Found</Text>
 					<Text className="text-center opacity-70 mb-6">
-						The track you&apos;re looking for doesn&apos;t exist or has been removed.
+						The track you&apos;re looking for doesn&apos;t exist or has been
+						removed.
 					</Text>
 					<Button onPress={handleClose}>
 						<Text>Go Back</Text>

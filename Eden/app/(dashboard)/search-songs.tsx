@@ -1,42 +1,11 @@
-
-import {
-	Accordion,
-	AccordionContent,
-	AccordionItem,
-	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Text } from "@/components/ui/text";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
-import type { Album } from "@/lib/actions/albums";
-import type { Artist } from "@/lib/actions/artists";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { searchTracks, searchWithRelated } from "@/lib/actions/search";
-import type { Track } from "@/lib/actions/tracks";
-import {
-	albumViewed,
-	artistViewed,
-	searchPerformed,
-	trackPlayWithQueue,
-} from "@/lib/analytics";
-import { formatDuration } from "@/lib/utils";
 import {
 	DockedSearchBar,
 	Text as ExpoText,
 	Host,
 	SegmentedButton,
-	SingleChoiceSegmentedButtonRow
+	SingleChoiceSegmentedButtonRow,
 } from "@expo/ui/jetpack-compose";
-import {
-	fillMaxWidth,
-	width
-} from "@expo/ui/jetpack-compose/modifiers";
+import { fillMaxWidth, width } from "@expo/ui/jetpack-compose/modifiers";
 import { router } from "expo-router";
 import { DrawerActions, useNavigation } from "expo-router/react-navigation";
 import {
@@ -51,14 +20,42 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	ActivityIndicator,
-	Image,
 	Pressable,
 	ScrollView,
 	type TextStyle,
 	useColorScheme,
-	useWindowDimensions, View,
+	useWindowDimensions,
+	View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Artwork } from "@/components/ui/artwork";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
+import type { Album } from "@/lib/actions/albums";
+import type { Artist } from "@/lib/actions/artists";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { searchTracks, searchWithRelated } from "@/lib/actions/search";
+import type { Track } from "@/lib/actions/tracks";
+import {
+	albumViewed,
+	artistViewed,
+	searchPerformed,
+	trackPlayWithQueue,
+} from "@/lib/analytics";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
+import { formatDuration } from "@/lib/utils";
 
 type SearchType = "all" | "title" | "artist";
 
@@ -82,7 +79,8 @@ function ArtistCircleCard({
 	artist,
 	onPress,
 	size = 100,
-}: ArtistCircleCardProps) {	const colorScheme = useColorScheme();
+}: ArtistCircleCardProps) {
+	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
 	return (
@@ -179,10 +177,9 @@ function TrackSquareCard({
 					}}
 				>
 					{track.artworkUrl ? (
-						<Image
+						<Artwork
 							source={{ uri: track.artworkUrl }}
 							style={{ width: "100%", height: "100%", borderRadius: 8 }}
-							resizeMode="cover"
 						/>
 					) : (
 						<Disc size={40} className="opacity-30" />
@@ -245,10 +242,9 @@ function TrackListItem({ track, index, onPress }: TrackListItemProps) {
 				}}
 			>
 				{track.artworkUrl ? (
-					<Image
+					<Artwork
 						source={{ uri: track.artworkUrl }}
 						style={{ width: "100%", height: "100%", borderRadius: 6 }}
-						resizeMode="cover"
 					/>
 				) : (
 					<Disc size={24} className="opacity-30" />
@@ -307,10 +303,9 @@ function AlbumCard({ album, onPress, size = 140 }: AlbumCardProps) {
 				}}
 			>
 				{album.artworkUrl ? (
-					<Image
+					<Artwork
 						source={{ uri: album.artworkUrl }}
 						style={{ width: "100%", height: "100%", borderRadius: 8 }}
-						resizeMode="cover"
 					/>
 				) : (
 					<Library size={40} className="opacity-30" />
@@ -416,7 +411,7 @@ function AlbumsSkeleton() {
 }
 
 // === Empty State ===
-function EmptyState({ message, color }: { message: string, color: string }) {
+function EmptyState({ message, color }: { message: string; color: string }) {
 	return (
 		<View className="flex-1 items-center justify-center py-20 px-8">
 			<Search size={48} className="opacity-20" color={color} />
@@ -466,91 +461,91 @@ export default function SearchSongsScreen() {
 	const handleSearchWithQuery = useCallback(
 		async (queryInput: string) => {
 			const query = queryInput.trim();
-		if (!query) {
-			setError("Please enter a search query");
-			return;
-		}
+			if (!query) {
+				setError("Please enter a search query");
+				return;
+			}
 
 			setSearchQuery(query);
 
-		// Cancel previous request
-		abortControllerRef.current?.abort();
-		const controller = new AbortController();
-		abortControllerRef.current = controller;
+			// Cancel previous request
+			abortControllerRef.current?.abort();
+			const controller = new AbortController();
+			abortControllerRef.current = controller;
 
-		setIsSearching(true);
-		setError(null);
-		setHasSearched(true);
+			setIsSearching(true);
+			setError(null);
+			setHasSearched(true);
 
-		try {
-			if (searchType === "artist") {
-				// Artist-only search with related content
-				const result = await searchWithRelated(
-					query,
-					{
-						artistLimit: 50,
-						trackLimit: 0,
-						albumLimit: 20,
-						relatedTracksLimit: 30,
-					},
-					controller.signal,
-				);
-				setArtists(result.artists);
-				setTracks([]);
-				setAlbums(result.albums);
-				setRelatedTracks(result.relatedTracks);
+			try {
+				if (searchType === "artist") {
+					// Artist-only search with related content
+					const result = await searchWithRelated(
+						query,
+						{
+							artistLimit: 50,
+							trackLimit: 0,
+							albumLimit: 20,
+							relatedTracksLimit: 30,
+						},
+						controller.signal,
+					);
+					setArtists(result.artists);
+					setTracks([]);
+					setAlbums(result.albums);
+					setRelatedTracks(result.relatedTracks);
 
-				// Track search analytics
-				searchPerformed(query, "artist", {
-					artists: result.artists.length,
-					tracks: 0,
-					albums: result.albums.length,
-				});
-			} else if (searchType === "title") {
-				// Track-only search
-				const result = await searchTracks(query, 50, controller.signal);
-				setTracks(result.tracks);
+					// Track search analytics
+					searchPerformed(query, "artist", {
+						artists: result.artists.length,
+						tracks: 0,
+						albums: result.albums.length,
+					});
+				} else if (searchType === "title") {
+					// Track-only search
+					const result = await searchTracks(query, 50, controller.signal);
+					setTracks(result.tracks);
+					setArtists([]);
+					setAlbums([]);
+					setRelatedTracks([]);
+
+					// Track search analytics
+					searchPerformed(query, "title", {
+						artists: 0,
+						tracks: result.tracks.length,
+						albums: 0,
+					});
+				} else {
+					// Search all with related content
+					const result = await searchWithRelated(
+						query,
+						{
+							artistLimit: 10,
+							trackLimit: 30,
+							albumLimit: 10,
+							relatedTracksLimit: 20,
+						},
+						controller.signal,
+					);
+					setArtists(result.artists);
+					setTracks(result.tracks);
+					setAlbums(result.albums);
+					setRelatedTracks(result.relatedTracks);
+
+					// Track search analytics
+					searchPerformed(query, "all", {
+						artists: result.artists.length,
+						tracks: result.tracks.length + result.relatedTracks.length,
+						albums: result.albums.length,
+					});
+				}
+			} catch (err) {
+				if (err instanceof Error && err.name === "AbortError") return;
+				setError(err instanceof Error ? err.message : "Search failed");
 				setArtists([]);
+				setTracks([]);
 				setAlbums([]);
 				setRelatedTracks([]);
-
-				// Track search analytics
-				searchPerformed(query, "title", {
-					artists: 0,
-					tracks: result.tracks.length,
-					albums: 0,
-				});
-			} else {
-				// Search all with related content
-				const result = await searchWithRelated(
-					query,
-					{
-						artistLimit: 10,
-						trackLimit: 30,
-						albumLimit: 10,
-						relatedTracksLimit: 20,
-					},
-					controller.signal,
-				);
-				setArtists(result.artists);
-				setTracks(result.tracks);
-				setAlbums(result.albums);
-				setRelatedTracks(result.relatedTracks);
-
-				// Track search analytics
-				searchPerformed(query, "all", {
-					artists: result.artists.length,
-					tracks: result.tracks.length + result.relatedTracks.length,
-					albums: result.albums.length,
-				});
-			}
-		} catch (err) {
-			if (err instanceof Error && err.name === "AbortError") return;
-			setError(err instanceof Error ? err.message : "Search failed");
-			setArtists([]);
-			setTracks([]);
-			setAlbums([]);
-			setRelatedTracks([]);
 			} finally {
 				setIsSearching(false);
 			}
@@ -647,12 +642,10 @@ export default function SearchSongsScreen() {
 					trackIndex,
 				);
 
-				playTrackWithQueue(
-					selectedTrack,
-					queueTracks,
-					trackIndex,
-					{ type: "search", query: searchQuery } as QueueSource,
-				);
+				playTrackWithQueue(selectedTrack, queueTracks, trackIndex, {
+					type: "search",
+					query: searchQuery,
+				} as QueueSource);
 			}
 		},
 		[queueTracks, playTrackWithQueue, searchQuery],
@@ -706,7 +699,9 @@ export default function SearchSongsScreen() {
 								</DockedSearchBar.Placeholder>
 							</DockedSearchBar>
 						</Host>
-						{isSearching && <ActivityIndicator size="small" color={themeColors.tint} />}
+						{isSearching && (
+							<ActivityIndicator size="small" color={themeColors.tint} />
+						)}
 					</View>
 				</View>
 
@@ -842,7 +837,10 @@ export default function SearchSongsScreen() {
 					{!isSearching && hasSearched && (
 						<>
 							{!hasResults && (
-								<EmptyState message="No results found. Try a different search term." color={themeColors.tint} />
+								<EmptyState
+									message="No results found. Try a different search term."
+									color={themeColors.tint}
+								/>
 							)}
 
 							{/* Artists Section - Horizontal */}
@@ -956,11 +954,13 @@ export default function SearchSongsScreen() {
 
 					{/* Initial State */}
 					{!isSearching && !hasSearched && (
-						<EmptyState message="Search for your favorite songs and artists" color={themeColors.accent} />
+						<EmptyState
+							message="Search for your favorite songs and artists"
+							color={themeColors.accent}
+						/>
 					)}
 				</ScrollView>
 			</View>
 		</SafeAreaView>
 	);
 }
-

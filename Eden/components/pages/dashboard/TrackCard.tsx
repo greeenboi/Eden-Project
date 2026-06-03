@@ -1,13 +1,13 @@
-
+import { LinearGradient } from "expo-linear-gradient";
+import { Clock, Disc } from "lucide-react-native";
+import { Pressable, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { Artwork } from "@/components/ui/artwork";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
 import type { Track } from "@/lib/actions/tracks";
 import { formatDuration } from "@/lib/utils";
-import { LinearGradient } from "expo-linear-gradient";
-import { Clock, Disc } from "lucide-react-native";
-import {Image, Pressable, View} from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 
 interface MasonryTrack extends Track {
 	span: number;
@@ -39,7 +39,7 @@ export function TrackCard({ item, index, onPress }: TrackCardProps) {
 
 	return (
 		<Animated.View
-		className="p-1"
+			className="p-1"
 			entering={FadeInDown.duration(220)
 				.delay(Math.min(index * 18, 360))
 				.springify()
@@ -65,10 +65,9 @@ export function TrackCard({ item, index, onPress }: TrackCardProps) {
 						className="w-full items-center justify-center relative"
 					>
 						{item.artworkUrl ? (
-							<Image
+							<Artwork
 								source={{ uri: item.artworkUrl }}
 								style={{ width: "100%", height: "100%" }}
-								resizeMode="cover"
 							/>
 						) : (
 							<LinearGradient
