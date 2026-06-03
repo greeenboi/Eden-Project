@@ -1,20 +1,8 @@
 import { FlashList } from "@shopify/flash-list";
-import { BlurSurface } from "@/components/ui/blur-surface";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayerState } from "@/lib/GlobalPlayerProvider";
-import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
-import {
-	queueCleared,
-	queueTrackRemoved,
-	trackPlayWithQueue,
-} from "@/lib/analytics";
 import { router } from "expo-router";
 import { GripVertical, Music, Pause, Trash2, X } from "lucide-react-native";
 import { useCallback } from "react";
-import {Image, Pressable, useColorScheme, View} from "react-native";
+import { Pressable, useColorScheme, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import Reanimated, {
 	Extrapolation,
@@ -23,6 +11,18 @@ import Reanimated, {
 	useAnimatedStyle,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Artwork } from "@/components/ui/artwork";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Text } from "@/components/ui/text";
+import Colors from "@/constants/Colors";
+import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
+import {
+	queueCleared,
+	queueTrackRemoved,
+	trackPlayWithQueue,
+} from "@/lib/analytics";
+import { useGlobalPlayerState } from "@/lib/GlobalPlayerProvider";
 
 interface QueueItemProps {
 	track: QueueTrack;
@@ -146,10 +146,9 @@ function QueueItem({
 					>
 						<CardContent className="p-0 w-full h-full bg-primary/10 items-center justify-center">
 							{track.artworkUrl ? (
-								<Image
+								<Artwork
 									source={{ uri: track.artworkUrl }}
-									className="w-full h-full"
-									resizeMode="cover"
+									style={{ width: "100%", height: "100%" }}
 								/>
 							) : (
 								<Music size={20} color={themeColors.muted} />
@@ -259,37 +258,6 @@ export default function QueueScreen() {
 	return (
 		<SafeAreaView className="flex-1">
 			<View className="flex-1">
-				{/* Blurred artwork backdrop */}
-				{currentTrack?.artworkUrl && (
-					<View
-						pointerEvents="none"
-						style={{
-							position: "absolute",
-							top: 0,
-							left: 0,
-							right: 0,
-							height: 320,
-						}}
-					>
-						<Image
-							source={{ uri: currentTrack.artworkUrl }}
-							style={{ width: "100%", height: "100%", opacity: 0.55 }}
-							resizeMode="cover"
-							blurRadius={28}
-						/>
-						<BlurSurface
-							intensity={50}
-							style={{
-								position: "absolute",
-								top: 0,
-								left: 0,
-								right: 0,
-								bottom: 0,
-							}}
-						/>
-					</View>
-				)}
-
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-2 py-3 border-b border-border">
 					<Button variant="ghost" size="sm" onPress={() => router.back()}>
