@@ -1,157 +1,42 @@
 import Colors from "@/constants/Colors";
-import { Box, Host, Slider } from "@expo/ui/jetpack-compose";
-import { Shapes, background, clip, fillMaxWidth, size } from "@expo/ui/jetpack-compose/modifiers";
 import type { BottomSheetHandleProps } from "@gorhom/bottom-sheet";
-import TrackPlayer, {
-	PlaybackState,
-	usePlaybackState,
-	useProgress,
-} from "@rntp/player";
 import type React from "react";
-import { useCallback, useMemo } from "react";
 import {
-    type StyleProp,
-    StyleSheet,
-    type ViewStyle,
-    useColorScheme,
+	type StyleProp,
+	StyleSheet,
+	View,
+	type ViewStyle,
+	useColorScheme,
 } from "react-native";
-import Animated, {
-    Extrapolation,
-    interpolate,
-    useAnimatedStyle,
-} from "react-native-reanimated";
 
-interface PlayerHandleProps extends BottomSheetHandleProps {
+type PlayerHandleProps = BottomSheetHandleProps & {
 	style?: StyleProp<ViewStyle>;
-}
+};
 
 /**
- * Custom handle component that shows:
- * - Regular animated handle when in full/expanded mode
- * - Progress slider when in mini mode (index 0)
+ * Minimal drag handle for the player sheet. The progress slider that used to
+ * live here was moved into the mini player content (AnimatedPlayerContent),
+ * where dragging to seek no longer competes with the sheet's pan gesture.
  */
-const PlayerHandle: React.FC<PlayerHandleProps> = ({
-	style,
-	animatedIndex,
-}) => {
+const PlayerHandle: React.FC<PlayerHandleProps> = ({ style }) => {
 	const colorScheme = useColorScheme();
 	const themeColors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
-	const { position, duration } = useProgress();
-	const playbackState = usePlaybackState();
-	const isLoaded =
-		playbackState === PlaybackState.Ready ||
-		playbackState === PlaybackState.Ended;
-	const isLoading = playbackState === PlaybackState.Buffering;
-
-	const sliderMax = useMemo(() => {
-		if (!Number.isFinite(duration) || duration <= 0) return 1;
-		return duration;
-	}, [duration]);
-
-	const sliderValue = useMemo(() => {
-		if (!Number.isFinite(position)) return 0;
-		return Math.min(sliderMax, Math.max(0, position));
-	}, [position, sliderMax]);
-
-	const handleSlidingComplete = useCallback(
-		(value: number) => {
-			if (!isLoaded || !Number.isFinite(value)) return;
-			TrackPlayer.seekTo(Math.min(sliderMax, Math.max(0, value)));
-		},
-		[isLoaded, sliderMax],
-	);
-
-	// Animated styles for the regular handle
-	const containerAnimatedStyle = useAnimatedStyle(() => {
-		const borderTopRadius = interpolate(
-			animatedIndex.value,
-			[0, 1, 2],
-			[12, 20, 0],
-			Extrapolation.CLAMP,
-		);
-		return {
-			borderTopLeftRadius: borderTopRadius,
-			borderTopRightRadius: borderTopRadius,
-		};
-	});
-
-	// Opacity for slider (visible at index 0) vs handle indicators (visible at index 1+)
-	const sliderOpacityStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(
-			animatedIndex.value,
-			[0, 0.3],
-			[1, 0],
-			Extrapolation.CLAMP,
-		);
-		return { opacity };
-	});
-
-	const indicatorOpacityStyle = useAnimatedStyle(() => {
-		const opacity = interpolate(
-			animatedIndex.value,
-			[0, 0.3],
-			[0, 1],
-			Extrapolation.CLAMP,
-		);
-		return { opacity };
-	});
-
-	const containerStyle = useMemo(
-		() => [
-			styles.header,
-			{
-				backgroundColor: themeColors.card,
-				borderBottomColor: themeColors.border,
-			},
-			style,
-		],
-		[style, themeColors.card, themeColors.border],
-	);
-
 	return (
-		<Animated.View
-			style={[containerStyle, containerAnimatedStyle]}
-			renderToHardwareTextureAndroid={true}
+		<View
+			style={[
+				styles.header,
+				{
+					backgroundColor: themeColors.card,
+					borderBottomColor: themeColors.border,
+				},
+				style,
+			]}
 		>
-			{/* Slider - visible in mini mode */}
-			<Animated.View style={[styles.sliderContainer, sliderOpacityStyle]}>
-				<Host matchContents style={styles.sliderHost}>
-					<Box contentAlignment="center" modifiers={[fillMaxWidth(0.95)]}>
-						<Slider
-							value={sliderValue}
-							min={0}
-							max={sliderMax}
-							enabled={isLoaded && !isLoading}
-							colors={{
-								thumbColor: themeColors.primary,
-								activeTickColor: themeColors.primary,
-								inactiveTickColor: themeColors.muted,
-								activeTrackColor: themeColors.primary,
-								inactiveTrackColor: themeColors.muted,
-							}}
-							onValueChange={() => {}}
-							onValueChangeFinished={(value?: number) => {
-								const finalValue =
-									typeof value === "number" && Number.isFinite(value)
-										? value
-										: sliderValue;
-								handleSlidingComplete(finalValue);
-							}}
-						>
-							<Slider.Thumb>
-								<Box modifiers={[size(20, 20), clip(Shapes.Circle), background(themeColors.primary)]} />
-							</Slider.Thumb>
-						</Slider>
-					</Box>
-				</Host>
-			</Animated.View>
-
-			{/* Regular handle indicators - visible in expanded mode */}
-			<Animated.View
-				style={[styles.indicatorContainer, indicatorOpacityStyle]}
+			<View
+				style={[styles.grabber, { backgroundColor: themeColors.mutedForeground }]}
 			/>
-		</Animated.View>
+		</View>
 	);
 };
 
@@ -159,41 +44,17 @@ export default PlayerHandle;
 
 const styles = StyleSheet.create({
 	header: {
-		alignContent: "center",
 		alignItems: "center",
 		justifyContent: "center",
 		paddingVertical: 10,
-		borderBottomWidth: 1,
-		minHeight: 40,
+		borderTopLeftRadius: 16,
+		borderTopRightRadius: 16,
+		borderBottomWidth: StyleSheet.hairlineWidth,
 	},
-	sliderContainer: {
-		position: "absolute",
-		left: 16,
-		right: 16,
-		top: 0,
-		bottom: 0,
-		justifyContent: "center",
-	},
-	sliderHost: {
-		width: "100%",
-		height: 40,
-	},
-	indicatorContainer: {
-		height: 1,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-	},
-	indicator: {
-		width: 10,
+	grabber: {
+		width: 36,
 		height: 4,
-	},
-	leftIndicator: {
-		borderTopStartRadius: 2,
-		borderBottomStartRadius: 2,
-	},
-	rightIndicator: {
-		borderTopEndRadius: 2,
-		borderBottomEndRadius: 2,
+		borderRadius: 2,
+		opacity: 0.5,
 	},
 });
