@@ -1,18 +1,18 @@
-import { BlurSurface } from "@/components/ui/blur-surface";
-import Colors from "@/constants/Colors";
-import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
-import { type Artist, fetchArtists } from "@/lib/actions/artists";
-import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
-import { type Track, useTrackStore } from "@/lib/actions/tracks";
-import { trackPlayWithQueue } from "@/lib/analytics";
-import { formatDuration } from "@/lib/utils";
 import {
 	Box,
 	HorizontalCenteredHeroCarousel,
 	Host,
-	RNHostView
+	RNHostView,
 } from "@expo/ui/jetpack-compose";
-import { Shapes, clickable, clip, offset, rotate, size, zIndex } from "@expo/ui/jetpack-compose/modifiers";
+import {
+	clickable,
+	clip,
+	offset,
+	rotate,
+	Shapes,
+	size,
+	zIndex,
+} from "@expo/ui/jetpack-compose/modifiers";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { DrawerActions, useNavigation } from "expo-router/react-navigation";
@@ -24,8 +24,8 @@ import {
 	Pressable,
 	ScrollView,
 	Text,
-	View,
 	useColorScheme,
+	View,
 } from "react-native";
 import Animated, {
 	Easing,
@@ -37,7 +37,17 @@ import Animated, {
 	withTiming,
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Artwork } from "@/components/ui/artwork";
+import { BlurSurface } from "@/components/ui/blur-surface";
+import LoadingScreen from "@/components/ui/loading-screen";
 import WavyLoading from "@/components/ui/wavy-loading";
+import Colors from "@/constants/Colors";
+import { type Artist, fetchArtists } from "@/lib/actions/artists";
+import type { QueueSource, QueueTrack } from "@/lib/actions/queue";
+import { type Track, useTrackStore } from "@/lib/actions/tracks";
+import { trackPlayWithQueue } from "@/lib/analytics";
+import { useGlobalPlayerActions } from "@/lib/GlobalPlayerProvider";
+import { formatDuration } from "@/lib/utils";
 
 const TRACK_STATUS_FILTER = "published";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -50,7 +60,13 @@ type CollageTrack = {
 	artworkUrl?: string | null;
 };
 
-type CollageShape = "Circle" | "Star" | "RoundedCornerShape" | "Pill" | "Slanted" | "Other";
+type CollageShape =
+	| "Circle"
+	| "Star"
+	| "RoundedCornerShape"
+	| "Pill"
+	| "Slanted"
+	| "Other";
 
 const COLLAGE_HEIGHT = scale(400);
 
@@ -154,7 +170,9 @@ const AdaptiveCollage = ({
 	const tiles = COSMIC_SWIRL_CONFIGS.map((cfg, i) => ({
 		cfg,
 		track: featuredTracks[i] ?? null,
-	})).filter((t): t is { cfg: CollageConfig; track: CollageTrack } => Boolean(t.track?.artworkUrl));
+	})).filter((t): t is { cfg: CollageConfig; track: CollageTrack } =>
+		Boolean(t.track?.artworkUrl),
+	);
 
 	return (
 		<View style={{ width: SCREEN_WIDTH, height: COLLAGE_HEIGHT }}>
@@ -175,7 +193,9 @@ const AdaptiveCollage = ({
 									rotate(cfg.rotate),
 									zIndex(cfg.zIndex),
 									clip(getNativeShape(cfg.shape)),
-									...(track.id ? [clickable(() => handleTrackPress(track.id as string))] : []),
+									...(track.id
+										? [clickable(() => handleTrackPress(track.id as string))]
+										: []),
 								]}
 							>
 								<RNHostView matchContents>
@@ -183,7 +203,7 @@ const AdaptiveCollage = ({
 										// biome-ignore lint/style/noNonNullAssertion: filtered to non-null artwork above
 										source={{ uri: track.artworkUrl! }}
 										style={{ width: "100%", height: "100%" }}
-										resizeMode="cover"
+										resizeMode="contain"
 									/>
 								</RNHostView>
 							</Box>
@@ -194,7 +214,6 @@ const AdaptiveCollage = ({
 		</View>
 	);
 };
-
 
 export default function HomeScreen() {
 	const colorScheme = useColorScheme();
@@ -268,7 +287,6 @@ export default function HomeScreen() {
 			.slice(0, 8);
 	}, [tracks]);
 
-
 	const quickPicks: Track[] = useMemo(() => {
 		if (tracks.length === 0) return [];
 		// Deterministic pseudo-shuffle so it doesn't reorder every render
@@ -293,24 +311,32 @@ export default function HomeScreen() {
 		navigation.dispatch(DrawerActions.openDrawer());
 	};
 
-	const handleTrackPress = useCallback((trackId: string) => {
-		const trackIndex = queueTracks.findIndex((track) => track.id === trackId);
-		const selectedTrack = queueTracks[trackIndex];
+	const handleTrackPress = useCallback(
+		(trackId: string) => {
+			const trackIndex = queueTracks.findIndex((track) => track.id === trackId);
+			const selectedTrack = queueTracks[trackIndex];
 
-		if (selectedTrack && queueTracks.length > 0) {
-			trackPlayWithQueue(
-				trackId,
-				selectedTrack.title,
-				"all-songs",
-				queueTracks.length,
-				trackIndex,
-			);
-			playTrackWithQueue(selectedTrack, queueTracks, trackIndex, ALL_SONGS_SOURCE);
-			return;
-		}
+			if (selectedTrack && queueTracks.length > 0) {
+				trackPlayWithQueue(
+					trackId,
+					selectedTrack.title,
+					"all-songs",
+					queueTracks.length,
+					trackIndex,
+				);
+				playTrackWithQueue(
+					selectedTrack,
+					queueTracks,
+					trackIndex,
+					ALL_SONGS_SOURCE,
+				);
+				return;
+			}
 
-		playTrack(trackId);
-	}, [playTrack, playTrackWithQueue, queueTracks]);
+			playTrack(trackId);
+		},
+		[playTrack, playTrackWithQueue, queueTracks],
+	);
 
 	const handleArtistPress = useCallback((artistId: string) => {
 		router.push(`/artist-detail?id=${artistId}`);
@@ -334,7 +360,9 @@ export default function HomeScreen() {
 		}
 
 		if (topArtists.length === 0) {
-			return <Text style={{ color: themeColors.tint }}>No artists available.</Text>;
+			return (
+				<Text style={{ color: themeColors.tint }}>No artists available.</Text>
+			);
 		}
 
 		return (
@@ -351,13 +379,21 @@ export default function HomeScreen() {
 					{topArtists.map((artist) => (
 						<Box
 							key={artist.id}
-							modifiers={[size(220, 220), clip(Shapes.RoundedCorner(12)), clickable(() => handleArtistPress(artist.id))]}
+							modifiers={[
+								size(220, 220),
+								clip(Shapes.RoundedCorner(12)),
+								clickable(() => handleArtistPress(artist.id)),
+							]}
 						>
 							<RNHostView matchContents>
 								<Image
 									// biome-ignore lint/style/noNonNullAssertion: always present
 									source={{ uri: artist.avatarUrl! }}
-									style={{ width: "100%", height: 250, backgroundColor: themeColors.muted }}
+									style={{
+										width: "100%",
+										height: 250,
+										backgroundColor: themeColors.muted,
+									}}
 									resizeMode="cover"
 								/>
 							</RNHostView>
@@ -369,33 +405,7 @@ export default function HomeScreen() {
 	};
 
 	if (!hasInitialLoaded) {
-		return (
-			<SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }}>
-				<LinearGradient
-					colors={[`${themeColors.primary}22`, "transparent"]}
-					start={{ x: 0, y: 0 }}
-					end={{ x: 0.6, y: 0.6 }}
-					style={{
-						position: "absolute",
-						top: 0,
-						left: 0,
-						right: 0,
-						height: SCREEN_WIDTH * 1.1,
-					}}
-					pointerEvents="none"
-				/>
-				<Animated.View
-					entering={FadeIn.duration(200)}
-					style={{
-						flex: 1,
-						alignItems: "center",
-						justifyContent: "center",
-					}}
-				>
-					<WavyLoading color={themeColors.primary} dimension={72} />
-				</Animated.View>
-			</SafeAreaView>
-		);
+		return <LoadingScreen />;
 	}
 
 	return (
@@ -434,12 +444,22 @@ export default function HomeScreen() {
 					<View className="flex-row items-end justify-between">
 						<View>
 							<Text
-								style={{ color: themeColors.text, fontSize: 78, lineHeight: 78, fontWeight: "800" }}
+								style={{
+									color: themeColors.text,
+									fontSize: 78,
+									lineHeight: 78,
+									fontWeight: "800",
+								}}
 							>
 								Your{"\n"}Mix
 							</Text>
 							<Text
-								style={{ color: themeColors.tint, fontSize: 44 / 2, fontWeight: "500", marginTop: 10 }}
+								style={{
+									color: themeColors.tint,
+									fontSize: 44 / 2,
+									fontWeight: "500",
+									marginTop: 10,
+								}}
 							>
 								Today&apos;s Mix for you
 							</Text>
@@ -461,12 +481,21 @@ export default function HomeScreen() {
 									transform: [{ scale: pressed ? 0.94 : 1 }],
 								})}
 							>
-								<Play size={56} color={themeColors.mutedForeground} fill={themeColors.muted} />
+								<Play
+									size={56}
+									color={themeColors.mutedForeground}
+									fill={themeColors.muted}
+								/>
 							</Pressable>
 						</Animated.View>
 					</View>
 
-					<Animated.View entering={FadeInDown.duration(360).delay(80).springify().damping(16)}>
+					<Animated.View
+						entering={FadeInDown.duration(360)
+							.delay(80)
+							.springify()
+							.damping(16)}
+					>
 						<AdaptiveCollage
 							featuredTracks={featuredTracks}
 							handleTrackPress={handleTrackPress}
@@ -474,7 +503,10 @@ export default function HomeScreen() {
 					</Animated.View>
 
 					<Animated.View
-						entering={FadeInDown.duration(380).delay(140).springify().damping(16)}
+						entering={FadeInDown.duration(380)
+							.delay(140)
+							.springify()
+							.damping(16)}
 						style={{ marginTop: 30, paddingBottom: 12 }}
 					>
 						{renderTopArtists()}
@@ -483,7 +515,10 @@ export default function HomeScreen() {
 					{/* New Releases */}
 					{newReleases.length > 0 && (
 						<Animated.View
-							entering={FadeInDown.duration(380).delay(180).springify().damping(16)}
+							entering={FadeInDown.duration(380)
+								.delay(180)
+								.springify()
+								.damping(16)}
 							style={{ marginTop: 12 }}
 						>
 							<View
@@ -495,7 +530,9 @@ export default function HomeScreen() {
 									marginBottom: 12,
 								}}
 							>
-								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+								<View
+									style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
+								>
 									<Text
 										style={{
 											color: themeColors.text,
@@ -549,10 +586,9 @@ export default function HomeScreen() {
 											}}
 										>
 											{track.artworkUrl ? (
-												<Image
+												<Artwork
 													source={{ uri: track.artworkUrl }}
 													style={{ width: "100%", height: "100%" }}
-													resizeMode="cover"
 												/>
 											) : (
 												<View
@@ -563,7 +599,11 @@ export default function HomeScreen() {
 														justifyContent: "center",
 													}}
 												>
-													<Disc size={48} color={themeColors.primary} opacity={0.5} />
+													<Disc
+														size={48}
+														color={themeColors.primary}
+														opacity={0.5}
+													/>
 												</View>
 											)}
 											{idx === 0 && (
@@ -620,11 +660,13 @@ export default function HomeScreen() {
 						</Animated.View>
 					)}
 
-
 					{/* Quick Picks */}
 					{quickPicks.length > 0 && (
 						<Animated.View
-							entering={FadeInDown.duration(380).delay(260).springify().damping(16)}
+							entering={FadeInDown.duration(380)
+								.delay(260)
+								.springify()
+								.damping(16)}
 							style={{ marginTop: 28, paddingBottom: 32 }}
 						>
 							<Text
@@ -665,7 +707,7 @@ export default function HomeScreen() {
 												borderRadius: 14,
 												borderCurve: "continuous",
 												overflow: "hidden",
-												borderWidth: 0
+												borderWidth: 0,
 											}}
 										>
 											<View
@@ -681,13 +723,16 @@ export default function HomeScreen() {
 												}}
 											>
 												{track.artworkUrl ? (
-													<Image
+													<Artwork
 														source={{ uri: track.artworkUrl }}
 														style={{ width: "100%", height: "100%" }}
-														resizeMode="cover"
 													/>
 												) : (
-													<Disc size={26} color={themeColors.primary} opacity={0.6} />
+													<Disc
+														size={26}
+														color={themeColors.primary}
+														opacity={0.6}
+													/>
 												)}
 											</View>
 											<View style={{ flex: 1 }}>
@@ -731,7 +776,6 @@ export default function HomeScreen() {
 							</View>
 						</Animated.View>
 					)}
-
 				</Animated.View>
 			</ScrollView>
 		</SafeAreaView>
