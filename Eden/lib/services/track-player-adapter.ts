@@ -1,4 +1,4 @@
-import TrackPlayer, { type MediaItem } from "@rntp/player";
+import TrackPlayer, { type MediaItem, PlaybackState } from "@rntp/player";
 import { type QueueTrack, useQueueStore } from "@/lib/actions/queue";
 import { useTrackStore } from "@/lib/actions/tracks";
 
@@ -68,6 +68,16 @@ const URL_FETCH_CONCURRENCY = 8;
 export async function pushQueueToPlayer(): Promise<void> {
 	const z = useQueueStore.getState();
 	if (z.queue.length === 0 || z.currentIndex < 0) {
+		// Don't wipe the player if it's already playing something we haven't
+		// adopted into the store yet — e.g. the app cold-started while the
+		// background service kept a track going. hydrateStoreFromPlayer() will
+		// pull that track back into the store instead.
+		try {
+			if (TrackPlayer.getActiveMediaItem()) return;
+		} catch {
+			// Player not set up yet — nothing to clear.
+			return;
+		}
 		TrackPlayer.clear();
 		return;
 	}
@@ -92,6 +102,24 @@ export async function pushQueueToPlayer(): Promise<void> {
 		0,
 		Math.min(items.length - 1, z.currentIndex - activeOffset),
 	);
+
+	// Skip the rebuild when RNTP already holds this exact queue at this index.
+	// setMediaItems reloads the active item and restarts playback from position
+	// 0, so re-pushing an unchanged queue would interrupt what's playing.
+	try {
+		const current = TrackPlayer.getQueue();
+		const activeIdx = TrackPlayer.getActiveMediaItemIndex();
+		if (
+			current.length === items.length &&
+			activeIdx === startIdx &&
+			current.every((it, i) => it.mediaId === items[i]?.mediaId)
+		) {
+			return;
+		}
+	} catch {
+		// Player not set up yet — fall through and set the queue.
+	}
+
 	TrackPlayer.setMediaItems(items, startIdx);
 	TrackPlayer.play();
 }
@@ -105,4 +133,107 @@ export function skipInPlayerTo(index: number): void {
 	const cur = TrackPlayer.getActiveMediaItemIndex();
 	if (cur === index) return;
 	TrackPlayer.skip(index);
+}
+
+// ---------------------------------------------------------------------------
+// Reverse sync: RNTP → zustand (app resume / cold start).
+//
+// When the app is killed but the background service keeps playing, the store
+// comes back empty (queue/currentIndex aren't persisted). hydrateStoreFromPlayer
+// reads RNTP's live queue and mirrors it back so the UI can show the now-playing
+// track. The `adoptingFromPlayer` flag lets the zustand→RNTP subscription skip
+// the echo push that would otherwise re-fetch URLs and restart playback.
+// ---------------------------------------------------------------------------
+
+let adoptingFromPlayer = false;
+
+/** True while the store is being populated FROM the player. */
+export function isAdoptingFromPlayer(): boolean {
+	return adoptingFromPlayer;
+}
+
+function mediaUrlToString(url: MediaItem["artworkUrl"]): string | null {
+	if (typeof url === "string") return url;
+	if (
+		url &&
+		typeof url === "object" &&
+		typeof (url as { uri?: unknown }).uri === "string"
+	) {
+		return (url as { uri: string }).uri;
+	}
+	return null;
+}
+
+function mediaItemToQueueTrack(item: MediaItem): QueueTrack | null {
+	const id = item.mediaId ?? (typeof item.url === "string" ? item.url : null);
+	if (!id) return null;
+	return {
+		id,
+		title: item.title ?? "Unknown",
+		artistName: item.artist ?? "",
+		artworkUrl: mediaUrlToString(item.artworkUrl),
+		duration: typeof item.duration === "number" ? item.duration : null,
+	};
+}
+
+/**
+ * Mirror RNTP's live queue into zustand if the store doesn't already own one.
+ * Returns the active track id (so the caller can surface the player), or null
+ * when there's nothing playing to adopt. Never overwrites a non-empty store —
+ * zustand stays the source of truth once it has a queue.
+ */
+export function hydrateStoreFromPlayer(): string | null {
+	const z = useQueueStore.getState();
+
+	// Store already owns a queue → it's the source of truth. Just report the
+	// current track; don't clobber it with RNTP's (possibly reduced) queue.
+	if (
+		z.queue.length > 0 &&
+		z.currentIndex >= 0 &&
+		z.currentIndex < z.queue.length
+	) {
+		return z.queue[z.currentIndex]?.id ?? null;
+	}
+
+	let items: MediaItem[];
+	let activeIndex: number | null;
+	let state: PlaybackState;
+	try {
+		items = TrackPlayer.getQueue();
+		activeIndex = TrackPlayer.getActiveMediaItemIndex();
+		state = TrackPlayer.getPlaybackState();
+	} catch {
+		// Player not set up yet.
+		return null;
+	}
+
+	if (!items?.length) return null;
+	if (state === PlaybackState.Idle || state === PlaybackState.Error) return null;
+
+	const tracks: QueueTrack[] = [];
+	for (const item of items) {
+		const track = mediaItemToQueueTrack(item);
+		if (track) tracks.push(track);
+	}
+	if (tracks.length === 0) return null;
+
+	const idx =
+		activeIndex != null && activeIndex >= 0 && activeIndex < tracks.length
+			? activeIndex
+			: 0;
+
+	adoptingFromPlayer = true;
+	try {
+		useQueueStore.setState({
+			queue: tracks,
+			originalQueue: tracks,
+			currentIndex: idx,
+			isQueueActive: true,
+			queueSource: { type: "custom", name: "Now Playing" },
+		});
+	} finally {
+		adoptingFromPlayer = false;
+	}
+
+	return tracks[idx]?.id ?? null;
 }

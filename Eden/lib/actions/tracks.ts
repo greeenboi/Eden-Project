@@ -90,6 +90,17 @@ export interface StreamingUrlResponse {
 	track: Track;
 }
 
+// Stream URLs are short-lived signed URLs. Cache them by trackId until shortly
+// before they expire so re-pushing the queue (shuffle / add / skip-back) and
+// replays reuse the URL instead of re-hitting the API. Concurrent requests for
+// the same id are de-duped into one in-flight promise.
+const STREAM_URL_TTL_BUFFER_MS = 30_000;
+const streamUrlCache = new Map<
+	string,
+	{ data: StreamingUrlResponse; expiresAtMs: number }
+>();
+const streamUrlInflight = new Map<string, Promise<StreamingUrlResponse>>();
+
 /**
  * Zustand store state for managing tracks
  * @interface TrackState
@@ -375,22 +386,48 @@ export const useTrackStore = create<TrackState>((set, get) => ({
 	 * ```
 	 */
 	getStreamingUrl: async (id: string) => {
-		try {
-			const response = await fetch(`${API_BASE_URL}/api/tracks/${id}/stream`);
-
-			if (!response.ok) {
-				if (response.status === 404) throw new Error("Track not found");
-				throw new Error(`Failed to get streaming URL: ${response.statusText}`);
-			}
-
-			const data: StreamingUrlResponse = await response.json();
-			return data;
-		} catch (error) {
-			const errorMessage =
-				error instanceof Error ? error.message : "Failed to get streaming URL";
-			set({ error: errorMessage });
-			throw error;
+		const cached = streamUrlCache.get(id);
+		if (cached && cached.expiresAtMs - Date.now() > STREAM_URL_TTL_BUFFER_MS) {
+			return cached.data;
 		}
+
+		const inflight = streamUrlInflight.get(id);
+		if (inflight) return inflight;
+
+		const request = (async () => {
+			try {
+				const response = await fetch(`${API_BASE_URL}/api/tracks/${id}/stream`);
+
+				if (!response.ok) {
+					if (response.status === 404) throw new Error("Track not found");
+					throw new Error(
+						`Failed to get streaming URL: ${response.statusText}`,
+					);
+				}
+
+				const data: StreamingUrlResponse = await response.json();
+				const ttlMs =
+					Number.isFinite(data.expiresIn) && data.expiresIn > 0
+						? data.expiresIn * 1000
+						: 0;
+				if (ttlMs > 0) {
+					streamUrlCache.set(id, { data, expiresAtMs: Date.now() + ttlMs });
+				}
+				return data;
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error
+						? error.message
+						: "Failed to get streaming URL";
+				set({ error: errorMessage });
+				throw error;
+			} finally {
+				streamUrlInflight.delete(id);
+			}
+		})();
+
+		streamUrlInflight.set(id, request);
+		return request;
 	},
 
 	clearError: () => set({ error: null }),

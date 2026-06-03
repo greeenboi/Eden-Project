@@ -1,5 +1,4 @@
 import { PlayingSongContent } from "@/components/pages/PlayingSongContent";
-import PlayerHandle from "@/components/pages/player/PlayerHandle";
 import {
 	type QueueSource,
 	type QueueTrack,
@@ -16,6 +15,8 @@ import {
 } from "@/lib/actions/queue";
 import useIsDark from "@/lib/hooks/isdark";
 import {
+	hydrateStoreFromPlayer,
+	isAdoptingFromPlayer,
 	pushQueueToPlayer,
 	skipInPlayerTo,
 } from "@/lib/services/track-player-adapter";
@@ -29,6 +30,7 @@ import {
 import TrackPlayer, {
 	Event,
 	RepeatMode as RntpRepeatMode,
+	useActiveMediaItem,
 } from "@rntp/player";
 import {
 	type ReactNode,
@@ -40,7 +42,13 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { BackHandler } from "react-native";
+import { AppState, BackHandler } from "react-native";
+
+// Floating mini-player layout: the sheet detaches into a floating card at the
+// mini snap and re-attaches edge-to-edge at the full snap.
+const MINI_SIDE_MARGIN = 12;
+const MINI_BOTTOM_INSET = 46;
+const MINI_RADIUS = 24;
 
 interface GlobalPlayerActionsContextValue {
 	/** Play a track by ID - opens the player sheet (single track, no queue) */
@@ -175,6 +183,19 @@ function AutoExpandOnMount({ targetIndex }: { targetIndex: number }) {
 	return null;
 }
 
+// Watches RNTP's active item and adopts it into the store when it appears.
+// Covers cold start where setupPlayer reconnects to a still-running background
+// service after this provider has already mounted (the AppState 'active' event
+// won't fire because the app is already foregrounded). Idempotent.
+function PlayerResumeAdopter({ onAdopt }: { onAdopt: () => void }) {
+	const activeItem = useActiveMediaItem();
+	const mediaId = activeItem?.mediaId ?? null;
+	useEffect(() => {
+		if (mediaId) onAdopt();
+	}, [mediaId, onAdopt]);
+	return null;
+}
+
 /**
  * Provider component that wraps the app with global player functionality.
  * Renders a BottomSheetModal that persists across route navigations.
@@ -183,8 +204,14 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
 	const [sheetIndex, setSheetIndex] = useState(0);
 	const [isPlayerVisible, setIsPlayerVisible] = useState(false);
+	// Whether the sheet is currently a floating (detached) card — true at the
+	// mini snap, false at the full snap. Driven by onAnimate/onChange below.
+	const [detached, setDetached] = useState(false);
 	const bottomSheetRef = useRef<BottomSheetModal>(null);
 	const isDark = useIsDark();
+	// Mirrors of state read inside stable callbacks without re-creating them.
+	const isPlayerVisibleRef = useRef(false);
+	const adoptedFromPlayerRef = useRef(false);
 
 	const setQueue = useQueueStore((state) => state.setQueue);
 	const addTrackToQueue = useQueueStore((state) => state.addToQueue);
@@ -204,9 +231,50 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	const shuffleMode = useQueueStore(selectShuffleMode);
 	const queueSource = useQueueStore(selectQueueSource);
 
-	const snapPoints = useMemo(() => ["20%", "98%"], []);
+	const snapPoints = useMemo(() => ["22%", "98%"], []);
 	const FULL_SNAP_INDEX = snapPoints.length - 1;
 	const MINI_SNAP_INDEX = 0;
+
+	// Floating-card style applied to the sheet container while detached (mini).
+	const miniSheetStyle = useMemo(
+		() => ({
+			marginHorizontal: MINI_SIDE_MARGIN,
+			borderRadius: MINI_RADIUS,
+			overflow: "hidden" as const,
+		}),
+		[],
+	);
+
+	useEffect(() => {
+		isPlayerVisibleRef.current = isPlayerVisible;
+	}, [isPlayerVisible]);
+
+	// Pull RNTP's live queue into the store and surface the mini player. Used on
+	// app resume / cold start so a track that kept playing in the background
+	// service (while the app was closed) reappears in the UI automatically.
+	// Idempotent: a no-op when the store already owns the queue or RNTP is idle.
+	const adoptFromPlayer = useCallback(() => {
+		const activeId = hydrateStoreFromPlayer();
+		if (!activeId) return;
+		adoptedFromPlayerRef.current = true;
+		setSelectedTrackId(activeId);
+		// Only present when nothing is showing yet — don't yank a full player
+		// back down to mini just because the app returned to the foreground.
+		if (!isPlayerVisibleRef.current) {
+			isPlayerVisibleRef.current = true;
+			setIsPlayerVisible(true);
+			bottomSheetRef.current?.present();
+			bottomSheetRef.current?.snapToIndex(MINI_SNAP_INDEX);
+		}
+	}, [MINI_SNAP_INDEX]);
+
+	// Re-check whenever the app comes back to the foreground.
+	useEffect(() => {
+		const sub = AppState.addEventListener("change", (next) => {
+			if (next === "active") adoptFromPlayer();
+		});
+		return () => sub.remove();
+	}, [adoptFromPlayer]);
 
 	const handleHardwareBackPress = useCallback(() => {
 		if (!isPlayerVisible) {
@@ -251,6 +319,10 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 
 	const playTrack = useCallback(
 		(trackId: string) => {
+			// Set the ref synchronously so the reactive adopter (fired by RNTP's
+			// active-item change once playback starts) sees the player as already
+			// visible and doesn't race-snap this open back down to the mini view.
+			isPlayerVisibleRef.current = true;
 			setSelectedTrackId(trackId);
 			setIsPlayerVisible(true);
 			setSheetIndex(FULL_SNAP_INDEX);
@@ -270,6 +342,9 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			startIndex = 0,
 			source?: QueueSource,
 		) => {
+			// Synchronously mark visible so the reactive adopter (fired when RNTP
+			// starts playing the new queue) doesn't race-snap this open to mini.
+			isPlayerVisibleRef.current = true;
 			// Set the queue first with source context
 			setQueue(queue, startIndex, source);
 			// Then play the track
@@ -365,8 +440,15 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	// Reverse: RNTP's MediaItemTransition writes the new index back to zustand
 	// via skipToIndex, which preserves history and queue-source analytics.
 	useEffect(() => {
-		// Initial push in case zustand was rehydrated from persistence.
-		void pushQueueToPlayer();
+		// Cold start: if RNTP is already playing (background service kept going
+		// while the app was closed), adopt its queue instead of pushing — pushing
+		// would re-fetch URLs and restart playback. Only push when there was
+		// nothing to adopt. The reactive PlayerResumeAdopter also covers the case
+		// where setupPlayer is still resolving at this point.
+		adoptFromPlayer();
+		if (!adoptedFromPlayerRef.current) {
+			void pushQueueToPlayer();
+		}
 
 		// 1. zustand → RNTP
 		//    Identity sig changes when the queue array itself changes
@@ -377,6 +459,13 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		const unsubscribe = useQueueStore.subscribe((state) => {
 			const identity = state.queue.map((t) => t.id).join("|");
 			const position = state.currentIndex;
+			// The store was just populated FROM the player (resume/adoption).
+			// Record the sigs so we don't echo it straight back and restart.
+			if (isAdoptingFromPlayer()) {
+				lastIdentity = identity;
+				lastPosition = position;
+				return;
+			}
 			if (identity !== lastIdentity) {
 				lastIdentity = identity;
 				lastPosition = position;
@@ -412,7 +501,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 			unsubscribe();
 			transition.remove();
 		};
-	}, []);
+	}, [adoptFromPlayer]);
 
 	// Mirror zustand's repeatMode into RNTP so lockscreen + native auto-advance
 	// honor it without needing useTrackAudioPlayer mounted.
@@ -429,6 +518,7 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	}, [repeatMode]);
 
 	const dismissPlayer = useCallback(() => {
+		isPlayerVisibleRef.current = false;
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
@@ -453,14 +543,31 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 		}
 	}, [sheetIndex, FULL_SNAP_INDEX, collapsePlayer, expandPlayer]);
 
-	const handleSheetChange = useCallback((index: number) => {
-		setSheetIndex(index);
-		if (index === -1) {
-			setIsPlayerVisible(false);
-		}
-	}, []);
+	const handleSheetChange = useCallback(
+		(index: number) => {
+			setSheetIndex(index);
+			if (index >= 0) setDetached(index === MINI_SNAP_INDEX);
+			if (index === -1) {
+				isPlayerVisibleRef.current = false;
+				setIsPlayerVisible(false);
+			}
+		},
+		[MINI_SNAP_INDEX],
+	);
+
+	// Detach into a floating card at the mini snap; re-attach edge-to-edge at
+	// the full snap. onAnimate fires as the move starts (drag or programmatic),
+	// so the sheet animates straight into the right layout instead of snapping
+	// after it settles.
+	const handleSheetAnimate = useCallback(
+		(_fromIndex: number, toIndex: number) => {
+			if (toIndex >= 0) setDetached(toIndex === MINI_SNAP_INDEX);
+		},
+		[MINI_SNAP_INDEX],
+	);
 
 	const handleSheetDismiss = useCallback(() => {
+		isPlayerVisibleRef.current = false;
 		setIsPlayerVisible(false);
 		setSelectedTrackId(null);
 		setSheetIndex(0);
@@ -533,22 +640,29 @@ export function GlobalPlayerProvider({ children }: GlobalPlayerProviderProps) {
 	return (
 		<GlobalPlayerActionsContext value={actionsValue}>
 			<GlobalPlayerStateContext value={stateValue}>
+			<PlayerResumeAdopter onAdopt={adoptFromPlayer} />
 			<BottomSheetModalProvider>
 				{children}
 				<BottomSheetModal
 					ref={bottomSheetRef}
 					snapPoints={snapPoints}
-					handleComponent={PlayerHandle}
+					handleComponent={null}
 					index={-1}
 					overDragResistanceFactor={3}
 					enablePanDownToClose={false}
+					enableDynamicSizing={false}
+					detached={detached}
+					bottomInset={detached ? MINI_BOTTOM_INSET : 0}
+					style={detached ? miniSheetStyle : undefined}
 					onChange={handleSheetChange}
+					onAnimate={handleSheetAnimate}
 					onDismiss={handleSheetDismiss}
 					enableOverDrag={false}
 					backgroundStyle={{
 						backgroundColor: isDark
 							? THEME.dark.background
 							: THEME.light.background,
+						borderRadius: detached ? MINI_RADIUS : 0,
 					}}
 					handleIndicatorStyle={{
 						backgroundColor: isDark ? THEME.dark.primary : THEME.light.primary,

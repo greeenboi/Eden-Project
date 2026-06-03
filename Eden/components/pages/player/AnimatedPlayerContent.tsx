@@ -1,8 +1,3 @@
-
-import { MarqueeText } from "@/components/ui/MarqueeText";
-import { Card, CardContent } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import type { RepeatMode } from "@/lib/actions/queue";
 import {
 	ListMusic,
 	Music,
@@ -12,12 +7,7 @@ import {
 	SkipForward,
 } from "lucide-react-native";
 import { memo, useEffect } from "react";
-import {
-	Image,
-	Pressable,
-	StyleSheet,
-	useWindowDimensions, View,
-} from "react-native";
+import { Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import Animated, {
 	Extrapolation,
 	interpolate,
@@ -25,10 +15,15 @@ import Animated, {
 	useSharedValue,
 	withSpring,
 } from "react-native-reanimated";
+import { Artwork } from "@/components/ui/artwork";
+import { Card, CardContent } from "@/components/ui/card";
+import { MarqueeText } from "@/components/ui/MarqueeText";
+import { Text } from "@/components/ui/text";
+import WavyLoading from "@/components/ui/wavy-loading";
+import type { RepeatMode } from "@/lib/actions/queue";
 import { PlayerControls } from "./PlayerControls";
 import { PlayerSlider } from "./PlayerSlider";
 import { PlayerTrackInfo } from "./PlayerTrackInfo";
-import WavyLoading from "@/components/ui/wavy-loading";
 
 const SPRING_CONFIG = {
 	damping: 20,
@@ -47,9 +42,6 @@ interface AnimatedPlayerContentProps {
 	isPlaying: boolean;
 	isLoaded: boolean;
 	loadingStream: boolean;
-	sliderValue: number;
-	sliderMax: number;
-	duration: number;
 	themeColors: {
 		primary: string;
 		muted: string;
@@ -73,7 +65,6 @@ interface AnimatedPlayerContentProps {
 	onQueuePress?: () => void;
 }
 
-
 /**
  * Animated player content that smoothly morphs between mini and full player modes.
  * Uses react-native-reanimated for performant layout animations.
@@ -90,9 +81,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 	isPlaying,
 	isLoaded,
 	loadingStream,
-	sliderValue,
-	sliderMax,
-	duration,
 	themeColors,
 	hasNext = false,
 	hasPrevious = false,
@@ -211,80 +199,96 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 
 	return (
 		<View style={styles.container}>
-			{/* Mini mode layout - row direction */}
+			{/* Mini mode layout - row + full-width progress slider */}
 			{!isFull && (
-				<Animated.View style={[styles.miniContainer, miniContainerStyle]}>
-					{/* Artwork */}
-					<Pressable onPress={onExpand}>
+				<Animated.View style={miniContainerStyle}>
+					<View style={styles.miniContainer}>
+						{/* Artwork */}
+						<Pressable onPress={onExpand}>
+							<Animated.View
+								style={[styles.artworkContainer, artworkContainerStyle]}
+							>
+								<Card className="w-full h-full p-0 overflow-hidden">
+									<CardContent className="p-0 w-full h-full bg-primary/10">
+										{artworkUrl ? (
+											<Artwork
+												source={{ uri: artworkUrl }}
+												style={styles.artworkImage}
+											/>
+										) : (
+											<View style={styles.artworkPlaceholder}>
+												<Music size={28} color={themeColors.muted} />
+											</View>
+										)}
+									</CardContent>
+								</Card>
+							</Animated.View>
+						</Pressable>
+
+						{/* Title and Artist */}
 						<Animated.View
-							style={[styles.artworkContainer, artworkContainerStyle]}
+							style={[styles.miniTextContainer, textContainerStyle]}
 						>
-							<Card className="w-full h-full p-0 overflow-hidden">
-								<CardContent className="p-0 w-full h-full bg-primary/10">
-									{artworkUrl ? (
-										<Image
-											source={{ uri: artworkUrl }}
-											style={styles.artworkImage}
-											resizeMode="cover"
-										/>
-									) : (
-										<View style={styles.artworkPlaceholder}>
-											<Music size={28} color={themeColors.muted} />
-										</View>
-									)}
-								</CardContent>
-							</Card>
+							<Pressable onPress={onExpand} style={{ flex: 1 }}>
+								<MarqueeText
+									text={title}
+									className="font-semibold text-foreground text-lg"
+									speed={40}
+									delay={2500}
+								/>
+								<Text className="text-xs opacity-70" numberOfLines={1}>
+									{artistName}
+								</Text>
+							</Pressable>
 						</Animated.View>
-					</Pressable>
 
-					{/* Title and Artist */}
-					<Animated.View style={[styles.miniTextContainer, textContainerStyle]}>
-						<Pressable onPress={onExpand} style={{ flex: 1 }}>
-							<MarqueeText
-								text={title}
-								className="font-semibold text-foreground text-lg"
-								speed={40}
-								delay={2500}
-							/>
-							<Text className="text-xs opacity-70" numberOfLines={1}>
-								{artistName}
-							</Text>
-						</Pressable>
-					</Animated.View>
-
-					{/* Controls */}
-					<Animated.View style={[styles.miniControls, miniControlsStyle]}>
-						<Pressable
-							onPress={onSkipPrevious}
-							disabled={!hasPrevious}
-							style={{ opacity: hasPrevious ? 1 : 0.4 }}
-						>
-							<SkipBack color={themeColors.tint} size={22} />
-						</Pressable>
-						<Pressable
-							onPress={onTogglePlayback}
-							disabled={!isLoaded || loadingStream}
-						>
-							<View style={styles.miniPlayButton}>
-								{isLoaded ? (
-									isPlaying ? (
-										<Pause color={themeColors.tint} size={24} />
+						{/* Controls */}
+						<Animated.View style={[styles.miniControls, miniControlsStyle]}>
+							<Pressable
+								onPress={onSkipPrevious}
+								disabled={!hasPrevious}
+								style={{ opacity: hasPrevious ? 1 : 0.4 }}
+							>
+								<SkipBack color={themeColors.tint} size={22} />
+							</Pressable>
+							<Pressable
+								onPress={onTogglePlayback}
+								disabled={!isLoaded || loadingStream}
+							>
+								<View style={styles.miniPlayButton}>
+									{isLoaded ? (
+										isPlaying ? (
+											<Pause color={themeColors.tint} size={24} />
+										) : (
+											<Play color={themeColors.tint} size={24} />
+										)
 									) : (
-										<Play color={themeColors.tint} size={24} />
-									)
-								) : (
-									<WavyLoading color={themeColors.tint} />
-								)}
-							</View>
-						</Pressable>
-						<Pressable
-							onPress={onSkipNext}
-							disabled={!hasNext}
-							style={{ opacity: hasNext ? 1 : 0.4 }}
-						>
-							<SkipForward color={themeColors.tint} size={22} />
-						</Pressable>
-					</Animated.View>
+										<WavyLoading color={themeColors.tint} />
+									)}
+								</View>
+							</Pressable>
+							<Pressable
+								onPress={onSkipNext}
+								disabled={!hasNext}
+								style={{ opacity: hasNext ? 1 : 0.4 }}
+							>
+								<SkipForward color={themeColors.tint} size={22} />
+							</Pressable>
+						</Animated.View>
+					</View>
+
+					{/* Progress slider — moved out of the sheet handle so dragging
+					    to seek no longer fights the bottom-sheet pan gesture. */}
+					<View style={styles.miniSliderWrap}>
+						<PlayerSlider
+							variant="mini"
+							trackId={trackId}
+							isLoaded={isLoaded}
+							loadingStream={loadingStream}
+							themeColors={themeColors}
+							onSlidingComplete={onSlidingComplete}
+						/>
+					</View>
 				</Animated.View>
 			)}
 
@@ -299,10 +303,9 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 							<Card className="w-full h-full p-0 overflow-hidden">
 								<CardContent className="p-0 w-full h-full bg-primary/10">
 									{artworkUrl ? (
-										<Image
+										<Artwork
 											source={{ uri: artworkUrl }}
 											style={styles.artworkImage}
-											resizeMode="cover"
 										/>
 									) : (
 										<View style={styles.artworkPlaceholder}>
@@ -351,9 +354,6 @@ export const AnimatedPlayerContent = memo(function AnimatedPlayerContent({
 					{/* Progress Slider */}
 					<PlayerSlider
 						trackId={trackId}
-						sliderValue={sliderValue}
-						sliderMax={sliderMax}
-						duration={duration}
 						isLoaded={isLoaded}
 						loadingStream={loadingStream}
 						themeColors={themeColors}
@@ -435,6 +435,10 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		gap: 12,
 	},
+	miniSliderWrap: {
+		marginTop: -6,
+		paddingHorizontal: 8,
+	},
 	miniPlayButton: {
 		width: 48,
 		height: 48,
@@ -458,6 +462,7 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		justifyContent: "flex-end",
 		paddingHorizontal: 8,
+		paddingBottom: 8,
 		backgroundColor: "transparent",
 	},
 });

@@ -6,7 +6,6 @@ import TrackPlayer, {
 	useActiveMediaItem,
 	useIsPlaying,
 	usePlaybackState,
-	useProgress,
 } from "@rntp/player";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueueStore } from "@/lib/actions/queue";
@@ -19,14 +18,11 @@ type UseTrackAudioPlayerOptions = {
 	fetchStream: FetchStream;
 	enabled?: boolean;
 	skipSeconds?: number;
-	updateInterval?: number;
 	onError?: (error: unknown) => void;
 	onTrackEnd?: () => void;
 };
 
 type AudioStatusSnapshot = {
-	currentTime: number;
-	duration: number;
 	isBuffering: boolean;
 	isLoaded: boolean;
 	playing: boolean;
@@ -47,24 +43,21 @@ export function useTrackAudioPlayer({
 	fetchStream,
 	enabled = true,
 	skipSeconds = 10,
-	updateInterval = 250,
 	onError,
 	onTrackEnd,
 }: UseTrackAudioPlayerOptions) {
 	const playbackState = usePlaybackState();
 	const isPlayingNow = useIsPlaying();
-	// updateInterval comes in as milliseconds (preserved from legacy expo-audio API);
-	// useProgress wants seconds, so divide. Clamp to a sane floor.
-	const intervalSeconds = Math.max(0.05, updateInterval / 1000);
-	const progress = useProgress(intervalSeconds);
 	const activeItem = useActiveMediaItem();
 	const activeItemMatchesTrack =
 		!trackId || activeItem?.mediaId === trackId;
 
+	// Progress (position/duration) is intentionally NOT subscribed here — it
+	// updates several times a second and would re-render every consumer of this
+	// hook. PlayerSlider subscribes to useProgress itself, so only the slider
+	// re-renders on a tick. This status only changes on load/play/pause/end.
 	const status: AudioStatusSnapshot = useMemo(
 		() => ({
-			currentTime: activeItemMatchesTrack ? progress.position : 0,
-			duration: activeItemMatchesTrack ? progress.duration : 0,
 			isBuffering: playbackState === PlaybackState.Buffering,
 			isLoaded:
 				activeItemMatchesTrack &&
@@ -74,13 +67,7 @@ export function useTrackAudioPlayer({
 			didJustFinish:
 				activeItemMatchesTrack && playbackState === PlaybackState.Ended,
 		}),
-		[
-			progress.position,
-			progress.duration,
-			playbackState,
-			isPlayingNow,
-			activeItemMatchesTrack,
-		],
+		[playbackState, isPlayingNow, activeItemMatchesTrack],
 	);
 
 	const fetchStreamRef = useRef(fetchStream);
@@ -306,8 +293,6 @@ export function useTrackAudioPlayer({
 		status,
 		streamError,
 		loadingStream,
-		progress:
-			status.duration > 0 ? (status.currentTime / status.duration) * 100 : 0,
 		ready: status.isLoaded,
 		seekForward,
 		seekBackward,
