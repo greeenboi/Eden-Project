@@ -1,0 +1,32 @@
+services:
+  yt-downloader:
+    image: ghcr.io/greeenboi/yt-downloader-worker:latest
+    container_name: yt_downloader_worker
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+      # use stack.env if you are using portainer
+    environment:
+      - PORT=8000
+    volumes:
+      # Dedicated storage mount for persistent data
+      - yt_downloader_storage:/app/storage
+    networks:
+      - eden_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  yt_downloader_storage:
+    name: yt_downloader_storage
+
+networks:
+  eden_network:
+    name: eden_network
+    driver: bridge
