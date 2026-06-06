@@ -1,4 +1,5 @@
 import { sendToBackground } from "@plasmohq/messaging";
+import { useStorage } from "@plasmohq/storage/hook";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RequestBody as GetVideoRequestBody, ResponseBody as GetVideoResponseBody } from "~background/messages/get-video";
 
@@ -84,9 +85,12 @@ type PopupEnv = {
 const METADATA_WORKER_URL =
   process.env.PLASMO_PUBLIC_YT_METADATA_WORKER || process.env.PLASMO_PUBLIC_YtMetadataWorker || ""
 
-const EDEN_GATEWAY_URL = process.env.PLASMO_PUBLIC_EDEN_GATEWAY || ""
+const INITIAL_EDEN_GATEWAY_URL = process.env.PLASMO_PUBLIC_EDEN_GATEWAY || ""
 
 export function PopupApp() {
+  const [edenGatewayUrl, setEdenGatewayUrl] = useStorage("eden_gateway_url", INITIAL_EDEN_GATEWAY_URL)
+  const [tempGatewayUrl, setTempGatewayUrl] = useState("")
+
   const [currentUrl, setCurrentUrl] = useState("")
   const [youtubeVideo, setYoutubeVideo] = useState<YouTubeVideo | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -261,7 +265,7 @@ export function PopupApp() {
       return
     }
 
-    if (!EDEN_GATEWAY_URL) {
+    if (!edenGatewayUrl) {
       setMetadataError("Gateway URL is not configured.")
       return
     }
@@ -293,7 +297,7 @@ export function PopupApp() {
         }
       }
 
-      const res = await fetch(`${EDEN_GATEWAY_URL}/api/jobs/downloader`, {
+      const res = await fetch(`${edenGatewayUrl}/api/jobs/downloader`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -314,7 +318,7 @@ export function PopupApp() {
     } finally {
       setIsPushing(false)
     }
-  }, [youtubeVideo, trackOptions.length, selectedMetadata])
+  }, [youtubeVideo, trackOptions.length, selectedMetadata, edenGatewayUrl])
 
   const getSelectedExternalUrl = useCallback((option?: SpotifyMetadata | null) => {
     if (!option) {
@@ -448,6 +452,38 @@ export function PopupApp() {
     void handleInitialLoad()
   }, [handleInitialLoad])
 
+  if (!edenGatewayUrl) {
+    return (
+      <main data-theme="retro" className="min-h-[620px] min-w-[470px] bg-base-300 p-4 text-base-content flex items-center justify-center">
+        <div className="card w-96 border border-base-content/20 bg-base-100 shadow-xl">
+          <div className="card-body">
+            <h2 className="card-title">Setup Eden Garden</h2>
+            <p className="text-sm opacity-70">Please configure the Eden Gateway URL to proceed.</p>
+            <div className="form-control w-full mt-4">
+              <label className="label py-1"><span className="label-text">Gateway URL</span></label>
+              <input 
+                type="text" 
+                placeholder="https://..." 
+                className="input input-bordered w-full" 
+                value={tempGatewayUrl || ""} 
+                onChange={(e) => setTempGatewayUrl(e.target.value)} 
+              />
+            </div>
+            <div className="card-actions justify-end mt-4">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setEdenGatewayUrl(tempGatewayUrl)}
+                disabled={!tempGatewayUrl}
+              >
+                Save & Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main
       data-theme="retro"
@@ -460,7 +496,39 @@ export function PopupApp() {
               <div className="navbar-start">
                 <h1 className="text-lg font-bold tracking-wide">Eden Music</h1>
               </div>
-              <div className="navbar-end">
+              <div className="navbar-end gap-2">
+                <div className="dropdown dropdown-end">
+                  <div tabIndex={0} role="button" className="btn btn-ghost btn-circle btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="h-5 w-5 stroke-current"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  </div>
+                  <div tabIndex={0} className="dropdown-content z-[1] card card-compact w-72 p-2 shadow-xl bg-base-100 text-base-content border border-base-content/10 mt-2">
+                    <div className="card-body gap-2">
+                      <h3 className="card-title text-sm border-b border-base-content/10 pb-1">Settings</h3>
+                      <div className="form-control w-full">
+                        <label className="label py-1"><span className="label-text text-xs">Gateway URL</span></label>
+                        <input 
+                          type="text" 
+                          value={tempGatewayUrl || edenGatewayUrl || ""} 
+                          onChange={(e) => setTempGatewayUrl(e.target.value)} 
+                          className="input input-sm input-bordered w-full text-xs" 
+                          placeholder="https://..." 
+                        />
+                      </div>
+                      <div className="card-actions justify-end mt-1">
+                        <button 
+                          onClick={() => { 
+                            setEdenGatewayUrl(tempGatewayUrl || edenGatewayUrl); 
+                            const elem = document.activeElement as HTMLElement;
+                            if (elem) elem.blur();
+                          }} 
+                          className="btn btn-primary btn-sm"
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={handleInitialLoad}
